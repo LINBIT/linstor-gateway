@@ -35,7 +35,7 @@ const (
 
 func main() {
 	fmt.Printf("\x1b[1;33m")
-	fmt.Printf("linstor-remote experimental 2019-07-11 11:14")
+	fmt.Printf("linstor-remote experimental 2019-07-181 17:37")
 	fmt.Printf("\x1b[0m\n")
 
 	argsCount := len(os.Args)
@@ -55,7 +55,7 @@ func main() {
 		case ACTION_DELETE:
 			err = actionDelete()
 		case ACTION_LIST:
-			fallthrough
+			err = actionList()
 		default:
 			err = errors.New("Action '" + action + "' is not implemented")
 		}
@@ -139,6 +139,10 @@ func actionCreate() error {
 
 func actionDelete() error {
 	return errors.New("actionDelete() is not implemented yet")
+}
+
+func actionList() error {
+	return crmcontrol.ReadConfiguration()
 }
 
 func parseArguments(argMap *map[string]string) error {

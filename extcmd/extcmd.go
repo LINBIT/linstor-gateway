@@ -1,5 +1,6 @@
 package extcmd
 
+import "strings"
 import "os/exec"
 import "io"
 import "bufio"
@@ -7,14 +8,14 @@ import "sync"
 import "errors"
 
 type ExtCmdHandle struct {
-	Command         *exec.Cmd
-	stdinPipe       io.WriteCloser
-	stdoutPipe      io.ReadCloser
-	stderrPipe      io.ReadCloser
-	stdoutLines     []string
-	stderrLines     []string
-	pipeThrGrp      sync.WaitGroup
-	failedIo        bool
+	Command     *exec.Cmd
+	stdinPipe   io.WriteCloser
+	stdoutPipe  io.ReadCloser
+	stderrPipe  io.ReadCloser
+	stdoutLines []string
+	stderrLines []string
+	pipeThrGrp  sync.WaitGroup
+	failedIo    bool
 }
 
 func PipeToExtCmd(executable string, arguments []string) (*ExtCmdHandle, *bufio.Writer, error) {
@@ -52,6 +53,14 @@ func (handle *ExtCmdHandle) WaitForExtCmd() ([]string, []string, error) {
 		return handle.stdoutLines, handle.stderrLines, errors.New("CRM command: Interprocess communication failed: I/O error")
 	}
 	return handle.stdoutLines, handle.stderrLines, nil
+}
+
+func FuseStrings(linesArray []string) string {
+	var dataBld strings.Builder
+	for _, line := range linesArray {
+		dataBld.WriteString(line)
+	}
+	return dataBld.String()
 }
 
 func setupCmdPipes(cmdObj *exec.Cmd) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {

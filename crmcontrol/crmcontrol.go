@@ -3,9 +3,12 @@ package crmcontrol
 import "fmt"
 import "strings"
 import "strconv"
+import "sort"
+import "errors"
 import "github.com/LINBIT/linstor-remote-storage/templateproc"
 import "github.com/LINBIT/linstor-remote-storage/extcmd"
 import "github.com/LINBIT/linstor-remote-storage/debug"
+import xmltree "github.com/beevik/etree"
 
 const (
 	CRM_TMPL     = "templates/crm-iscsi.tmpl"
@@ -28,6 +31,18 @@ const (
 	VAR_TID           = "TID"
 	VAR_TGT_LOC_NODES = "TARGET_LOCATION_NODES"
 	VAR_LU_LOC_NODES  = "LU_LOCATION_NODES"
+)
+
+const (
+	CIB_RSC_XPATH    = "/cib/configuration/resources"
+	CIB_RSC_ATTR     = "instance_attributes"
+	CIB_RSC_ATTR_KEY = "nvpair"
+)
+
+const (
+	CRM_ISCSI_RSC_PREFIX = "p_iscsi_"
+	CRM_ISCSI_LU_NAME    = "lu"
+	CRM_ISCSI_PRM_TID    = "tid"
 )
 
 func CreateCrmLu(
@@ -122,6 +137,105 @@ func CreateCrmLu(
 	return nil
 }
 
+func ReadConfiguration() error {
+	docRoot := xmltree.NewDocument()
+
+	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
+	if err != nil {
+		return err
+	}
+	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
+	if len(stderrLines) > 0 {
+		fmt.Printf("\x1b[1;33m")
+		fmt.Printf("External command error output:")
+		fmt.Printf("\x1b[0m\n")
+		debug.PrintTextArray(stderrLines)
+		fmt.Printf("\n")
+	}
+
+	docData := extcmd.FuseStrings(stdoutLines)
+	err = docRoot.ReadFromString(docData)
+	if err != nil {
+		return err
+	}
+
+	cib := docRoot.Root()
+	if cib == nil {
+		return errors.New("Failed to find the cluster information base (CIB) root element")
+	}
+
+	rscSection := cib.FindElement(CIB_RSC_XPATH)
+	if rscSection == nil {
+		return errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
+	}
+
+	resources := rscSection.ChildElements()
+	if resources == nil {
+		return errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
+	}
+
+	var tidTable = make(map[uint8]interface{})
+	fmt.Printf("\x1b[1;33m")
+	fmt.Printf("Cluster resources:")
+	fmt.Printf("\x1b[0m\n")
+	for _, selectedRsc := range resources {
+		idAttr := selectedRsc.SelectAttr("id")
+		if idAttr != nil {
+			isISCSI := isISCSIEntry(idAttr.Value)
+			isLU := false
+			if isISCSI {
+				isLU = isLogicalUnitEntry(idAttr.Value)
+				fmt.Printf("\x1b[1;32m")
+			}
+			fmt.Printf("%-40s", idAttr.Value)
+			if isISCSI {
+				fmt.Printf(" \x1b[0;32m[iSCSI]")
+				if isLU {
+					fmt.Printf(" \x1b[1;34m[LU]")
+				}
+				if isISCSI {
+					fmt.Printf("\x1b[0m")
+				}
+				fmt.Printf("\n")
+
+				tidPrm := selectedRsc.FindElement("instance_attributes/nvpair[@name='tid']")
+				if tidPrm != nil {
+					tidAttr := tidPrm.SelectAttr("value")
+					if tidAttr != nil {
+						tid, err := strconv.ParseUint(tidAttr.Value, 10, 8)
+						if err != nil {
+							fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
+						}
+						tidTable[uint8(tid)] = nil
+					}
+				}
+			} else {
+				fmt.Printf("\n")
+			}
+		} else {
+			fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mname\x1b[0m\n")
+		}
+	}
+	fmt.Printf("\n")
+
+	if len(tidTable) > 0 {
+		fmt.Printf("Allocated TIDs:\n")
+		var tidList []uint8
+		for tid, _ := range tidTable {
+			tidList = append(tidList, tid)
+		}
+		sort.Sort(SortUint8(tidList))
+		for _, tid := range tidList {
+			fmt.Printf("    %d\n", tid)
+		}
+	} else {
+		fmt.Printf("No TIDs allocated")
+	}
+	fmt.Printf("\n")
+
+	return nil
+}
+
 func copyMap(srcMap map[string]string) map[string]string {
 	resultMap := make(map[string]string, len(srcMap))
 	for key, value := range srcMap {
@@ -148,4 +262,48 @@ func constructNodesTemplate(srcFile string, nodeList []string, tmplVars map[stri
 		nr++
 	}
 	return subDataBld.String(), nil
+}
+
+func isISCSIEntry(id string) bool {
+	return strings.Index(id, CRM_ISCSI_RSC_PREFIX) == 0
+}
+
+func isLogicalUnitEntry(id string) bool {
+	result := false
+	nameIdx := strings.LastIndexByte(id, '_')
+	if nameIdx != -1 {
+		name := id[nameIdx+1:]
+		lunIdx := strings.Index(name, CRM_ISCSI_LU_NAME)
+		if lunIdx == 0 {
+			lunStr := name[lunIdx+len(CRM_ISCSI_LU_NAME):]
+			_, err := strconv.ParseUint(lunStr, 10, 8)
+			if err == nil {
+				result = true
+			}
+		}
+	}
+	return result
+}
+
+func getRscParams(resource *xmltree.Element) []*xmltree.Element {
+	var attrList []*xmltree.Element
+	instAttr := resource.FindElement(CIB_RSC_ATTR)
+	if instAttr != nil {
+		attrList = instAttr.ChildElements()
+	}
+	return attrList
+}
+
+type SortUint8 []uint8
+
+func (data SortUint8) Len() int {
+	return len(data)
+}
+
+func (data SortUint8) Swap(idx1st int, idx2nd int) {
+	data[idx1st], data[idx2nd] = data[idx2nd], data[idx1st]
+}
+
+func (data SortUint8) Less(idx1st int, idx2nd int) bool {
+	return data[idx1st] < data[idx2nd]
 }

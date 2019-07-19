@@ -48,7 +48,7 @@ func CreateVolume(
 
 	// Create a volume definition
 	vlmDfnData := client.VolumeDefinitionCreate{
-		VolumeDefinition: client.VolumeDefinition{VolumeNumber: int32(0), SizeKib: uint64(3000)},
+		VolumeDefinition: client.VolumeDefinition{VolumeNumber: int32(0), SizeKib: vlmSizeKiB},
 	}
 	err = ctrlConn.ResourceDefinitions.CreateVolumeDefinition(
 		clientCtx,
@@ -93,6 +93,21 @@ func CreateVolume(
 	}
 
 	return vlm[0].DevicePath, err
+}
+
+func DeleteVolume(
+	iscsiTargetName string,
+	lun uint8,
+) error {
+	clientCtx := context.Background()
+	logCfg := &client.LogCfg{Level: logrus.TraceLevel.String()}
+	ctrlConn, err := client.NewClient(client.Log(logCfg))
+	if err != nil {
+		return err
+	}
+
+	luName := "lu" + strconv.Itoa(int(lun))
+	return ctrlConn.ResourceDefinitions.Delete(clientCtx, iscsiTargetName+"_"+luName)
 }
 
 type debugFormatter struct {

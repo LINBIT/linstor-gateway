@@ -137,6 +137,58 @@ func CreateCrmLu(
 	return nil
 }
 
+func DeleteCrmLu(
+	iscsiTargetName string,
+	lun uint8,
+) error {
+	luName := CRM_ISCSI_LU_NAME + strconv.Itoa(int(lun))
+
+	crmLu := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_" + luName
+	crmTgt := CRM_ISCSI_RSC_PREFIX + iscsiTargetName
+	crmSvcIp := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_ip"
+
+	cmd, _, err := extcmd.PipeToExtCmd(
+		"cibadmin",
+		[]string{
+			"--delete",
+			"--xpath=/cib/configuration/resources/primitive[@id='" + crmLu + "']",
+		},
+	)
+	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
+	printCmdOutput(stdoutLines, stderrLines)
+	if err != nil {
+		return err
+	}
+
+	cmd, _, err = extcmd.PipeToExtCmd(
+		"cibadmin",
+		[]string{
+			"--delete",
+			"--xpath=/cib/configuration/resources/primitive[@id='" + crmTgt + "']",
+		},
+	)
+	stdoutLines, stderrLines, err = cmd.WaitForExtCmd()
+	printCmdOutput(stdoutLines, stderrLines)
+	if err != nil {
+		return err
+	}
+
+	cmd, _, err = extcmd.PipeToExtCmd(
+		"cibadmin",
+		[]string{
+			"--delete",
+			"--xpath=/cib/configuration/resources/primitive[@id='" + crmSvcIp + "']",
+		},
+	)
+	stdoutLines, stderrLines, err = cmd.WaitForExtCmd()
+	printCmdOutput(stdoutLines, stderrLines)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ReadConfiguration() error {
 	docRoot := xmltree.NewDocument()
 
@@ -306,4 +358,22 @@ func (data SortUint8) Swap(idx1st int, idx2nd int) {
 
 func (data SortUint8) Less(idx1st int, idx2nd int) bool {
 	return data[idx1st] < data[idx2nd]
+}
+
+func printCmdOutput(stdoutLines []string, stderrLines []string) {
+	if len(stdoutLines) > 0 {
+		fmt.Printf("Stdout output:\n")
+		debug.PrintTextArray(stdoutLines)
+	} else {
+		fmt.Printf("No stdout output\n")
+	}
+
+	if len(stderrLines) > 0 {
+		fmt.Printf("Stderr output:\n")
+		debug.PrintTextArray(stderrLines)
+	} else {
+		fmt.Printf("No stderr output\n")
+	}
+
+	fmt.Printf("\n")
 }

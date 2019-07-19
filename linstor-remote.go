@@ -33,6 +33,23 @@ const (
 	ACTION_LIST   = "list"
 )
 
+var CREATE_PARAMS []string = []string{
+	KEY_SVC_IP,
+	KEY_IQN,
+	KEY_LUN,
+	KEY_USERNAME,
+	KEY_PASSWORD,
+	KEY_PORTALS,
+	KEY_TID,
+	KEY_NODES,
+	KEY_SIZE,
+}
+
+var DELETE_PARAMS []string = []string{
+	KEY_IQN,
+	KEY_LUN,
+}
+
 func main() {
 	fmt.Printf("\x1b[1;33m")
 	fmt.Printf("linstor-remote experimental 2019-07-181 17:37")
@@ -68,16 +85,12 @@ func main() {
 }
 
 func actionCreate() error {
+	if explainParams(ACTION_CREATE, CREATE_PARAMS) {
+		return nil
+	}
+
 	argMap := make(map[string]string)
-	argMap[KEY_SVC_IP] = ""
-	argMap[KEY_IQN] = ""
-	argMap[KEY_LUN] = ""
-	argMap[KEY_USERNAME] = ""
-	argMap[KEY_PASSWORD] = ""
-	argMap[KEY_PORTALS] = ""
-	argMap[KEY_TID] = ""
-	argMap[KEY_NODES] = ""
-	argMap[KEY_SIZE] = ""
+	loadParams(CREATE_PARAMS, argMap)
 
 	err := parseArguments(&argMap)
 	if err != nil {
@@ -138,7 +151,32 @@ func actionCreate() error {
 }
 
 func actionDelete() error {
-	return errors.New("actionDelete() is not implemented yet")
+	if explainParams(ACTION_DELETE, DELETE_PARAMS) {
+		return nil
+	}
+
+	argMap := make(map[string]string)
+	loadParams(DELETE_PARAMS, argMap)
+
+	err := parseArguments(&argMap)
+	if err != nil {
+		fmt.Printf("Invalid command line: %s\n", err.Error())
+		os.Exit(EXIT_INV_PRM)
+	}
+
+	lun, err := strconv.ParseUint(argMap[KEY_LUN], 10, 8)
+	if err != nil {
+		fmt.Printf("Argument '%s': Unparseable logical unit number", KEY_LUN)
+		os.Exit(EXIT_INV_PRM)
+	}
+
+	targetName, err := iqnExtractTarget(argMap[KEY_IQN])
+	if err != nil {
+		fmt.Printf("Argument '%s': Invalid IQN format: Missing ':' separator and target name")
+		os.Exit(EXIT_INV_PRM)
+	}
+
+	return crmcontrol.DeleteCrmLu(targetName, uint8(lun))
 }
 
 func actionList() error {
@@ -205,4 +243,22 @@ func iqnExtractTarget(iqn string) (string, error) {
 		err = errors.New("Malformed argument '" + iqn + "'")
 	}
 	return target, err
+}
+
+func loadParams(paramList []string, argMap map[string]string) {
+	for _, key := range paramList {
+		argMap[key] = ""
+	}
+}
+
+func explainParams(action string, paramList []string) bool {
+	explainFlag := len(os.Args) < 3
+	if explainFlag {
+		fmt.Printf("Parameters required for action %s:\n", action)
+		for _, entry := range paramList {
+			fmt.Printf("    %s\n", entry)
+		}
+		fmt.Printf("\n")
+	}
+	return explainFlag
 }

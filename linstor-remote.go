@@ -180,7 +180,8 @@ func actionDelete() error {
 }
 
 func actionList() error {
-	return crmcontrol.ReadConfiguration()
+	_, err := crmcontrol.ReadConfiguration()
+	return err
 }
 
 func parseArguments(argMap *map[string]string) error {

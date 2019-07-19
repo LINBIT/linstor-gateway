@@ -3,7 +3,6 @@ package crmcontrol
 import "fmt"
 import "strings"
 import "strconv"
-import "sort"
 import "errors"
 import "github.com/LINBIT/linstor-remote-storage/templateproc"
 import "github.com/LINBIT/linstor-remote-storage/extcmd"
@@ -40,10 +39,18 @@ const (
 )
 
 const (
-	CRM_ISCSI_RSC_PREFIX = "p_iscsi_"
-	CRM_ISCSI_LU_NAME    = "lu"
-	CRM_ISCSI_PRM_TID    = "tid"
+	CRM_ISCSI_RSC_PREFIX  = "p_iscsi_"
+	CRM_ISCSI_LU_NAME     = "lu"
+	CRM_ISCSI_PRM_TID     = "tid"
+	CRM_TYPE_ISCSI_TARGET = "iSCSITarget"
+	CRM_TYPE_ISCSI_LU     = "iSCSILogicalUnit"
 )
+
+type CrmConfiguration struct {
+	targetList []string
+	luList     []string
+	tidSet     TargetIdSet
+}
 
 func CreateCrmLu(
 	storageNodeList []string,
@@ -189,12 +196,13 @@ func DeleteCrmLu(
 	return nil
 }
 
-func ReadConfiguration() error {
+func ReadConfiguration() (CrmConfiguration, error) {
+	config := CrmConfiguration{tidSet: NewTargetIdSet()}
 	docRoot := xmltree.NewDocument()
 
 	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
 	if err != nil {
-		return err
+		return config, err
 	}
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 	if len(stderrLines) > 0 {
@@ -208,61 +216,72 @@ func ReadConfiguration() error {
 	docData := extcmd.FuseStrings(stdoutLines)
 	err = docRoot.ReadFromString(docData)
 	if err != nil {
-		return err
+		return config, err
 	}
 
 	cib := docRoot.Root()
 	if cib == nil {
-		return errors.New("Failed to find the cluster information base (CIB) root element")
+		return config, errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
 	rscSection := cib.FindElement(CIB_RSC_XPATH)
 	if rscSection == nil {
-		return errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
+		return config, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
 	}
 
 	resources := rscSection.ChildElements()
 	if resources == nil {
-		return errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
+		return config, errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
 	}
 
-	var tidTable = make(map[uint8]interface{})
 	fmt.Printf("\x1b[1;33m")
 	fmt.Printf("Cluster resources:")
 	fmt.Printf("\x1b[0m\n")
 	for _, selectedRsc := range resources {
 		idAttr := selectedRsc.SelectAttr("id")
 		if idAttr != nil {
-			isISCSI := isISCSIEntry(idAttr.Value)
-			isLU := false
-			if isISCSI {
-				isLU = isLogicalUnitEntry(idAttr.Value)
-				fmt.Printf("\x1b[1;32m")
+			crmRscName := idAttr.Value
+			isISCSI := strings.Index(idAttr.Value, CRM_ISCSI_RSC_PREFIX) == 0
+			isTarget := false
+			isLu := false
+			typeAttr := selectedRsc.SelectAttr("type")
+			if typeAttr != nil {
+				isTarget = isTargetEntry(*typeAttr)
+				isLu = isLogicalUnitEntry(*typeAttr)
+			} else {
+				fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mtype\x1b[0m\n")
+			}
+
+			if isTarget {
+				config.targetList = append(config.targetList, crmRscName)
+			}
+			if isLu {
+				config.luList = append(config.luList, crmRscName)
 			}
 			fmt.Printf("%-40s", idAttr.Value)
 			if isISCSI {
 				fmt.Printf(" \x1b[0;32m[iSCSI]")
-				if isLU {
+				if isTarget {
+					fmt.Printf(" \x1b[1;33m[TARGET]")
+				} else if isLu {
 					fmt.Printf(" \x1b[1;34m[LU]")
 				}
-				if isISCSI {
-					fmt.Printf("\x1b[0m")
-				}
-				fmt.Printf("\n")
-
-				tidPrm := selectedRsc.FindElement("instance_attributes/nvpair[@name='tid']")
-				if tidPrm != nil {
-					tidAttr := tidPrm.SelectAttr("value")
-					if tidAttr != nil {
-						tid, err := strconv.ParseUint(tidAttr.Value, 10, 8)
-						if err != nil {
-							fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
-						}
-						tidTable[uint8(tid)] = nil
-					}
-				}
+				fmt.Printf("\x1b[0m")
 			} else {
-				fmt.Printf("\n")
+				fmt.Printf(" \x1b[0;35m[other]\x1b[0m")
+			}
+			fmt.Printf("\n")
+
+			tidEntry := selectedRsc.FindElement("instance_attributes/nvpair[@name='tid']")
+			if tidEntry != nil {
+				tidAttr := tidEntry.SelectAttr("value")
+				if tidAttr != nil {
+					tid, err := strconv.ParseUint(tidAttr.Value, 10, 8)
+					if err != nil {
+						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
+					}
+					config.tidSet.Insert(uint8(tid))
+				}
 			}
 		} else {
 			fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mname\x1b[0m\n")
@@ -270,14 +289,10 @@ func ReadConfiguration() error {
 	}
 	fmt.Printf("\n")
 
-	if len(tidTable) > 0 {
+	if config.tidSet.GetSize() > 0 {
 		fmt.Printf("Allocated TIDs:\n")
-		var tidList []uint8
-		for tid, _ := range tidTable {
-			tidList = append(tidList, tid)
-		}
-		sort.Sort(SortUint8(tidList))
-		for _, tid := range tidList {
+		tidIter := config.tidSet.Iterator()
+		for tid, isValid := tidIter.Next(); isValid; tid, isValid = tidIter.Next() {
 			fmt.Printf("    %d\n", tid)
 		}
 	} else {
@@ -285,7 +300,7 @@ func ReadConfiguration() error {
 	}
 	fmt.Printf("\n")
 
-	return nil
+	return config, nil
 }
 
 func copyMap(srcMap map[string]string) map[string]string {
@@ -316,25 +331,12 @@ func constructNodesTemplate(srcFile string, nodeList []string, tmplVars map[stri
 	return subDataBld.String(), nil
 }
 
-func isISCSIEntry(id string) bool {
-	return strings.Index(id, CRM_ISCSI_RSC_PREFIX) == 0
+func isTargetEntry(typeAttr xmltree.Attr) bool {
+	return typeAttr.Value == CRM_TYPE_ISCSI_TARGET
 }
 
-func isLogicalUnitEntry(id string) bool {
-	result := false
-	nameIdx := strings.LastIndexByte(id, '_')
-	if nameIdx != -1 {
-		name := id[nameIdx+1:]
-		lunIdx := strings.Index(name, CRM_ISCSI_LU_NAME)
-		if lunIdx == 0 {
-			lunStr := name[lunIdx+len(CRM_ISCSI_LU_NAME):]
-			_, err := strconv.ParseUint(lunStr, 10, 8)
-			if err == nil {
-				result = true
-			}
-		}
-	}
-	return result
+func isLogicalUnitEntry(typeAttr xmltree.Attr) bool {
+	return typeAttr.Value == CRM_TYPE_ISCSI_LU
 }
 
 func getRscParams(resource *xmltree.Element) []*xmltree.Element {

@@ -31,6 +31,17 @@ func (tidSet *TargetIdSet) GetSize() int {
 	return tidSet.tidMap.GetSize()
 }
 
+func (tidSet *TargetIdSet) ToSortedArray() []uint8 {
+	tidArray := make([]uint8, tidSet.tidMap.GetSize())
+	idx := 0
+	iter := tidSet.tidMap.Iterator()
+	for tid, _, isValid := iter.Next(); isValid; tid, _, isValid = iter.Next() {
+		tidArray[idx] = tid.(uint8)
+		idx++
+	}
+	return tidArray
+}
+
 func (tidSet *TargetIdSet) Iterator() TargetIdIterator {
 	return TargetIdIterator{tidMapIter: tidSet.tidMap.Iterator()}
 }

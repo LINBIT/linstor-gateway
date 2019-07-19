@@ -300,6 +300,14 @@ func ReadConfiguration() (CrmConfiguration, error) {
 	}
 	fmt.Printf("\n")
 
+	freeTid, haveFreeTid := GetFreeTargetId(config.tidSet.ToSortedArray())
+	if haveFreeTid {
+		fmt.Printf("Next free TID: %d\n", int(freeTid))
+	} else {
+		fmt.Printf("No free TIDs")
+	}
+	fmt.Printf("\n")
+
 	return config, nil
 }
 

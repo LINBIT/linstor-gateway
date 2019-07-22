@@ -47,9 +47,9 @@ const (
 )
 
 type CrmConfiguration struct {
-	targetList []string
-	luList     []string
-	tidSet     TargetIdSet
+	TargetList []string
+	LuList     []string
+	TidSet     TargetIdSet
 }
 
 func CreateCrmLu(
@@ -62,7 +62,7 @@ func CreateCrmLu(
 	username string,
 	password string,
 	portal string,
-	tid string,
+	tid int16,
 ) error {
 	// Load the template for modifying the CIB
 	tmplLines, err := templateproc.LoadTemplate(CRM_TMPL)
@@ -84,7 +84,7 @@ func CreateCrmLu(
 	tmplVars[VAR_USERNAME] = username
 	tmplVars[VAR_PASSWORD] = password
 	tmplVars[VAR_PORTALS] = portal
-	tmplVars[VAR_TID] = tid
+	tmplVars[VAR_TID] = strconv.Itoa(int(tid))
 
 	targetLocData, err := constructNodesTemplate(TGT_LOC_TMPL, storageNodeList, tmplVars)
 	if err != nil {
@@ -197,7 +197,7 @@ func DeleteCrmLu(
 }
 
 func ReadConfiguration() (CrmConfiguration, error) {
-	config := CrmConfiguration{tidSet: NewTargetIdSet()}
+	config := CrmConfiguration{TidSet: NewTargetIdSet()}
 	docRoot := xmltree.NewDocument()
 
 	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
@@ -253,10 +253,10 @@ func ReadConfiguration() (CrmConfiguration, error) {
 			}
 
 			if isTarget {
-				config.targetList = append(config.targetList, crmRscName)
+				config.TargetList = append(config.TargetList, crmRscName)
 			}
 			if isLu {
-				config.luList = append(config.luList, crmRscName)
+				config.LuList = append(config.LuList, crmRscName)
 			}
 			fmt.Printf("%-40s", idAttr.Value)
 			if isISCSI {
@@ -280,7 +280,7 @@ func ReadConfiguration() (CrmConfiguration, error) {
 					if err != nil {
 						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
 					}
-					config.tidSet.Insert(uint8(tid))
+					config.TidSet.Insert(uint8(tid))
 				}
 			}
 		} else {
@@ -289,9 +289,9 @@ func ReadConfiguration() (CrmConfiguration, error) {
 	}
 	fmt.Printf("\n")
 
-	if config.tidSet.GetSize() > 0 {
+	if config.TidSet.GetSize() > 0 {
 		fmt.Printf("Allocated TIDs:\n")
-		tidIter := config.tidSet.Iterator()
+		tidIter := config.TidSet.Iterator()
 		for tid, isValid := tidIter.Next(); isValid; tid, isValid = tidIter.Next() {
 			fmt.Printf("    %d\n", tid)
 		}
@@ -300,7 +300,7 @@ func ReadConfiguration() (CrmConfiguration, error) {
 	}
 	fmt.Printf("\n")
 
-	freeTid, haveFreeTid := GetFreeTargetId(config.tidSet.ToSortedArray())
+	freeTid, haveFreeTid := GetFreeTargetId(config.TidSet.ToSortedArray())
 	if haveFreeTid {
 		fmt.Printf("Next free TID: %d\n", int(freeTid))
 	} else {

@@ -16,7 +16,6 @@ const (
 	KEY_USERNAME = "username"
 	KEY_PASSWORD = "password"
 	KEY_PORTALS  = "portals"
-	KEY_TID      = "tid"
 	KEY_NODES    = "nodes"
 	KEY_SIZE     = "size"
 )
@@ -40,7 +39,6 @@ var CREATE_PARAMS []string = []string{
 	KEY_USERNAME,
 	KEY_PASSWORD,
 	KEY_PORTALS,
-	KEY_TID,
 	KEY_NODES,
 	KEY_SIZE,
 }
@@ -118,6 +116,17 @@ func actionCreate() error {
 		os.Exit(EXIT_INV_PRM)
 	}
 
+	// Read the current configuration from the CRM
+	config, err := crmcontrol.ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
+	if !haveFreeTid {
+		return errors.New("Failed to allocate a target ID for the new iSCSI target")
+	}
+
 	devPath, err := linstorcontrol.CreateVolume(
 		targetName,
 		uint8(lun),
@@ -144,7 +153,7 @@ func actionCreate() error {
 		argMap[KEY_USERNAME],
 		argMap[KEY_PASSWORD],
 		argMap[KEY_PORTALS],
-		argMap[KEY_TID],
+		int16(freeTid),
 	)
 
 	return err

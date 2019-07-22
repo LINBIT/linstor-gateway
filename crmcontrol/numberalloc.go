@@ -1,15 +1,17 @@
 package crmcontrol
 
+import "errors"
+
 const (
 	MAX_LOOPS = 32
 )
 
-// Adapted for a fixed [1, 255] range from LINSTOR com.linbit.NumberAlloc
-func GetFreeTargetId(sortedTidList []uint8) (uint8, bool) {
-	var freeTid uint8
+// Adapted for a fixed [1, 32767] range from LINSTOR com.linbit.NumberAlloc
+func GetFreeTargetId(sortedTidList []int16) (int16, bool) {
+	var freeTid int16
 	haveFreeTid := false
 	tidCount := len(sortedTidList)
-	if tidCount < 255 {
+	if tidCount < 32767 {
 		if tidCount > 0 {
 			startIdx := 0
 			endIdx := tidCount
@@ -17,11 +19,11 @@ func GetFreeTargetId(sortedTidList []uint8) (uint8, bool) {
 			loopGuard := 0
 			for startIdx < endIdx {
 				if loopGuard >= MAX_LOOPS {
-					break
+					panic(errors.New("Implementation error: Loop guard triggered, possible use of unsorted array with GetFreeTargetId()"))
 				}
 				width := endIdx - startIdx
 				midIdx := startIdx + (width >> 1)
-				if sortedTidList[midIdx] == uint8(midIdx+1) {
+				if sortedTidList[midIdx] == int16(midIdx+1) {
 					// No gap in the lower part of the current region
 					// Isolate higher part of the region
 					startIdx = midIdx + 1
@@ -46,6 +48,7 @@ func GetFreeTargetId(sortedTidList []uint8) (uint8, bool) {
 				haveFreeTid = true
 			}
 		} else {
+			freeTid = 1
 			haveFreeTid = true
 		}
 	}

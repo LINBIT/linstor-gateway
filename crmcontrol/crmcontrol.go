@@ -276,11 +276,16 @@ func ReadConfiguration() (CrmConfiguration, error) {
 			if tidEntry != nil {
 				tidAttr := tidEntry.SelectAttr("value")
 				if tidAttr != nil {
-					tid, err := strconv.ParseUint(tidAttr.Value, 10, 8)
+					tid, err := strconv.ParseInt(tidAttr.Value, 10, 16)
 					if err != nil {
 						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
 					}
-					config.TidSet.Insert(uint8(tid))
+					if tid > 0 {
+						config.TidSet.Insert(int16(tid))
+					} else {
+						fmt.Printf("\x1b[1;31mWarning: Invalid tid value %d for resource '%s'\x1b[0m\n", tid, idAttr.Value)
+					}
+
 				}
 			}
 		} else {

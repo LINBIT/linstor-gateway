@@ -46,6 +46,16 @@ const (
 	CRM_TYPE_ISCSI_LU     = "iSCSILogicalUnit"
 )
 
+const (
+	CIB_TAG_LOCATION   = "rsc_location"
+	CIB_TAG_COLOCATION = "rsc_colocation"
+	CIB_TAG_ORDER      = "rsc_order"
+	CIB_TAG_RSC_REF    = "resource_ref"
+	CIB_TAG_LRM_RSC    = "lrm_resource"
+)
+
+const MAX_RECURSION_LEVEL = 40
+
 type CrmConfiguration struct {
 	TargetList   []string
 	LuList       []string
@@ -138,11 +148,7 @@ func CreateCrmLu(
 		fmt.Printf("No stderr output\n")
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func DeleteCrmLu(
@@ -155,46 +161,90 @@ func DeleteCrmLu(
 	crmTgt := CRM_ISCSI_RSC_PREFIX + iscsiTargetName
 	crmSvcIp := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_ip"
 
-	cmd, _, err := extcmd.PipeToExtCmd(
-		"cibadmin",
-		[]string{
-			"--delete",
-			"--xpath=/cib/configuration/resources/primitive[@id='" + crmLu + "']",
-		},
-	)
+	docRoot, err := ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	cib := docRoot.Root()
+	if cib == nil {
+		return errors.New("Failed to find the cluster information base (CIB) root element")
+	}
+
+	delItems := make(map[string]interface{})
+	delItems[crmTgt] = nil
+	delItems[crmLu] = nil
+	delItems[crmSvcIp] = nil
+
+	err = dissolveConstraints(cib, delItems)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Executing dissolveConstraints(...) again\n")
+	err = dissolveConstraints(cib, delItems)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Deleting resources:\n")
+	for elemId, _ := range delItems {
+		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
+		if rscElem != nil {
+			rscElemParent := rscElem.Parent()
+			if rscElemParent != nil {
+				fmt.Printf("Deleting '%s'\n", elemId)
+				rscElemParent.RemoveChildAt(rscElem.Index())
+			} else {
+				return errors.New("Cannot modify CIB, CRM resource '" + elemId + "' has no parent object")
+			}
+		} else {
+			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemId)
+		}
+	}
+
+	cibData, err := docRoot.WriteToString()
+	if err != nil {
+		return err
+	}
+
+	// Call cibadmin and pipe the CIB update data to the cluster resource manager
+	cmd, cmdPipe, err := extcmd.PipeToExtCmd("cibadmin", []string{"--replace", "--xml-pipe"})
+	if err != nil {
+		return err
+	}
+
+	fmt.Print("Updated CIB data:\n")
+	fmt.Print(cibData)
+	fmt.Print("\n\n")
+
+	_, err = cmdPipe.WriteString(cibData)
+	if err != nil {
+		cmd.IoFailed()
+	}
+	cmdPipe.Flush()
+
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
-	printCmdOutput(stdoutLines, stderrLines)
-	if err != nil {
-		return err
+
+	fmt.Printf("CRM command execution successful\n\n")
+
+	if len(stdoutLines) >= 1 {
+		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
+		debug.PrintTextArrayLimited(stdoutLines, 5)
+	} else {
+		fmt.Printf("No stdout output\n")
 	}
 
-	cmd, _, err = extcmd.PipeToExtCmd(
-		"cibadmin",
-		[]string{
-			"--delete",
-			"--xpath=/cib/configuration/resources/primitive[@id='" + crmTgt + "']",
-		},
-	)
-	stdoutLines, stderrLines, err = cmd.WaitForExtCmd()
-	printCmdOutput(stdoutLines, stderrLines)
-	if err != nil {
-		return err
+	if len(stderrLines) >= 1 {
+		fmt.Printf("\x1b[1;33mCRM command stderr output:\x1b[0m\n")
+		fmt.Printf("\x1b[1;31m")
+		debug.PrintTextArray(stderrLines)
+		fmt.Printf("\x1b[0m")
+	} else {
+		fmt.Printf("No stderr output\n")
 	}
 
-	cmd, _, err = extcmd.PipeToExtCmd(
-		"cibadmin",
-		[]string{
-			"--delete",
-			"--xpath=/cib/configuration/resources/primitive[@id='" + crmSvcIp + "']",
-		},
-	)
-	stdoutLines, stderrLines, err = cmd.WaitForExtCmd()
-	printCmdOutput(stdoutLines, stderrLines)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func ParseConfiguration(docRoot *xmltree.Document) (CrmConfiguration, error) {
@@ -363,4 +413,198 @@ func printCmdOutput(stdoutLines []string, stderrLines []string) {
 	}
 
 	fmt.Printf("\n")
+}
+
+func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface{}) error {
+	return dissolveConstraintsImpl(cibElem, delItems, 0)
+}
+
+func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) error {
+	// delIdxSet is allocated on-demand only if it is required
+	var delIdxSet *ElemIdxSet = nil
+
+	childList := cibElem.ChildElements()
+	for _, subElem := range childList {
+		var dependFlag bool = false
+		var err error
+		if subElem.Tag == CIB_TAG_COLOCATION {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				dependFlag, err = isColocationDependency(subElem, delItems)
+				if err != nil {
+					return err
+				}
+				if !dependFlag {
+					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				return maxRecursionError()
+			}
+		} else if subElem.Tag == CIB_TAG_ORDER {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				dependFlag, err = isOrderDependency(subElem, delItems)
+				if err != nil {
+					return err
+				}
+				if !dependFlag {
+					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				return maxRecursionError()
+			}
+		} else if subElem.Tag == CIB_TAG_LOCATION {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				dependFlag = isLocationDependency(subElem, delItems)
+				if !dependFlag {
+					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				return maxRecursionError()
+			}
+		} else if subElem.Tag == CIB_TAG_LRM_RSC {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				dependFlag, err = isLrmDependency(subElem, delItems)
+				if err != nil {
+					return err
+				}
+			} else {
+				return maxRecursionError()
+			}
+		} else {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				err := dissolveConstraintsImpl(subElem, delItems, recursionLevel+1)
+				if err != nil {
+					return err
+				}
+			} else {
+				return maxRecursionError()
+			}
+		}
+		if dependFlag {
+			if delIdxSet == nil {
+				setInstance := NewElemIdxSet()
+				delIdxSet = &setInstance
+			}
+			delIdxSet.Insert(subElem.Index())
+			idAttr := subElem.SelectAttr("id")
+			if idAttr != nil {
+				fmt.Printf("Deleting type %s dependency '%s'\n", subElem.Tag, idAttr.Value)
+			}
+		}
+	}
+	if delIdxSet != nil {
+		delIdxIter := delIdxSet.Iterator()
+		for delIdx, valid := delIdxIter.Next(); valid; delIdx, valid = delIdxIter.Next() {
+			cibElem.RemoveChildAt(delIdx)
+		}
+	}
+
+	return nil
+}
+
+func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) (bool, error) {
+	depFlag := false
+
+	var err error
+	childList := cibElem.ChildElements()
+	for _, subElem := range childList {
+		if subElem.Tag == CIB_TAG_RSC_REF {
+			idAttr := subElem.SelectAttr("id")
+			if idAttr != nil {
+				_, depFlag = delItems[idAttr.Value]
+			} else {
+				return false, errors.New("Unparseable " + subElem.Tag + " tag, cannot find \"id\" attribute")
+			}
+		} else {
+			if recursionLevel < MAX_RECURSION_LEVEL {
+				depFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
+				if err != nil {
+					return false, err
+				}
+			} else {
+				return false, maxRecursionError()
+			}
+		}
+		if depFlag {
+			break
+		}
+	}
+
+	return depFlag, nil
+}
+
+func isLocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) bool {
+	depFlag := false
+
+	rscAttr := cibElem.SelectAttr("rsc")
+	if rscAttr != nil {
+		_, depFlag = delItems[rscAttr.Value]
+	}
+
+	return depFlag
+}
+
+func isOrderDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
+	depFlag := false
+
+	firstAttr := cibElem.SelectAttr("first")
+	thenAttr := cibElem.SelectAttr("then")
+	if firstAttr == nil {
+		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"first\" attribute")
+	}
+	if thenAttr == nil {
+		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"then\" attribute")
+	}
+
+	_, depFlag = delItems[firstAttr.Value]
+	if !depFlag {
+		_, depFlag = delItems[thenAttr.Value]
+	}
+
+	return depFlag, nil
+}
+
+func isColocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
+	depFlag := false
+
+	rscAttr := cibElem.SelectAttr("rsc")
+	withRscAttr := cibElem.SelectAttr("with-rsc")
+	if rscAttr == nil {
+		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"rsc\" attribute")
+	}
+	if withRscAttr == nil {
+		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"with-rsc\" attribute")
+	}
+
+	_, depFlag = delItems[rscAttr.Value]
+	if !depFlag {
+		_, depFlag = delItems[withRscAttr.Value]
+	}
+
+	return depFlag, nil
+}
+
+func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
+	depFlag := false
+
+	idAttr := cibElem.SelectAttr("id")
+	if idAttr == nil {
+		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"id\" attribute")
+	}
+
+	_, depFlag = delItems[idAttr.Value]
+
+	return depFlag, nil
+}
+
+func maxRecursionError() error {
+	return errors.New("Exceeding maximum recursion level, operation aborted")
 }

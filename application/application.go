@@ -140,20 +140,23 @@ func ActionDelete() (int, error) {
 		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
 	}
 
-	lun, err := strconv.ParseUint(argMap[KEY_LUN], 10, 8)
+	numericLun, err := strconv.ParseUint(argMap[KEY_LUN], 10, 8)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Argument '" + KEY_LUN + "': Unparseable logical unit number")
 	}
+	lun := uint8(numericLun)
 
 	targetName, err := iqnExtractTarget(argMap[KEY_IQN])
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Argument '" + KEY_IQN + "': Invalid IQN format: Missing ':' separator and target name")
 	}
 
-	err = crmcontrol.DeleteCrmLu(targetName, uint8(lun))
+	err = crmcontrol.DeleteCrmLu(targetName, lun)
 	if err != nil {
 		return EXIT_FAILED_ACTION, err
 	}
+
+	err = linstorcontrol.DeleteVolume(targetName, lun)
 
 	return EXIT_SUCCESS, nil
 }

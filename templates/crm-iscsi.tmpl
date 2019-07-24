@@ -14,7 +14,6 @@
 
       <primitive id="p_iscsi_${CRM_TARGET_NAME}" class="ocf" provider="heartbeat" type="iSCSITarget">
         <instance_attributes id="p_iscsi_${CRM_TARGET_NAME}-instance_attributes">
-          <nvpair name="implementation" value="tgt" id="p_iscsi_${CRM_TARGET_NAME}-instance_attributes-implementation"/>
           <nvpair name="iqn" value="${TARGET_IQN}" id="p_iscsi_${CRM_TARGET_NAME}-instance_attributes-iqn"/>
           <nvpair name="incoming_username" value="${USERNAME}" id="p_iscsi_${CRM_TARGET_NAME}-instance_attributes-incoming_username"/>
           <nvpair name="incoming_password" value="${PASSWORD}" id="p_iscsi_${CRM_TARGET_NAME}-instance_attributes-incoming_password"/>
@@ -33,7 +32,6 @@
 
       <primitive id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}" class="ocf" provider="heartbeat" type="iSCSILogicalUnit">
         <instance_attributes id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}-instance_attributes">
-          <nvpair name="implementation" value="tgt" id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}-instance_attributes-implementation"/>
           <nvpair name="lun" value="${LUN}" id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}-instance_attributes-lun"/>
           <nvpair name="target_iqn" value="${TARGET_IQN}" id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}-instance_attributes-target_iqn"/>
           <nvpair name="path" value="${DEVICE}" id="p_iscsi_${CRM_TARGET_NAME}_${CRM_LU_NAME}-instance_attributes-path"/>

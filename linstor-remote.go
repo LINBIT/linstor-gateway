@@ -7,7 +7,7 @@ import application "github.com/LINBIT/linstor-remote-storage/application"
 
 func main() {
 	fmt.Printf("\x1b[1;33m")
-	fmt.Printf("linstor-remote experimental 2019-07-181 17:37")
+	fmt.Printf("linstor-remote experimental v0.1")
 	fmt.Printf("\x1b[0m\n")
 
 	argsCount := len(os.Args)

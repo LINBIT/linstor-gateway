@@ -47,9 +47,10 @@ const (
 )
 
 type CrmConfiguration struct {
-	TargetList []string
-	LuList     []string
-	TidSet     TargetIdSet
+	TargetList   []string
+	LuList       []string
+	OtherRscList []string
+	TidSet       TargetIdSet
 }
 
 func CreateCrmLu(
@@ -196,27 +197,10 @@ func DeleteCrmLu(
 	return nil
 }
 
-func ReadConfiguration() (CrmConfiguration, error) {
+func ParseConfiguration(docRoot *xmltree.Document) (CrmConfiguration, error) {
 	config := CrmConfiguration{TidSet: NewTargetIdSet()}
-	docRoot := xmltree.NewDocument()
-
-	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
-	if err != nil {
-		return config, err
-	}
-	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
-	if len(stderrLines) > 0 {
-		fmt.Printf("\x1b[1;33m")
-		fmt.Printf("External command error output:")
-		fmt.Printf("\x1b[0m\n")
-		debug.PrintTextArray(stderrLines)
-		fmt.Printf("\n")
-	}
-
-	docData := extcmd.FuseStrings(stdoutLines)
-	err = docRoot.ReadFromString(docData)
-	if err != nil {
-		return config, err
+	if docRoot == nil {
+		return config, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
 
 	cib := docRoot.Root()
@@ -234,14 +218,10 @@ func ReadConfiguration() (CrmConfiguration, error) {
 		return config, errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
 	}
 
-	fmt.Printf("\x1b[1;33m")
-	fmt.Printf("Cluster resources:")
-	fmt.Printf("\x1b[0m\n")
 	for _, selectedRsc := range resources {
 		idAttr := selectedRsc.SelectAttr("id")
 		if idAttr != nil {
 			crmRscName := idAttr.Value
-			isISCSI := strings.Index(idAttr.Value, CRM_ISCSI_RSC_PREFIX) == 0
 			isTarget := false
 			isLu := false
 			typeAttr := selectedRsc.SelectAttr("type")
@@ -254,23 +234,11 @@ func ReadConfiguration() (CrmConfiguration, error) {
 
 			if isTarget {
 				config.TargetList = append(config.TargetList, crmRscName)
-			}
-			if isLu {
+			} else if isLu {
 				config.LuList = append(config.LuList, crmRscName)
-			}
-			fmt.Printf("%-40s", idAttr.Value)
-			if isISCSI {
-				fmt.Printf(" \x1b[0;32m[iSCSI]")
-				if isTarget {
-					fmt.Printf(" \x1b[1;33m[TARGET]")
-				} else if isLu {
-					fmt.Printf(" \x1b[1;34m[LU]")
-				}
-				fmt.Printf("\x1b[0m")
 			} else {
-				fmt.Printf(" \x1b[0;35m[other]\x1b[0m")
+				config.OtherRscList = append(config.OtherRscList, crmRscName)
 			}
-			fmt.Printf("\n")
 
 			tidEntry := selectedRsc.FindElement("instance_attributes/nvpair[@name='tid']")
 			if tidEntry != nil {
@@ -292,28 +260,32 @@ func ReadConfiguration() (CrmConfiguration, error) {
 			fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mname\x1b[0m\n")
 		}
 	}
-	fmt.Printf("\n")
-
-	if config.TidSet.GetSize() > 0 {
-		fmt.Printf("Allocated TIDs:\n")
-		tidIter := config.TidSet.Iterator()
-		for tid, isValid := tidIter.Next(); isValid; tid, isValid = tidIter.Next() {
-			fmt.Printf("    %d\n", tid)
-		}
-	} else {
-		fmt.Printf("No TIDs allocated")
-	}
-	fmt.Printf("\n")
-
-	freeTid, haveFreeTid := GetFreeTargetId(config.TidSet.ToSortedArray())
-	if haveFreeTid {
-		fmt.Printf("Next free TID: %d\n", int(freeTid))
-	} else {
-		fmt.Printf("No free TIDs")
-	}
-	fmt.Printf("\n")
 
 	return config, nil
+}
+
+func ReadConfiguration() (*xmltree.Document, error) {
+	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
+	if err != nil {
+		return nil, err
+	}
+	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
+	if len(stderrLines) > 0 {
+		fmt.Printf("\x1b[1;33m")
+		fmt.Printf("External command error output:")
+		fmt.Printf("\x1b[0m\n")
+		debug.PrintTextArray(stderrLines)
+		fmt.Printf("\n")
+	}
+
+	docData := extcmd.FuseStrings(stdoutLines)
+	docRoot := xmltree.NewDocument()
+	err = docRoot.ReadFromString(docData)
+	if err != nil {
+		return nil, err
+	}
+
+	return docRoot, nil
 }
 
 func copyMap(srcMap map[string]string) map[string]string {

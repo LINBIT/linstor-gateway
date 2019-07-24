@@ -79,7 +79,11 @@ func ActionCreate() (int, error) {
 	}
 
 	// Read the current configuration from the CRM
-	config, err := crmcontrol.ReadConfiguration()
+	docRoot, err := crmcontrol.ReadConfiguration()
+	if err != nil {
+		return EXIT_FAILED_ACTION, err
+	}
+	config, err := crmcontrol.ParseConfiguration(docRoot)
 	if err != nil {
 		return EXIT_FAILED_ACTION, err
 	}
@@ -155,10 +159,68 @@ func ActionDelete() (int, error) {
 }
 
 func ActionList() (int, error) {
-	_, err := crmcontrol.ReadConfiguration()
+	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
 		return EXIT_FAILED_ACTION, err
 	}
+
+	config, err := crmcontrol.ParseConfiguration(docRoot)
+	if err != nil {
+		return EXIT_FAILED_ACTION, err
+	}
+
+	fmt.Printf("\x1b[1;33m")
+	fmt.Printf("Cluster resources:")
+	fmt.Printf("\x1b[0m\n")
+	fmt.Printf("    \x1b[1;32miSCSI resources:\x1b[0m\n")
+
+	fmt.Printf("        \x1b[1;32miSCSI targets:\x1b[0m\n")
+	if len(config.TargetList) > 0 {
+		for _, rscName := range config.TargetList {
+			fmt.Printf("            %s\n", rscName)
+		}
+	} else {
+		fmt.Printf("            No resources\n")
+	}
+
+	fmt.Printf("        \x1b[1;32miSCSI logical units:\x1b[0m\n")
+	if len(config.LuList) > 0 {
+		for _, rscName := range config.LuList {
+			fmt.Printf("            %s\n", rscName)
+		}
+	} else {
+		fmt.Printf("            No resources\n")
+	}
+
+	fmt.Printf("    \x1b[1;32mOther cluster resources:\x1b[0m\n")
+	if len(config.OtherRscList) > 0 {
+		for _, rscName := range config.OtherRscList {
+			fmt.Printf("        %s\n", rscName)
+		}
+	} else {
+		fmt.Printf("        No resources\n")
+	}
+
+	fmt.Printf("\n")
+
+	if config.TidSet.GetSize() > 0 {
+		fmt.Printf("\x1b[1;32mAllocated TIDs:\x1b[0m\n")
+		tidIter := config.TidSet.Iterator()
+		for tid, isValid := tidIter.Next(); isValid; tid, isValid = tidIter.Next() {
+			fmt.Printf("    %d\n", tid)
+		}
+	} else {
+		fmt.Printf("\x1b[1;32mNo TIDs allocated\x1b[0m\n")
+	}
+	fmt.Printf("\n")
+
+	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
+	if haveFreeTid {
+		fmt.Printf("\x1b[1;32mNext free TID:\x1b[0m\n    %d\n", int(freeTid))
+	} else {
+		fmt.Printf("\x1b[1;31mNo free TIDs\x1b[0m\n")
+	}
+	fmt.Printf("\n")
 
 	return EXIT_SUCCESS, nil
 }

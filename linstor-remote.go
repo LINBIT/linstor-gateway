@@ -10,13 +10,6 @@ func main() {
 	fmt.Printf("linstor-remote experimental v0.1")
 	fmt.Printf("\x1b[0m\n")
 
-	argsCount := len(os.Args)
-	fmt.Printf("%d arguments:\n", argsCount)
-	for idx, arg := range os.Args {
-		fmt.Printf("    [%3d] %s\n", idx, arg)
-	}
-	fmt.Printf("\n")
-
 	var exit_code int = application.EXIT_INV_PRM
 	var err error = nil
 	argCount := len(os.Args)
@@ -36,8 +29,7 @@ func main() {
 	}
 
 	if err != nil {
-		fmt.Printf("Operation failed, error: %s\n", err.Error())
-		os.Exit(application.EXIT_FAILED_ACTION)
+		fmt.Printf("%sOperation failed!%s Error: %s\n", application.COLOR_RED, application.COLOR_RESET, err.Error())
 	}
 
 	os.Exit(exit_code)

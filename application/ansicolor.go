@@ -1,3 +1,4 @@
+// ANSI escape codes for terminal colors
 package application
 
 import "fmt"
@@ -22,10 +23,12 @@ const (
 	COLOR_RESET      = "\x1B[0m"
 )
 
+// Set the terminal foreground color
 func color(clrFmt string) {
 	fmt.Print(clrFmt)
 }
 
+// Reset the terminal foreground color (and actually various other ANSI terminal modes too)
 func defaultColor() {
 	fmt.Print(COLOR_RESET)
 }

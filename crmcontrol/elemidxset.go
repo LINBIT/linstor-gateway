@@ -1,5 +1,10 @@
 package crmcontrol
 
+// elemidxset module
+//
+// Ordered set of element indexes
+// Used to perform XML modification in a specific order
+
 import dsaext "github.com/raltnoeder/godsaext"
 
 type ElemIdxSet struct {

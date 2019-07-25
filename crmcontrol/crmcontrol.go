@@ -1,4 +1,20 @@
+// CRM (Pacemaker) API
 package crmcontrol
+
+// crmcontrol module
+//
+// The functions in this module are called by the high-level API in package application
+// (module application.go) to perform operations in the CRM subsystem, such as
+// creating the primitives and constraints that configure iSCSI targets, logical units
+// and the associated service IP addresses.
+// The 'cibadmin' utility is used to modify the cluster's CIB (cluster information base).
+// The CIB is modified by
+//   - sending XML entries, created from templates, to create new primitives & constraints,
+//     much like a macro processor
+//   - reading and parsing the current CIB XML, and modifying the contents
+//     (e.g. removing tags and their nested tags) to delete existing entries from
+//     the cluster configuration.
+// The 'etree' package is used for XML parsing and modification.
 
 import "fmt"
 import "strings"
@@ -9,12 +25,14 @@ import "github.com/LINBIT/linstor-remote-storage/extcmd"
 import "github.com/LINBIT/linstor-remote-storage/debug"
 import xmltree "github.com/beevik/etree"
 
+// Template file names
 const (
 	CRM_TMPL     = "templates/crm-iscsi.tmpl"
 	TGT_LOC_TMPL = "templates/target-location-nodes.tmpl"
 	LU_LOC_TMPL  = "templates/lu-location-nodes.tmpl"
 )
 
+// Template variable keys
 const (
 	VAR_NODE_NAME     = "CRM_NODE_NAME"
 	VAR_NR            = "NR"
@@ -32,12 +50,15 @@ const (
 	VAR_LU_LOC_NODES  = "LU_LOCATION_NODES"
 )
 
+// Pacemaker CIB XML resource XPaths and resource sub tag names
+// FIXME: the resource sub tag names should probably go into the CIB_TAG_... section
 const (
 	CIB_RSC_XPATH    = "/cib/configuration/resources"
 	CIB_RSC_ATTR     = "instance_attributes"
 	CIB_RSC_ATTR_KEY = "nvpair"
 )
 
+// Pacemaker CRM resource names, prefixes, suffixes, search patterns, etc.
 const (
 	CRM_ISCSI_RSC_PREFIX  = "p_iscsi_"
 	CRM_ISCSI_LU_NAME     = "lu"
@@ -46,6 +67,7 @@ const (
 	CRM_TYPE_ISCSI_LU     = "iSCSILogicalUnit"
 )
 
+// Pacemaker CIB XML tag names
 const (
 	CIB_TAG_LOCATION   = "rsc_location"
 	CIB_TAG_COLOCATION = "rsc_colocation"
@@ -54,8 +76,11 @@ const (
 	CIB_TAG_LRM_RSC    = "lrm_resource"
 )
 
+// Maximum recursion level, currently used to limit recursion during recursive
+// searches of the XML document tree
 const MAX_RECURSION_LEVEL = 40
 
+// Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	TargetList   []string
 	LuList       []string
@@ -63,6 +88,11 @@ type CrmConfiguration struct {
 	TidSet       TargetIdSet
 }
 
+// Creates the CRM resources
+//
+// The resources created depend on the contents of the template for resource creation.
+// Typically, it's an iSCSI target, logical unit and service IP address, along
+// with constraints that bundle them and place them on the selected nodes
 func CreateCrmLu(
 	storageNodeList []string,
 	iscsiTargetName string,
@@ -97,21 +127,22 @@ func CreateCrmLu(
 	tmplVars[VAR_PORTALS] = portal
 	tmplVars[VAR_TID] = strconv.Itoa(int(tid))
 
+	// Create sub XML content, one entry per node, from the iSCSI target location constraint template
 	targetLocData, err := constructNodesTemplate(TGT_LOC_TMPL, storageNodeList, tmplVars)
 	if err != nil {
 		return err
 	}
+	// Create sub XML content, one entry per node, from the iSCSI logical unit location constraint template
 	luLocData, err := constructNodesTemplate(LU_LOC_TMPL, storageNodeList, tmplVars)
 	if err != nil {
 		return err
 	}
+	// Load the sub XML content into variables
 	tmplVars[VAR_TGT_LOC_NODES] = targetLocData
 	tmplVars[VAR_LU_LOC_NODES] = luLocData
 
+	// Replace resource creation template variables
 	cibData := templateproc.ReplaceVariables(tmplLines, tmplVars)
-
-	// debug.PrintfLnCaption("CIB update input:")
-	// debug.PrintTextArray(cibData)
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
 	cmd, cmdPipe, err := extcmd.PipeToExtCmd("cibadmin", []string{"--modify", "--allow-create", "--xml-pipe"})
@@ -151,6 +182,12 @@ func CreateCrmLu(
 	return err
 }
 
+// Deletes the CRM resources
+//
+// TODO:
+// The names of the objects to delete are currently hard coded, they should probably
+// be loaded from a file, because the actual objects created depend on templates that
+// are also stored in files.
 func DeleteCrmLu(
 	iscsiTargetName string,
 	lun uint8,
@@ -161,6 +198,7 @@ func DeleteCrmLu(
 	crmTgt := CRM_ISCSI_RSC_PREFIX + iscsiTargetName
 	crmSvcIp := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_ip"
 
+	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
 		return err
@@ -176,24 +214,19 @@ func DeleteCrmLu(
 	delItems[crmLu] = nil
 	delItems[crmSvcIp] = nil
 
+	// Process the CIB XML document tree, removing constraints that refer to any of the objects
+	// that will be deleted
 	err = dissolveConstraints(cib, delItems)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Executing dissolveConstraints(...) again\n")
-	err = dissolveConstraints(cib, delItems)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Deleting resources:\n")
+	// Process the CIB XML document tree, removing the specified CRM resources
 	for elemId, _ := range delItems {
 		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
 			if rscElemParent != nil {
-				fmt.Printf("Deleting '%s'\n", elemId)
 				rscElemParent.RemoveChildAt(rscElem.Index())
 			} else {
 				return errors.New("Cannot modify CIB, CRM resource '" + elemId + "' has no parent object")
@@ -203,6 +236,7 @@ func DeleteCrmLu(
 		}
 	}
 
+	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
 	cibData, err := docRoot.WriteToString()
 	if err != nil {
 		return err
@@ -247,6 +281,10 @@ func DeleteCrmLu(
 	return err
 }
 
+// Parses the CIB XML document and returns information about existing resources
+//
+// Information about existing CRM resources is parsed from the CIB XML document and
+// stored in a newly allocated CrmConfiguration data structure
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config := CrmConfiguration{TidSet: NewTargetIdSet()}
 	if docRoot == nil {
@@ -314,6 +352,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	return &config, nil
 }
 
+// Reads the CIB XML document into a string
 func ReadConfiguration() (*xmltree.Document, error) {
 	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
 	if err != nil {
@@ -338,6 +377,7 @@ func ReadConfiguration() (*xmltree.Document, error) {
 	return docRoot, nil
 }
 
+// Creates and returns a copy of a map[string]string
 func copyMap(srcMap map[string]string) map[string]string {
 	resultMap := make(map[string]string, len(srcMap))
 	for key, value := range srcMap {
@@ -346,6 +386,11 @@ func copyMap(srcMap map[string]string) map[string]string {
 	return resultMap
 }
 
+// Constructs a sub template for each node entry
+//
+// For each node entry, a template is loaded and variable replacement is performed, with one of the variables
+// containing the node name for the current iteration. The templates are concatenated.
+// The resulting XML content is a sub template for insertion into another XML template.
 func constructNodesTemplate(srcFile string, nodeList []string, tmplVars map[string]string) (string, error) {
 	subTmplLines, err := templateproc.LoadTemplate(srcFile)
 	if err != nil {
@@ -366,14 +411,17 @@ func constructNodesTemplate(srcFile string, nodeList []string, tmplVars map[stri
 	return subDataBld.String(), nil
 }
 
+// Identifies CRM iSCSI target resources by checking the resource agent name
 func isTargetEntry(typeAttr xmltree.Attr) bool {
 	return typeAttr.Value == CRM_TYPE_ISCSI_TARGET
 }
 
+// Identifies CRM iSCSI logical unit resources by checking the resource agent name
 func isLogicalUnitEntry(typeAttr xmltree.Attr) bool {
 	return typeAttr.Value == CRM_TYPE_ISCSI_LU
 }
 
+// Returns resource attributes, if present, otherwise nil
 func getRscParams(resource *xmltree.Element) []*xmltree.Element {
 	var attrList []*xmltree.Element
 	instAttr := resource.FindElement(CIB_RSC_ATTR)
@@ -383,20 +431,8 @@ func getRscParams(resource *xmltree.Element) []*xmltree.Element {
 	return attrList
 }
 
-type SortUint8 []uint8
-
-func (data SortUint8) Len() int {
-	return len(data)
-}
-
-func (data SortUint8) Swap(idx1st int, idx2nd int) {
-	data[idx1st], data[idx2nd] = data[idx2nd], data[idx1st]
-}
-
-func (data SortUint8) Less(idx1st int, idx2nd int) bool {
-	return data[idx1st] < data[idx2nd]
-}
-
+// Prints collected stdout/stderr output of an external command, or indicates
+// that the external command did not produce such output
 func printCmdOutput(stdoutLines []string, stderrLines []string) {
 	if len(stdoutLines) > 0 {
 		fmt.Printf("Stdout output:\n")
@@ -415,10 +451,12 @@ func printCmdOutput(stdoutLines []string, stderrLines []string) {
 	fmt.Printf("\n")
 }
 
+// Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree
 func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface{}) error {
 	return dissolveConstraintsImpl(cibElem, delItems, 0)
 }
 
+// See dissolveConstraints(...)
 func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) error {
 	// delIdxSet is allocated on-demand only if it is required
 	var delIdxSet *ElemIdxSet = nil
@@ -500,6 +538,9 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 			}
 		}
 	}
+	// Elements are deleted in order of descending index, so that the index of elements
+	// deleted later does not change due to reordering elements that had a greater index
+	// than an element thas was deleted from the slice/array.
 	if delIdxSet != nil {
 		delIdxIter := delIdxSet.Iterator()
 		for delIdx, valid := delIdxIter.Next(); valid; delIdx, valid = delIdxIter.Next() {
@@ -510,6 +551,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 	return nil
 }
 
+// Indicates whether an element has sub elements that are resource reference tags that refer to any of the specified delItems names
 func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) (bool, error) {
 	depFlag := false
 
@@ -541,6 +583,7 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 	return depFlag, nil
 }
 
+// Indicates whether the element is a CRM location constraint that refers to any of the specified delItems names
 func isLocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) bool {
 	depFlag := false
 
@@ -552,6 +595,7 @@ func isLocationDependency(cibElem *xmltree.Element, delItems map[string]interfac
 	return depFlag
 }
 
+// Indicates whether the element is a CRM order constraint that refers to any of the specified delItems names
 func isOrderDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
 	depFlag := false
 
@@ -572,6 +616,7 @@ func isOrderDependency(cibElem *xmltree.Element, delItems map[string]interface{}
 	return depFlag, nil
 }
 
+// Indicates whether the element is a CRM colocation constraint that refers to any of the specified delItems names
 func isColocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
 	depFlag := false
 
@@ -592,6 +637,7 @@ func isColocationDependency(cibElem *xmltree.Element, delItems map[string]interf
 	return depFlag, nil
 }
 
+// Indicates whether the element is an LRM entry that refers to any of the specified delItems names
 func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
 	depFlag := false
 
@@ -605,6 +651,7 @@ func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) 
 	return depFlag, nil
 }
 
+// Generates an error indicating that an operation was aborted because it reached the maximum recursion level
 func maxRecursionError() error {
 	return errors.New("Exceeding maximum recursion level, operation aborted")
 }

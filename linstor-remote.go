@@ -1,3 +1,4 @@
+// LINSTOR - iSCSI administration utility
 package main
 
 import "os"

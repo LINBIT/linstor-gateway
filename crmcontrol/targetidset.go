@@ -1,5 +1,9 @@
 package crmcontrol
 
+// targetidset module
+//
+// Ordered set of iSCSI target IDs
+
 import dsaext "github.com/raltnoeder/godsaext"
 
 type TargetIdSet struct {

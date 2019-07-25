@@ -1,4 +1,9 @@
+// Command line interface (CLI) functionality
 package application
+
+// cli module
+//
+// This module implements CLI functionality, such as argument parsing, list display, usage help, etc.
 
 import "os"
 import "fmt"
@@ -7,12 +12,14 @@ import "strconv"
 import "errors"
 import "github.com/LINBIT/linstor-remote-storage/crmcontrol"
 
+// Application action command line parameters
 const (
 	ACTION_CREATE = "create"
 	ACTION_DELETE = "delete"
 	ACTION_LIST   = "list"
 )
 
+// Command line parameter keys for key=value parameters
 const (
 	KEY_TARGET   = "target"
 	KEY_SVC_IP   = "ip"
@@ -25,6 +32,7 @@ const (
 	KEY_SIZE     = "size"
 )
 
+// Required command line parameters for resource creation
 var CREATE_PARAMS []string = []string{
 	KEY_SVC_IP,
 	KEY_IQN,
@@ -36,11 +44,14 @@ var CREATE_PARAMS []string = []string{
 	KEY_SIZE,
 }
 
+// Required command line parameters for resource deletion
 var DELETE_PARAMS []string = []string{
 	KEY_IQN,
 	KEY_LUN,
 }
 
+// Parses the required arguments for resource creation from the command line,
+// then calls the application.CreateResource(...) high-level API
 func CliCreateResource() (int, error) {
 	if explainParams(ACTION_CREATE, CREATE_PARAMS) {
 		return EXIT_SUCCESS, nil
@@ -80,6 +91,8 @@ func CliCreateResource() (int, error) {
 	)
 }
 
+// Parses the required arguments for resource deletion from the command line,
+// then calls the application.DeleteResource(...) high-level API
 func CliDeleteResource() (int, error) {
 	if explainParams(ACTION_DELETE, DELETE_PARAMS) {
 		return EXIT_SUCCESS, nil
@@ -101,6 +114,7 @@ func CliDeleteResource() (int, error) {
 	return DeleteResource(argMap[KEY_IQN], lun)
 }
 
+// Lists existing CRM resources, output goes to stdout
 func CliListResources() (int, error) {
 	_, config, exit_code, err := ListResources()
 	if err != nil {
@@ -189,6 +203,7 @@ func CliListResources() (int, error) {
 	return EXIT_SUCCESS, nil
 }
 
+// Prints text with an indent, 4 spaces per indent level
 func IndentPrint(indent int, text string) {
 	for ctr := 0; ctr < indent; ctr++ {
 		fmt.Print("    ")
@@ -196,6 +211,7 @@ func IndentPrint(indent int, text string) {
 	fmt.Print(text)
 }
 
+// Prints a formatted text with an indent, 4 spaces per indent level
 func IndentPrintf(indent int, format string, arguments ...interface{}) {
 	for ctr := 0; ctr < indent; ctr++ {
 		fmt.Print("    ")
@@ -203,6 +219,15 @@ func IndentPrintf(indent int, format string, arguments ...interface{}) {
 	fmt.Printf(format, arguments...)
 }
 
+// Parses all arguments that have a key in the supplied argMap
+//
+// Errors are generated for missing arguments, duplicate arguments,
+// argument keys that do not have a corresponding key in the supplied
+// argMap, and argument keys without values.
+// An empty string is an allowed value.
+//
+// The parsed argument values are stored as value entries with their
+// respective keys in the supplied argMap.
 func parseArguments(argMap *map[string]string) error {
 	collectedArgs := make(map[string]*string)
 	for key, _ := range *argMap {
@@ -239,6 +264,13 @@ func parseArguments(argMap *map[string]string) error {
 	return nil
 }
 
+// Parses a logical unit number (LUN)
+//
+// A LUN, as parsed in this function, must be in the range [0, 255].
+//
+// Note that 0 is not a valid LUN for a volume (it is reserved for the SCSI controller),
+// therefore, other parts of the application should check the validity of the LUN for
+// the respective purpose.
 func parseLun(lunStr string) (uint8, error) {
 	lunNum, err := strconv.ParseUint(lunStr, 10, 8)
 	if err != nil {
@@ -247,6 +279,7 @@ func parseLun(lunStr string) (uint8, error) {
 	return uint8(lunNum), nil
 }
 
+// Splits key=value arguments
 func splitArg(arg string) (*string, *string, error) {
 	var key string
 	var value string
@@ -261,12 +294,15 @@ func splitArg(arg string) (*string, *string, error) {
 	return &key, &value, err
 }
 
+// Loads an array of strings into the supplied map as key entries
 func loadParams(paramList []string, argMap map[string]string) {
 	for _, key := range paramList {
 		argMap[key] = ""
 	}
 }
 
+// Prints a simple usage description to stdout, indicating the application
+// action to perform and the parameters required for it
 func explainParams(action string, paramList []string) bool {
 	explainFlag := len(os.Args) < 3
 	if explainFlag {

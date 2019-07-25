@@ -1,11 +1,19 @@
 package crmcontrol
 
+// numberalloc module
+//
+// Automatic allocation of free numbers from a pool
+// Currently implemented for iSCSI target IDs, which are required by some backends
+
 import "errors"
 
 const (
 	MAX_LOOPS = 32
 )
 
+// Finds the lowest-value free (unallocated) target ID in a [1, 32767] range by
+// searching through a sorted list of allocated target IDs
+//
 // Adapted for a fixed [1, 32767] range from LINSTOR com.linbit.NumberAlloc
 func GetFreeTargetId(sortedTidList []int16) (int16, bool) {
 	var freeTid int16

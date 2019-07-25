@@ -1,4 +1,12 @@
+// LINSTOR API - creating/deleting LINSTOR resources/volumes
 package linstorcontrol
+
+// linstorcontrol module
+//
+// The functions in this module are called by the high-level API in package application
+// (module application.go) to perform operations in the LINSTOR subsystem, such
+// as creating and deleting resources/volumes. The golinstor driver is used
+// for communication with the LINSTOR Controller.
 
 import (
 	"context"
@@ -15,6 +23,7 @@ const (
 	DEBUG_LINSTOR_CONTROLLERS = "10.43.9.28:3370"
 )
 
+// Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
 func CreateVolume(
 	iscsiTargetName string,
 	lun uint8,
@@ -95,6 +104,7 @@ func CreateVolume(
 	return vlm[0].DevicePath, err
 }
 
+// Deletes the LINSTOR resource definition
 func DeleteVolume(
 	iscsiTargetName string,
 	lun uint8,
@@ -114,6 +124,7 @@ type debugFormatter struct {
 	logrus.Formatter
 }
 
+// Implements the logrus.Formatter interface; provisional implementation; used for golinstor
 func (formatter *debugFormatter) format(logEntry *logrus.Entry) ([]byte, error) {
 	var output []byte = make([]byte, 0)
 	output = append(output, (*logEntry).Message...)

@@ -1,4 +1,10 @@
+// External command handling
 package extcmd
+
+// extcmd module
+//
+// This module manages piping input to external commands and piping
+// stdout and stderr output back to this application.
 
 import "strings"
 import "os/exec"
@@ -18,6 +24,7 @@ type ExtCmdHandle struct {
 	failedIo    bool
 }
 
+// Starts an external command and sets up anonymous pipes to/from that external command
 func PipeToExtCmd(executable string, arguments []string) (*ExtCmdHandle, *bufio.Writer, error) {
 	cmdObj := exec.Command(executable, arguments...)
 	var handle *ExtCmdHandle = &ExtCmdHandle{cmdObj, nil, nil, nil, make([]string, 0), make([]string, 0), sync.WaitGroup{}, false}
@@ -38,10 +45,12 @@ func PipeToExtCmd(executable string, arguments []string) (*ExtCmdHandle, *bufio.
 	return handle, bufStdinPipe, nil
 }
 
+// Causes an error object indicating an I/O error to be returned upon completion of WaitForExtCmd()
 func (handle *ExtCmdHandle) IoFailed() {
 	handle.failedIo = true
 }
 
+// Waits for the external command to exit and returns collected stdout/stderr output from the external command
 func (handle *ExtCmdHandle) WaitForExtCmd() ([]string, []string, error) {
 	handle.stdinPipe.Close()
 	handle.pipeThrGrp.Wait()
@@ -55,6 +64,7 @@ func (handle *ExtCmdHandle) WaitForExtCmd() ([]string, []string, error) {
 	return handle.stdoutLines, handle.stderrLines, nil
 }
 
+// Fuses the elements of an array of strings to form a single string
 func FuseStrings(linesArray []string) string {
 	var dataBld strings.Builder
 	for _, line := range linesArray {
@@ -63,6 +73,7 @@ func FuseStrings(linesArray []string) string {
 	return dataBld.String()
 }
 
+// Sets up stdin/stdout/stderr pipes for interprocess communication with the external process
 func setupCmdPipes(cmdObj *exec.Cmd) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
 	stdinPipe, err := cmdObj.StdinPipe()
 	if err != nil {
@@ -79,6 +90,7 @@ func setupCmdPipes(cmdObj *exec.Cmd) (io.WriteCloser, io.ReadCloser, io.ReadClos
 	return stdinPipe, stdoutPipe, stderrPipe, nil
 }
 
+// Pipes data from the external process into an array of strings, one line per element
 func pipeCmdStream(cmdStream io.ReadCloser, outputLines *[]string, failedIo *bool, pipeThrGrp *sync.WaitGroup) {
 	cmdIn := bufio.NewReader(cmdStream)
 	for {

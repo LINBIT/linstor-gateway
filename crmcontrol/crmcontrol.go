@@ -247,25 +247,25 @@ func DeleteCrmLu(
 	return err
 }
 
-func ParseConfiguration(docRoot *xmltree.Document) (CrmConfiguration, error) {
+func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config := CrmConfiguration{TidSet: NewTargetIdSet()}
 	if docRoot == nil {
-		return config, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
+		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
 
 	cib := docRoot.Root()
 	if cib == nil {
-		return config, errors.New("Failed to find the cluster information base (CIB) root element")
+		return nil, errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
 	rscSection := cib.FindElement(CIB_RSC_XPATH)
 	if rscSection == nil {
-		return config, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
+		return nil, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
 	}
 
 	resources := rscSection.ChildElements()
 	if resources == nil {
-		return config, errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
+		return nil, errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
 	}
 
 	for _, selectedRsc := range resources {
@@ -311,7 +311,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (CrmConfiguration, error) {
 		}
 	}
 
-	return config, nil
+	return &config, nil
 }
 
 func ReadConfiguration() (*xmltree.Document, error) {

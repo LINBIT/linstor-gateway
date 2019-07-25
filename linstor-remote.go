@@ -24,11 +24,11 @@ func main() {
 		action := os.Args[1]
 		switch action {
 		case application.ACTION_CREATE:
-			exit_code, err = application.ActionCreate()
+			exit_code, err = application.CliCreateResource()
 		case application.ACTION_DELETE:
-			exit_code, err = application.ActionDelete()
+			exit_code, err = application.CliDeleteResource()
 		case application.ACTION_LIST:
-			exit_code, err = application.ActionList()
+			exit_code, err = application.CliListResources()
 		default:
 			err = errors.New("Action '" + action + "' is not implemented")
 			exit_code = application.EXIT_FAILED_ACTION

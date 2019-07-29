@@ -145,7 +145,7 @@ func CreateCrmLu(
 	cibData := templateproc.ReplaceVariables(tmplLines, tmplVars)
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	cmd, cmdPipe, err := extcmd.PipeToExtCmd("cibadmin", []string{"--modify", "--allow-create", "--xml-pipe"})
+	cmd, cmdPipe, err := extcmd.PipeToExtCmd(CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func DeleteCrmLu(
 	}
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	cmd, cmdPipe, err := extcmd.PipeToExtCmd("cibadmin", []string{"--replace", "--xml-pipe"})
+	cmd, cmdPipe, err := extcmd.PipeToExtCmd(CRM_DELETE_COMMAND.executable, CRM_DELETE_COMMAND.arguments)
 	if err != nil {
 		return err
 	}
@@ -354,7 +354,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 
 // Reads the CIB XML document into a string
 func ReadConfiguration() (*xmltree.Document, error) {
-	cmd, _, err := extcmd.PipeToExtCmd("cibadmin", []string{"--query"})
+	cmd, _, err := extcmd.PipeToExtCmd(CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments)
 	if err != nil {
 		return nil, err
 	}

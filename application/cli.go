@@ -14,9 +14,9 @@ import "github.com/LINBIT/linstor-remote-storage/crmcontrol"
 
 // Application action command line parameters
 const (
-	ACTION_CREATE = "create"
-	ACTION_DELETE = "delete"
-	ACTION_LIST   = "list"
+	ACTION_CREATE_CMD = "create"
+	ACTION_DELETE_CMD = "delete"
+	ACTION_LIST_CMD   = "list"
 )
 
 // Command line parameter keys for key=value parameters
@@ -32,33 +32,54 @@ const (
 	KEY_SIZE     = "size"
 )
 
-// Required command line parameters for resource creation
-var CREATE_PARAMS []string = []string{
-	KEY_SVC_IP,
-	KEY_IQN,
-	KEY_LUN,
-	KEY_USERNAME,
-	KEY_PASSWORD,
-	KEY_PORTALS,
-	KEY_NODES,
-	KEY_SIZE,
+type ActionDescription struct {
+	Command string
+	Params  []string
 }
 
-// Required command line parameters for resource deletion
-var DELETE_PARAMS []string = []string{
-	KEY_IQN,
-	KEY_LUN,
+var ACTION_CREATE ActionDescription = ActionDescription{
+	ACTION_CREATE_CMD,
+	[]string{
+		KEY_SVC_IP,
+		KEY_IQN,
+		KEY_LUN,
+		KEY_USERNAME,
+		KEY_PASSWORD,
+		KEY_PORTALS,
+		KEY_NODES,
+		KEY_SIZE,
+	},
+}
+
+var ACTION_DELETE ActionDescription = ActionDescription{
+	ACTION_DELETE_CMD,
+	[]string{
+		KEY_IQN,
+		KEY_LUN,
+	},
+}
+
+var ACTION_LIST ActionDescription = ActionDescription{
+	ACTION_LIST_CMD,
+	[]string{},
+}
+
+// List of available program actions
+var APPLICATION_ACTIONS []ActionDescription = []ActionDescription{
+	ACTION_CREATE,
+	ACTION_DELETE,
+	ACTION_LIST,
 }
 
 // Parses the required arguments for resource creation from the command line,
 // then calls the application.CreateResource(...) high-level API
 func CliCreateResource() (int, error) {
-	if explainParams(ACTION_CREATE, CREATE_PARAMS) {
+	if explainParams(ACTION_CREATE) {
 		return EXIT_SUCCESS, nil
 	}
 
 	argMap := make(map[string]string)
-	loadParams(CREATE_PARAMS, argMap)
+	loadParams(ACTION_CREATE, argMap)
 
 	err := parseArguments(&argMap)
 	if err != nil {
@@ -94,12 +115,12 @@ func CliCreateResource() (int, error) {
 // Parses the required arguments for resource deletion from the command line,
 // then calls the application.DeleteResource(...) high-level API
 func CliDeleteResource() (int, error) {
-	if explainParams(ACTION_DELETE, DELETE_PARAMS) {
+	if explainParams(ACTION_DELETE) {
 		return EXIT_SUCCESS, nil
 	}
 
 	argMap := make(map[string]string)
-	loadParams(DELETE_PARAMS, argMap)
+	loadParams(ACTION_DELETE, argMap)
 
 	err := parseArguments(&argMap)
 	if err != nil {
@@ -203,6 +224,23 @@ func CliListResources() (int, error) {
 	return EXIT_SUCCESS, nil
 }
 
+func CliCommands(programName string) int {
+	fmt.Print("Syntax:\n")
+	for _, action := range APPLICATION_ACTIONS {
+		IndentPrintf(1, "%s %s", programName, action.Command)
+		if len(action.Params) > 0 {
+			fmt.Print(" [ parameters ]")
+		}
+		fmt.Print("\n")
+	}
+	fmt.Print("\n")
+	fmt.Print(
+		"To display a list of parameters for actions that require parameters,\n" +
+			"enter that action without specifying any further parameters.\n\n",
+	)
+	return EXIT_SUCCESS
+}
+
 // Prints text with an indent, 4 spaces per indent level
 func IndentPrint(indent int, text string) {
 	for ctr := 0; ctr < indent; ctr++ {
@@ -295,22 +333,26 @@ func splitArg(arg string) (*string, *string, error) {
 }
 
 // Loads an array of strings into the supplied map as key entries
-func loadParams(paramList []string, argMap map[string]string) {
-	for _, key := range paramList {
+func loadParams(action ActionDescription, argMap map[string]string) {
+	for _, key := range action.Params {
 		argMap[key] = ""
 	}
 }
 
 // Prints a simple usage description to stdout, indicating the application
 // action to perform and the parameters required for it
-func explainParams(action string, paramList []string) bool {
+func explainParams(action ActionDescription) bool {
 	explainFlag := len(os.Args) < 3
 	if explainFlag {
-		fmt.Printf("Parameters required for action %s:\n", action)
-		for _, entry := range paramList {
-			fmt.Printf("    %s\n", entry)
+		if len(action.Params) > 0 {
+			fmt.Printf("Parameters required for action %s:\n", action.Command)
+			for _, entry := range action.Params {
+				fmt.Printf("    %s\n", entry)
+			}
+			fmt.Printf("\n")
+		} else {
+			fmt.Printf("Action %s does not require any parameters", action.Command)
 		}
-		fmt.Printf("\n")
 	}
 	return explainFlag
 }

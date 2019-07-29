@@ -11,22 +11,30 @@ func main() {
 	fmt.Printf("linstor-remote experimental v0.1")
 	fmt.Printf("\x1b[0m\n")
 
+	programName := "linstor-remote"
+
 	var exit_code int = application.EXIT_INV_PRM
 	var err error = nil
 	argCount := len(os.Args)
+	if argCount == 1 {
+		programName = os.Args[0]
+	}
+
 	if argCount >= 2 {
 		action := os.Args[1]
 		switch action {
-		case application.ACTION_CREATE:
+		case application.ACTION_CREATE.Command:
 			exit_code, err = application.CliCreateResource()
-		case application.ACTION_DELETE:
+		case application.ACTION_DELETE.Command:
 			exit_code, err = application.CliDeleteResource()
-		case application.ACTION_LIST:
+		case application.ACTION_LIST.Command:
 			exit_code, err = application.CliListResources()
 		default:
 			err = errors.New("Action '" + action + "' is not implemented")
 			exit_code = application.EXIT_FAILED_ACTION
 		}
+	} else {
+		exit_code = application.CliCommands(programName)
 	}
 
 	if err != nil {

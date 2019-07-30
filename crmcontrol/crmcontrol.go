@@ -28,6 +28,7 @@ import xmltree "github.com/beevik/etree"
 // Template file names
 const (
 	CRM_TMPL     = "templates/crm-iscsi.tmpl"
+	CRM_OBJ_TMPL = "templates/crm-obj-names.tmpl"
 	TGT_LOC_TMPL = "templates/target-location-nodes.tmpl"
 	LU_LOC_TMPL  = "templates/lu-location-nodes.tmpl"
 )
@@ -192,12 +193,6 @@ func DeleteCrmLu(
 	iscsiTargetName string,
 	lun uint8,
 ) error {
-	luName := CRM_ISCSI_LU_NAME + strconv.Itoa(int(lun))
-
-	crmLu := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_" + luName
-	crmTgt := CRM_ISCSI_RSC_PREFIX + iscsiTargetName
-	crmSvcIp := CRM_ISCSI_RSC_PREFIX + iscsiTargetName + "_ip"
-
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
@@ -209,10 +204,10 @@ func DeleteCrmLu(
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	delItems := make(map[string]interface{})
-	delItems[crmTgt] = nil
-	delItems[crmLu] = nil
-	delItems[crmSvcIp] = nil
+	delItems, err := LoadCrmObjMap(iscsiTargetName, lun)
+	if err != nil {
+		return err
+	}
 
 	// Process the CIB XML document tree, removing constraints that refer to any of the objects
 	// that will be deleted
@@ -248,10 +243,6 @@ func DeleteCrmLu(
 		return err
 	}
 
-	fmt.Print("Updated CIB data:\n")
-	fmt.Print(cibData)
-	fmt.Print("\n\n")
-
 	_, err = cmdPipe.WriteString(cibData)
 	if err != nil {
 		cmd.IoFailed()
@@ -260,7 +251,14 @@ func DeleteCrmLu(
 
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 
-	fmt.Printf("CRM command execution successful\n\n")
+	if err == nil {
+		fmt.Print("CRM command execution successful\n\n")
+	} else {
+		fmt.Print("CRM command execution returned an error\n\n")
+		fmt.Print("The updated CIB data sent to the command was:\n")
+		fmt.Print(cibData)
+		fmt.Print("\n\n")
+	}
 
 	if len(stdoutLines) >= 1 {
 		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
@@ -375,6 +373,24 @@ func ReadConfiguration() (*xmltree.Document, error) {
 	}
 
 	return docRoot, nil
+}
+
+// Loads a map of CRM object names from the template
+func LoadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, error) {
+	objMap := make(map[string]interface{})
+	nameTmplList, err := templateproc.LoadTemplate(CRM_OBJ_TMPL)
+	if err != nil {
+		return objMap, err
+	}
+	tmplVars := make(map[string]string)
+	tmplVars[VAR_TGT_NAME] = iscsiTargetName
+	tmplVars[VAR_LU_NAME] = CRM_ISCSI_LU_NAME + strconv.Itoa(int(lun))
+	nameList := templateproc.ReplaceVariables(nameTmplList, tmplVars)
+	for _, nameLine := range nameList {
+		name := strings.TrimRight(nameLine, "\r\n")
+		objMap[name] = nil
+	}
+	return objMap, nil
 }
 
 // Creates and returns a copy of a map[string]string

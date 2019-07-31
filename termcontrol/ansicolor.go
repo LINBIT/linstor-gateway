@@ -1,5 +1,5 @@
 // ANSI escape codes for terminal colors
-package application
+package termcontrol
 
 import "fmt"
 
@@ -24,11 +24,11 @@ const (
 )
 
 // Set the terminal foreground color
-func color(clrFmt string) {
+func Color(clrFmt string) {
 	fmt.Print(clrFmt)
 }
 
 // Reset the terminal foreground color (and actually various other ANSI terminal modes too)
-func defaultColor() {
+func DefaultColor() {
 	fmt.Print(COLOR_RESET)
 }

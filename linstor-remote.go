@@ -5,6 +5,7 @@ import "os"
 import "fmt"
 import "errors"
 import application "github.com/LINBIT/linstor-remote-storage/application"
+import term "github.com/LINBIT/linstor-remote-storage/termcontrol"
 
 func main() {
 	fmt.Printf("\x1b[1;33m")
@@ -42,7 +43,7 @@ func main() {
 	}
 
 	if err != nil {
-		fmt.Printf("%sOperation failed!%s Error: %s\n", application.COLOR_RED, application.COLOR_RESET, err.Error())
+		fmt.Printf("%sOperation failed!%s Error: %s\n", term.COLOR_RED, term.COLOR_RESET, err.Error())
 	}
 
 	os.Exit(exit_code)

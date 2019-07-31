@@ -11,6 +11,7 @@ import "strings"
 import "strconv"
 import "errors"
 import "github.com/LINBIT/linstor-remote-storage/crmcontrol"
+import term "github.com/LINBIT/linstor-remote-storage/termcontrol"
 
 // Application action command line parameters
 const (
@@ -34,52 +35,65 @@ const (
 	KEY_SIZE     = "size"
 )
 
+// Default port for an iSCSI portal
+const DFLT_ISCSI_PORTAL_PORT = 3260
+
+type ParamDescription struct {
+	Name     string
+	Optional bool
+}
+
 type ActionDescription struct {
 	Command string
-	Params  []string
+	Params  []ParamDescription
+}
+
+type ParamValue struct {
+	Optional bool
+	Value    *string
 }
 
 var ACTION_CREATE ActionDescription = ActionDescription{
 	ACTION_CREATE_CMD,
-	[]string{
-		KEY_SVC_IP,
-		KEY_IQN,
-		KEY_LUN,
-		KEY_USERNAME,
-		KEY_PASSWORD,
-		KEY_PORTALS,
-		KEY_NODES,
-		KEY_SIZE,
+	[]ParamDescription{
+		ParamDescription{Name: KEY_SVC_IP},
+		ParamDescription{Name: KEY_IQN},
+		ParamDescription{Name: KEY_LUN},
+		ParamDescription{Name: KEY_USERNAME},
+		ParamDescription{Name: KEY_PASSWORD},
+		ParamDescription{Name: KEY_PORTALS, Optional: true},
+		ParamDescription{Name: KEY_NODES},
+		ParamDescription{Name: KEY_SIZE},
 	},
 }
 
 var ACTION_START ActionDescription = ActionDescription{
 	ACTION_START_CMD,
-	[]string{
-		KEY_IQN,
-		KEY_LUN,
+	[]ParamDescription{
+		ParamDescription{Name: KEY_IQN},
+		ParamDescription{Name: KEY_LUN},
 	},
 }
 
 var ACTION_STOP ActionDescription = ActionDescription{
 	ACTION_STOP_CMD,
-	[]string{
-		KEY_IQN,
-		KEY_LUN,
+	[]ParamDescription{
+		ParamDescription{Name: KEY_IQN},
+		ParamDescription{Name: KEY_LUN},
 	},
 }
 
 var ACTION_DELETE ActionDescription = ActionDescription{
 	ACTION_DELETE_CMD,
-	[]string{
-		KEY_IQN,
-		KEY_LUN,
+	[]ParamDescription{
+		ParamDescription{Name: KEY_IQN},
+		ParamDescription{Name: KEY_LUN},
 	},
 }
 
 var ACTION_LIST ActionDescription = ActionDescription{
 	ACTION_LIST_CMD,
-	[]string{},
+	[]ParamDescription{},
 }
 
 // List of available program actions
@@ -99,9 +113,7 @@ func CliCreateResource() (int, error) {
 	}
 
 	argMap := make(map[string]string)
-	loadParams(ACTION_CREATE, argMap)
-
-	err := parseArguments(&argMap)
+	err := parseArguments(ACTION_CREATE, &argMap)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
 	}
@@ -118,6 +130,11 @@ func CliCreateResource() (int, error) {
 
 	storageNodeList := strings.Split(argMap[KEY_NODES], ",")
 
+	portals, found := argMap[KEY_PORTALS]
+	if !found {
+		portals = argMap[KEY_SVC_IP] + ":" + strconv.Itoa(DFLT_ISCSI_PORTAL_PORT)
+	}
+
 	return CreateResource(
 		argMap[KEY_IQN],
 		uint8(lun),
@@ -128,7 +145,7 @@ func CliCreateResource() (int, error) {
 		argMap[KEY_SVC_IP],
 		argMap[KEY_USERNAME],
 		argMap[KEY_PASSWORD],
-		argMap[KEY_PORTALS],
+		portals,
 	)
 }
 
@@ -140,9 +157,7 @@ func CliDeleteResource() (int, error) {
 	}
 
 	argMap := make(map[string]string)
-	loadParams(ACTION_DELETE, argMap)
-
-	err := parseArguments(&argMap)
+	err := parseArguments(ACTION_DELETE, &argMap)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
 	}
@@ -163,9 +178,7 @@ func CliStartResource() (int, error) {
 	}
 
 	argMap := make(map[string]string)
-	loadParams(ACTION_START, argMap)
-
-	err := parseArguments(&argMap)
+	err := parseArguments(ACTION_START, &argMap)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
 	}
@@ -186,9 +199,7 @@ func CliStopResource() (int, error) {
 	}
 
 	argMap := make(map[string]string)
-	loadParams(ACTION_STOP, argMap)
-
-	err := parseArguments(&argMap)
+	err := parseArguments(ACTION_STOP, &argMap)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
 	}
@@ -208,15 +219,15 @@ func CliListResources() (int, error) {
 		return exit_code, err
 	}
 
-	color(COLOR_YELLOW)
+	term.Color(term.COLOR_YELLOW)
 	fmt.Print("Cluster resources:")
 
 	indent := 1
-	color(COLOR_GREEN)
+	term.Color(term.COLOR_GREEN)
 	IndentPrint(indent, "\x1b[1;32miSCSI resources:\x1b[0m\n")
 	indent++
 	IndentPrint(indent, "\x1b[1;32miSCSI targets:\x1b[0m\n")
-	defaultColor()
+	term.DefaultColor()
 
 	indent++
 	if len(config.TargetList) > 0 {
@@ -228,9 +239,9 @@ func CliListResources() (int, error) {
 	}
 	indent--
 
-	color(COLOR_GREEN)
+	term.Color(term.COLOR_GREEN)
 	IndentPrint(indent, "\x1b[1;32miSCSI logical units:\x1b[0m\n")
-	defaultColor()
+	term.DefaultColor()
 
 	indent++
 	if len(config.LuList) > 0 {
@@ -242,9 +253,9 @@ func CliListResources() (int, error) {
 	}
 	indent -= 2
 
-	color(COLOR_TEAL)
+	term.Color(term.COLOR_TEAL)
 	IndentPrint(indent, "\x1b[1;32mOther cluster resources:\x1b[0m\n")
-	defaultColor()
+	term.DefaultColor()
 
 	indent++
 	if len(config.OtherRscList) > 0 {
@@ -259,9 +270,9 @@ func CliListResources() (int, error) {
 	fmt.Print("\n")
 
 	if config.TidSet.GetSize() > 0 {
-		color(COLOR_GREEN)
+		term.Color(term.COLOR_GREEN)
 		IndentPrint(indent, "\x1b[1;32mAllocated TIDs:\x1b[0m\n")
-		defaultColor()
+		term.DefaultColor()
 
 		indent++
 		tidIter := config.TidSet.Iterator()
@@ -270,21 +281,21 @@ func CliListResources() (int, error) {
 		}
 		indent--
 	} else {
-		color(COLOR_DARK_GREEN)
+		term.Color(term.COLOR_DARK_GREEN)
 		IndentPrint(indent, "\x1b[1;32mNo TIDs allocated\x1b[0m\n")
-		defaultColor()
+		term.DefaultColor()
 	}
 	fmt.Print("\n")
 
 	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
 	if haveFreeTid {
-		color(COLOR_GREEN)
+		term.Color(term.COLOR_GREEN)
 		IndentPrintf(indent, "\x1b[1;32mNext free TID:\x1b[0m\n    %d\n", int(freeTid))
 	} else {
-		color(COLOR_RED)
+		term.Color(term.COLOR_RED)
 		IndentPrint(indent, "\x1b[1;31mNo free TIDs\x1b[0m\n")
 	}
-	defaultColor()
+	term.DefaultColor()
 	fmt.Print("\n")
 
 	return EXIT_SUCCESS, nil
@@ -332,10 +343,10 @@ func IndentPrintf(indent int, format string, arguments ...interface{}) {
 //
 // The parsed argument values are stored as value entries with their
 // respective keys in the supplied argMap.
-func parseArguments(argMap *map[string]string) error {
-	collectedArgs := make(map[string]*string)
-	for key, _ := range *argMap {
-		collectedArgs[key] = nil
+func parseArguments(action ActionDescription, argMap *map[string]string) error {
+	collectedArgs := make(map[string]ParamValue)
+	for _, paramDescr := range action.Params {
+		collectedArgs[paramDescr.Name] = ParamValue{Optional: paramDescr.Optional, Value: nil}
 	}
 
 	argCount := len(os.Args)
@@ -347,21 +358,22 @@ func parseArguments(argMap *map[string]string) error {
 		}
 		key := *keyPtr
 		value := *valuePtr
-		mapValue, found := collectedArgs[key]
+		paramEntry, found := collectedArgs[key]
 		if !found {
 			return errors.New("Invalid argument key '" + key + "'")
 		}
-		if mapValue != nil {
+		if paramEntry.Value != nil {
 			return errors.New("Duplicate argument '" + key + "'")
 		}
-		collectedArgs[key] = &value
+		paramEntry.Value = &value
+		collectedArgs[key] = paramEntry
 	}
 
-	for key, value := range collectedArgs {
-		if value != nil {
-			(*argMap)[key] = *value
-		} else {
-			return errors.New("Missing argument '" + key + "'")
+	for paramName, paramEntry := range collectedArgs {
+		if paramEntry.Value != nil {
+			(*argMap)[paramName] = *paramEntry.Value
+		} else if !paramEntry.Optional {
+			return errors.New("Missing argument '" + paramName + "'")
 		}
 	}
 
@@ -398,13 +410,6 @@ func splitArg(arg string) (*string, *string, error) {
 	return &key, &value, err
 }
 
-// Loads an array of strings into the supplied map as key entries
-func loadParams(action ActionDescription, argMap map[string]string) {
-	for _, key := range action.Params {
-		argMap[key] = ""
-	}
-}
-
 // Prints a simple usage description to stdout, indicating the application
 // action to perform and the parameters required for it
 func explainParams(action ActionDescription) bool {
@@ -413,7 +418,11 @@ func explainParams(action ActionDescription) bool {
 		if len(action.Params) > 0 {
 			fmt.Printf("Parameters required for action %s:\n", action.Command)
 			for _, entry := range action.Params {
-				fmt.Printf("    %s\n", entry)
+				fmt.Printf("    %s", entry.Name)
+				if entry.Optional {
+					fmt.Print(" [optional]")
+				}
+				fmt.Print("\n")
 			}
 			fmt.Printf("\n")
 		} else {

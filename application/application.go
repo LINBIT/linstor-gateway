@@ -118,6 +118,26 @@ func DeleteResource(
 	return EXIT_SUCCESS, nil
 }
 
+// Starts existing iSCSI resources
+//
+// Returns: program exit code, error object
+func StartResource(
+	iqn string,
+	lun uint8,
+) (int, error) {
+	return modifyResourceTargetRole(iqn, lun, true)
+}
+
+// Stops existing iSCSI resources
+//
+// Returns: program exit code, error object
+func StopResource(
+	iqn string,
+	lun uint8,
+) (int, error) {
+	return modifyResourceTargetRole(iqn, lun, false)
+}
+
 // Extracts a list of existing CRM (Pacemaker) resources from the CIB XML
 //
 // Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object
@@ -133,6 +153,28 @@ func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, int, erro
 	}
 
 	return docRoot, config, EXIT_SUCCESS, nil
+}
+
+// Starts/stops existing iSCSI resources
+//
+// Returns: program exit code, error object
+func modifyResourceTargetRole(
+	iqn string,
+	lun uint8,
+	startFlag bool,
+) (int, error) {
+	targetName, err := iqnExtractTarget(iqn)
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+	}
+
+	// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
+	err = crmcontrol.ModifyCrmLuTargetRole(targetName, lun, startFlag)
+	if err != nil {
+		return EXIT_FAILED_ACTION, err
+	}
+
+	return EXIT_SUCCESS, nil
 }
 
 // Extracts the target name from an IQN string

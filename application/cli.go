@@ -16,6 +16,8 @@ import "github.com/LINBIT/linstor-remote-storage/crmcontrol"
 const (
 	ACTION_CREATE_CMD = "create"
 	ACTION_DELETE_CMD = "delete"
+	ACTION_START_CMD  = "start"
+	ACTION_STOP_CMD   = "stop"
 	ACTION_LIST_CMD   = "list"
 )
 
@@ -51,6 +53,22 @@ var ACTION_CREATE ActionDescription = ActionDescription{
 	},
 }
 
+var ACTION_START ActionDescription = ActionDescription{
+	ACTION_START_CMD,
+	[]string{
+		KEY_IQN,
+		KEY_LUN,
+	},
+}
+
+var ACTION_STOP ActionDescription = ActionDescription{
+	ACTION_STOP_CMD,
+	[]string{
+		KEY_IQN,
+		KEY_LUN,
+	},
+}
+
 var ACTION_DELETE ActionDescription = ActionDescription{
 	ACTION_DELETE_CMD,
 	[]string{
@@ -67,6 +85,8 @@ var ACTION_LIST ActionDescription = ActionDescription{
 // List of available program actions
 var APPLICATION_ACTIONS []ActionDescription = []ActionDescription{
 	ACTION_CREATE,
+	ACTION_START,
+	ACTION_STOP,
 	ACTION_DELETE,
 	ACTION_LIST,
 }
@@ -133,6 +153,52 @@ func CliDeleteResource() (int, error) {
 	}
 
 	return DeleteResource(argMap[KEY_IQN], lun)
+}
+
+// Parses the required arguments for starting resources from the command line,
+// then calls the application.StartResource(...) high-level API
+func CliStartResource() (int, error) {
+	if explainParams(ACTION_START) {
+		return EXIT_SUCCESS, nil
+	}
+
+	argMap := make(map[string]string)
+	loadParams(ACTION_START, argMap)
+
+	err := parseArguments(&argMap)
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
+	}
+
+	lun, err := parseLun(argMap[KEY_LUN])
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Argument '" + KEY_LUN + "': Unparseable logical unit number")
+	}
+
+	return StartResource(argMap[KEY_IQN], lun)
+}
+
+// Parses the required arguments for stopping resources from the command line,
+// then calls the application.StopResource(...) high-level API
+func CliStopResource() (int, error) {
+	if explainParams(ACTION_STOP) {
+		return EXIT_SUCCESS, nil
+	}
+
+	argMap := make(map[string]string)
+	loadParams(ACTION_STOP, argMap)
+
+	err := parseArguments(&argMap)
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
+	}
+
+	lun, err := parseLun(argMap[KEY_LUN])
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Argument '" + KEY_LUN + "': Unparseable logical unit number")
+	}
+
+	return StopResource(argMap[KEY_IQN], lun)
 }
 
 // Lists existing CRM resources, output goes to stdout

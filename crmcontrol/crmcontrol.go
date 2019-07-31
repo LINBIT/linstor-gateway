@@ -20,6 +20,7 @@ import "fmt"
 import "strings"
 import "strconv"
 import "errors"
+import "time"
 import "github.com/LINBIT/linstor-remote-storage/templateproc"
 import "github.com/LINBIT/linstor-remote-storage/extcmd"
 import "github.com/LINBIT/linstor-remote-storage/debug"
@@ -51,12 +52,10 @@ const (
 	VAR_LU_LOC_NODES  = "LU_LOCATION_NODES"
 )
 
-// Pacemaker CIB XML resource XPaths and resource sub tag names
-// FIXME: the resource sub tag names should probably go into the CIB_TAG_... section
+// Pacemaker CIB XML XPaths
 const (
 	CIB_RSC_XPATH    = "/cib/configuration/resources"
-	CIB_RSC_ATTR     = "instance_attributes"
-	CIB_RSC_ATTR_KEY = "nvpair"
+	CIB_STATUS_XPATH = "/cib/status"
 )
 
 // Pacemaker CRM resource names, prefixes, suffixes, search patterns, etc.
@@ -74,12 +73,55 @@ const (
 	CIB_TAG_COLOCATION = "rsc_colocation"
 	CIB_TAG_ORDER      = "rsc_order"
 	CIB_TAG_RSC_REF    = "resource_ref"
+	CIB_TAG_META_ATTR  = "meta_attributes"
+	CIB_TAG_INST_ATTR  = "instance_attributes"
+	CIB_TAG_NV_PAIR    = "nvpair"
+	CIB_TAG_LRM        = "lrm"
+	CIB_TAG_LRM_RSCLST = "lrm_resources"
 	CIB_TAG_LRM_RSC    = "lrm_resource"
+	CIB_TAG_LRM_RSC_OP = "lrm_rsc_op"
+)
+
+// Pacemaker CIB attribute names
+const (
+	CIB_ATTR_KEY_ID            = "id"
+	CIB_ATTR_KEY_NAME          = "name"
+	CIB_ATTR_KEY_VALUE         = "value"
+	CIB_ATTR_KEY_OPERATION     = "operation"
+	CIB_ATTR_KEY_RC_CODE       = "rc-code"
+	CIB_ATTR_VALUE_TARGET_ROLE = "target-role"
+	CIB_ATTR_VALUE_STARTED     = "Started"
+	CIB_ATTR_VALUE_STOPPED     = "Stopped"
+	CIB_ATTR_VALUE_STOP        = "stop"
+	CIB_ATTR_VALUE_MONITOR     = "monitor"
+)
+
+// Pacemaker OCF resource agent exit codes
+const (
+	OCF_SUCCESS           = 0
+	OCF_ERR_GENERIC       = 1
+	OCF_ERR_ARGS          = 2
+	OCF_ERR_UNIMPLEMENTED = 3
+	OCF_ERR_PERM          = 4
+	OCF_ERR_INSTALLED     = 5
+	OCF_NOT_RUNNING       = 7
+	OCF_RUNNING_MASTER    = 8
+	OCF_FAILED_MASTER     = 9
 )
 
 // Maximum recursion level, currently used to limit recursion during recursive
 // searches of the XML document tree
 const MAX_RECURSION_LEVEL = 40
+
+// Maximum number of CIB poll retries when waiting for CRM resources to stop
+const MAX_WAIT_STOP_RETRIES = 10
+
+// Initial delay after setting resource target-role=Stopped before starting to poll the CIB
+// to check whether resources have actually stopped
+const WAIT_STOP_POLL_CIB_DELAY = 1000
+
+// Delay between CIB polls in milliseconds
+const CIB_POLL_RETRY_DELAY = 1000
 
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
@@ -87,6 +129,11 @@ type CrmConfiguration struct {
 	LuList       []string
 	OtherRscList []string
 	TidSet       TargetIdSet
+}
+
+type LrmRunState struct {
+	HaveState bool
+	Running   bool
 }
 
 // Creates the CRM resources
@@ -183,16 +230,84 @@ func CreateCrmLu(
 	return err
 }
 
+// Stops the CRM resources
+func ModifyCrmLuTargetRole(
+	iscsiTargetName string,
+	lun uint8,
+	startFlag bool,
+) error {
+	// Read the current CIB XML
+	docRoot, err := ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	cib := docRoot.Root()
+	if cib == nil {
+		return errors.New("Failed to find the cluster information base (CIB) root element")
+	}
+
+	stopItems, err := LoadCrmObjMap(iscsiTargetName, lun)
+	if err != nil {
+		return err
+	}
+
+	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
+	for elemId, _ := range stopItems {
+		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
+		if rscElem != nil {
+			var tgtRoleEntry *xmltree.Element = nil
+			metaAttr := rscElem.FindElement(CIB_TAG_META_ATTR)
+			if metaAttr != nil {
+				// Meta attributes exist, find the entry that sets the target-role
+				tgtRoleEntry = metaAttr.FindElement(CIB_TAG_NV_PAIR + "[@" + CIB_ATTR_KEY_NAME + "='" + CIB_ATTR_VALUE_TARGET_ROLE + "']")
+			} else {
+				// No meta attributes present, create XML element
+				metaAttr = rscElem.CreateElement(CIB_TAG_META_ATTR)
+				metaAttr.CreateAttr(CIB_ATTR_KEY_ID, elemId+"_"+CIB_TAG_META_ATTR)
+			}
+			if tgtRoleEntry == nil {
+				// No entry that sets the target-role, create entry
+				tgtRoleEntry = metaAttr.CreateElement(CIB_TAG_NV_PAIR)
+				tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_ID, elemId+"_"+CIB_ATTR_VALUE_TARGET_ROLE)
+				tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_NAME, CIB_ATTR_VALUE_TARGET_ROLE)
+			}
+			// Set the target-role
+			var tgtRoleValue string
+			if startFlag {
+				tgtRoleValue = CIB_ATTR_VALUE_STARTED
+			} else {
+				tgtRoleValue = CIB_ATTR_VALUE_STOPPED
+			}
+			tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_VALUE, tgtRoleValue)
+		} else {
+			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemId)
+		}
+	}
+
+	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
+}
+
 // Deletes the CRM resources
-//
-// TODO:
-// The names of the objects to delete are currently hard coded, they should probably
-// be loaded from a file, because the actual objects created depend on templates that
-// are also stored in files.
 func DeleteCrmLu(
 	iscsiTargetName string,
 	lun uint8,
 ) error {
+	err := ModifyCrmLuTargetRole(iscsiTargetName, lun, false)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(time.Duration(WAIT_STOP_POLL_CIB_DELAY * time.Millisecond))
+	isStopped, err := WaitForResourceStop(iscsiTargetName, lun)
+	if err != nil {
+		return err
+	}
+
+	if !isStopped {
+		return errors.New("Resource stop was not confirmed for all resources, cannot continue delete action")
+	}
+
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
@@ -231,52 +346,85 @@ func DeleteCrmLu(
 		}
 	}
 
-	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
-	cibData, err := docRoot.WriteToString()
+	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
+}
+
+func WaitForResourceStop(
+	iscsiTargetName string,
+	lun uint8,
+) (bool, error) {
+	stopItems, err := LoadCrmObjMap(iscsiTargetName, lun)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	cmd, cmdPipe, err := extcmd.PipeToExtCmd(CRM_DELETE_COMMAND.executable, CRM_DELETE_COMMAND.arguments)
-	if err != nil {
-		return err
+	isStopped := false
+	retries := 0
+	for !isStopped && retries < MAX_WAIT_STOP_RETRIES {
+		retries++
+
+		for key, _ := range stopItems {
+			stopItems[key] = LrmRunState{}
+		}
+
+		// Read the current CIB XML
+		docRoot, err := ReadConfiguration()
+		if err != nil {
+			return false, err
+		}
+
+		cib := docRoot.Root()
+		if cib == nil {
+			return false, errors.New("Failed to find the cluster information base (CIB) root element")
+		}
+
+		statusSection := cib.FindElement(CIB_STATUS_XPATH)
+		if statusSection == nil {
+			return false, errors.New("Failed to find any resource status information in the cluster information base (CIB)")
+		}
+
+		for _, nodeElem := range statusSection.ChildElements() {
+			lrmElem := nodeElem.SelectElement(CIB_TAG_LRM)
+			if lrmElem != nil {
+				lrmRscList := lrmElem.SelectElement(CIB_TAG_LRM_RSCLST)
+				if lrmRscList != nil {
+					for _, lrmRsc := range lrmRscList.ChildElements() {
+						idAttr := lrmRsc.SelectAttr(CIB_ATTR_KEY_ID)
+						if idAttr == nil {
+							return false, errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
+						}
+						rscName := idAttr.Value
+						tmpRunState, isStopItem := stopItems[rscName]
+						if isStopItem {
+							itemRunState := tmpRunState.(LrmRunState)
+							updateRunState(rscName, lrmRsc, &itemRunState)
+							stopItems[rscName] = itemRunState
+						}
+					}
+				}
+			}
+		}
+
+		stoppedFlag := true
+		for rscName, tmpRunState := range stopItems {
+			runState := tmpRunState.(LrmRunState)
+			if !runState.HaveState {
+				fmt.Printf("Warning: No run status information for resource '%s'\n", rscName)
+				stoppedFlag = false
+			} else if runState.Running {
+				debug.DbgPrintf("Resource '%s' is still running\n", rscName)
+				stoppedFlag = false
+			}
+		}
+
+		if !stoppedFlag {
+			time.Sleep(time.Duration(CIB_POLL_RETRY_DELAY * time.Millisecond))
+		} else {
+			isStopped = true
+		}
 	}
 
-	_, err = cmdPipe.WriteString(cibData)
-	if err != nil {
-		cmd.IoFailed()
-	}
-	cmdPipe.Flush()
-
-	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
-
-	if err == nil {
-		fmt.Print("CRM command execution successful\n\n")
-	} else {
-		fmt.Print("CRM command execution returned an error\n\n")
-		fmt.Print("The updated CIB data sent to the command was:\n")
-		fmt.Print(cibData)
-		fmt.Print("\n\n")
-	}
-
-	if len(stdoutLines) >= 1 {
-		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
-		debug.PrintTextArrayLimited(stdoutLines, 5)
-	} else {
-		fmt.Printf("No stdout output\n")
-	}
-
-	if len(stderrLines) >= 1 {
-		fmt.Printf("\x1b[1;33mCRM command stderr output:\x1b[0m\n")
-		fmt.Printf("\x1b[1;31m")
-		debug.PrintTextArray(stderrLines)
-		fmt.Printf("\x1b[0m")
-	} else {
-		fmt.Printf("No stderr output\n")
-	}
-
-	return err
+	return isStopped, nil
 }
 
 // Parses the CIB XML document and returns information about existing resources
@@ -393,6 +541,55 @@ func LoadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, e
 	return objMap, nil
 }
 
+func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
+	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
+	cibData, err := docRoot.WriteToString()
+	if err != nil {
+		return err
+	}
+
+	// Call cibadmin and pipe the CIB update data to the cluster resource manager
+	cmd, cmdPipe, err := extcmd.PipeToExtCmd(crmCmd.executable, crmCmd.arguments)
+	if err != nil {
+		return err
+	}
+
+	_, err = cmdPipe.WriteString(cibData)
+	if err != nil {
+		cmd.IoFailed()
+	}
+	cmdPipe.Flush()
+
+	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
+
+	if err == nil {
+		fmt.Print("CRM command execution successful\n\n")
+	} else {
+		fmt.Print("CRM command execution returned an error\n\n")
+		fmt.Print("The updated CIB data sent to the command was:\n")
+		fmt.Print(cibData)
+		fmt.Print("\n\n")
+	}
+
+	if len(stdoutLines) >= 1 {
+		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
+		debug.PrintTextArrayLimited(stdoutLines, 5)
+	} else {
+		fmt.Printf("No stdout output\n")
+	}
+
+	if len(stderrLines) >= 1 {
+		fmt.Printf("\x1b[1;33mCRM command stderr output:\x1b[0m\n")
+		fmt.Printf("\x1b[1;31m")
+		debug.PrintTextArray(stderrLines)
+		fmt.Printf("\x1b[0m")
+	} else {
+		fmt.Printf("No stderr output\n")
+	}
+
+	return err
+}
+
 // Creates and returns a copy of a map[string]string
 func copyMap(srcMap map[string]string) map[string]string {
 	resultMap := make(map[string]string, len(srcMap))
@@ -440,7 +637,7 @@ func isLogicalUnitEntry(typeAttr xmltree.Attr) bool {
 // Returns resource attributes, if present, otherwise nil
 func getRscParams(resource *xmltree.Element) []*xmltree.Element {
 	var attrList []*xmltree.Element
-	instAttr := resource.FindElement(CIB_RSC_ATTR)
+	instAttr := resource.FindElement(CIB_TAG_INST_ATTR)
 	if instAttr != nil {
 		attrList = instAttr.ChildElements()
 	}
@@ -665,6 +862,65 @@ func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) 
 	_, depFlag = delItems[idAttr.Value]
 
 	return depFlag, nil
+}
+
+// Updates the run status information in the stopItem map
+func updateRunState(rscName string, lrmRsc *xmltree.Element, runState *LrmRunState) {
+	// For a resource to be considered stopped, this function must find
+	// - either a successful stop action
+	// - or a monitor action with rc-code OCF_NOT_RUNNING and no stop action
+	//
+	// If a stop action is present, the monitor action can still show "running" (rc-code OCF_SUCCESS == 0)
+	// although the resource is actually stopped. The monitor action's rc-code is only interesting if
+	// there is no stop action present.
+	stopEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_STOP + "']")
+	if stopEntry != nil {
+		rcAttr := stopEntry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
+		if rcAttr != nil {
+			rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
+			if err == nil {
+				if rc == OCF_SUCCESS {
+					if runState.HaveState == false {
+						runState.HaveState = true
+						runState.Running = false
+					}
+				} else {
+					runState.HaveState = true
+					runState.Running = true
+				}
+			} else {
+				fmt.Printf("Warning: Unparseable stop action information for resource '%s'\n", rscName)
+			}
+		} else {
+			fmt.Printf("Warning: Stop action information for resource '%s' does not contain a status code\n", rscName)
+		}
+	} else {
+		monEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_MONITOR + "']")
+		if monEntry != nil {
+			rcAttr := monEntry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
+			if rcAttr != nil {
+				rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
+				if err == nil {
+					if rc == OCF_NOT_RUNNING {
+						if runState.HaveState == false {
+							runState.HaveState = true
+							runState.Running = false
+						} else {
+						}
+					} else {
+						runState.HaveState = true
+						runState.Running = true
+					}
+				} else {
+					fmt.Printf("Warning: Unparseable status information for resource '%s'\n", rscName)
+				}
+			} else {
+				fmt.Printf("Warning: Monitor information for resource '%s' does not contain a status code\n", rscName)
+			}
+		} else {
+			fmt.Printf("Warning: No monitor information for resource '%s'\n", rscName)
+		}
+	}
 }
 
 // Generates an error indicating that an operation was aborted because it reached the maximum recursion level

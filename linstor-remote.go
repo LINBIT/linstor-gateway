@@ -25,6 +25,10 @@ func main() {
 		switch action {
 		case application.ACTION_CREATE.Command:
 			exit_code, err = application.CliCreateResource()
+		case application.ACTION_START.Command:
+			exit_code, err = application.CliStartResource()
+		case application.ACTION_STOP.Command:
+			exit_code, err = application.CliStopResource()
 		case application.ACTION_DELETE.Command:
 			exit_code, err = application.CliDeleteResource()
 		case application.ACTION_LIST.Command:

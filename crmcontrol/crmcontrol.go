@@ -125,6 +125,7 @@ const CIB_POLL_RETRY_DELAY = 2000
 
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
+	RscMap       map[string]interface{}
 	TargetList   []string
 	LuList       []string
 	OtherRscList []string
@@ -358,19 +359,30 @@ func WaitForResourceStop(
 		return false, err
 	}
 
+	// Read the current CIB XML
+	docRoot, err := ReadConfiguration()
+	if err != nil {
+		return false, err
+	}
+
+	config, err := ParseConfiguration(docRoot)
+	if err != nil {
+		return false, err
+	}
+
+	for rscName, _ := range stopItems {
+		_, found := config.RscMap[rscName]
+		if !found {
+			fmt.Printf("Warning: Resource '%s' not found in the CIB\n    Program will not wait for this resource to stop.\n", rscName)
+		}
+		delete(stopItems, rscName)
+	}
+
 	isStopped := false
 	retries := 0
-	for !isStopped && retries < MAX_WAIT_STOP_RETRIES {
-		retries++
-
+	for !isStopped {
 		for key, _ := range stopItems {
 			stopItems[key] = LrmRunState{}
-		}
-
-		// Read the current CIB XML
-		docRoot, err := ReadConfiguration()
-		if err != nil {
-			return false, err
 		}
 
 		cib := docRoot.Root()
@@ -418,10 +430,22 @@ func WaitForResourceStop(
 		}
 
 		if !stoppedFlag {
+			if retries > MAX_WAIT_STOP_RETRIES {
+				break
+			}
+
 			time.Sleep(time.Duration(CIB_POLL_RETRY_DELAY * time.Millisecond))
+
+			// Re-read the current CIB XML
+			docRoot, err = ReadConfiguration()
+			if err != nil {
+				return false, err
+			}
 		} else {
 			isStopped = true
 		}
+
+		retries++
 	}
 
 	return isStopped, nil
@@ -432,7 +456,7 @@ func WaitForResourceStop(
 // Information about existing CRM resources is parsed from the CIB XML document and
 // stored in a newly allocated CrmConfiguration data structure
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
-	config := CrmConfiguration{TidSet: NewTargetIdSet()}
+	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewTargetIdSet()}
 	if docRoot == nil {
 		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
@@ -466,6 +490,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 				fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mtype\x1b[0m\n")
 			}
 
+			config.RscMap[crmRscName] = nil
 			if isTarget {
 				config.TargetList = append(config.TargetList, crmRscName)
 			} else if isLu {

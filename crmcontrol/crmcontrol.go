@@ -118,10 +118,10 @@ const MAX_WAIT_STOP_RETRIES = 10
 
 // Initial delay after setting resource target-role=Stopped before starting to poll the CIB
 // to check whether resources have actually stopped
-const WAIT_STOP_POLL_CIB_DELAY = 1000
+const WAIT_STOP_POLL_CIB_DELAY = 2500
 
 // Delay between CIB polls in milliseconds
-const CIB_POLL_RETRY_DELAY = 1000
+const CIB_POLL_RETRY_DELAY = 2000
 
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {

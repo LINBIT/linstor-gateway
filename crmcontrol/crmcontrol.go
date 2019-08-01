@@ -350,6 +350,37 @@ func DeleteCrmLu(
 	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
 }
 
+// Probes the LRM run state of the CRM resources associated with the specified iSCSI resource
+func ProbeResource(
+	iscsiTargetName string,
+	lun uint8,
+) (map[string]LrmRunState, error) {
+	rscStateMap := make(map[string]LrmRunState)
+
+	stopItems, err := LoadCrmObjMap(iscsiTargetName, lun)
+	if err != nil {
+		return rscStateMap, err
+	}
+
+	// Read the current CIB XML
+	docRoot, err := ReadConfiguration()
+	if err != nil {
+		return rscStateMap, err
+	}
+
+	err = probeResourceRunState(&stopItems, docRoot)
+	if err != nil {
+		return rscStateMap, err
+	}
+
+	for rscName, tmpRunState := range stopItems {
+		runState := tmpRunState.(LrmRunState)
+		rscStateMap[rscName] = runState
+	}
+
+	return rscStateMap, nil
+}
+
 // Waits for CRM resources to stop
 //
 // Returns: Flag indicating whether resources are stopped (true) or not (false), error object

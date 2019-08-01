@@ -19,6 +19,7 @@ const (
 	ACTION_DELETE_CMD = "delete"
 	ACTION_START_CMD  = "start"
 	ACTION_STOP_CMD   = "stop"
+	ACTION_PROBE_CMD  = "probe"
 	ACTION_LIST_CMD   = "list"
 )
 
@@ -91,6 +92,14 @@ var ACTION_DELETE ActionDescription = ActionDescription{
 	},
 }
 
+var ACTION_PROBE ActionDescription = ActionDescription{
+	ACTION_PROBE_CMD,
+	[]ParamDescription{
+		ParamDescription{Name: KEY_IQN},
+		ParamDescription{Name: KEY_LUN},
+	},
+}
+
 var ACTION_LIST ActionDescription = ActionDescription{
 	ACTION_LIST_CMD,
 	[]ParamDescription{},
@@ -102,6 +111,7 @@ var APPLICATION_ACTIONS []ActionDescription = []ActionDescription{
 	ACTION_START,
 	ACTION_STOP,
 	ACTION_DELETE,
+	ACTION_PROBE,
 	ACTION_LIST,
 }
 
@@ -210,6 +220,44 @@ func CliStopResource() (int, error) {
 	}
 
 	return StopResource(argMap[KEY_IQN], lun)
+}
+
+// Shows the run status of the specified resource
+func CliProbeResource() (int, error) {
+	if explainParams(ACTION_PROBE) {
+		return EXIT_SUCCESS, nil
+	}
+
+	argMap := make(map[string]string)
+	err := parseArguments(ACTION_PROBE, &argMap)
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Invalid command line: " + err.Error())
+	}
+
+	lun, err := parseLun(argMap[KEY_LUN])
+	if err != nil {
+		return EXIT_INV_PRM, errors.New("Argument '" + KEY_LUN + "': Unparseable logical unit number")
+	}
+
+	rscStateMap, _, err := ProbeResource(argMap[KEY_IQN], lun)
+	if err != nil {
+		return EXIT_FAILED_ACTION, err
+	}
+
+	fmt.Printf("Current state of CRM resources\niSCSI resource %s, logical unit #%d:\n", argMap[KEY_IQN], lun)
+	for rscName, runState := range *rscStateMap {
+		label := term.COLOR_YELLOW + "Unknown" + term.COLOR_RESET
+		if runState.HaveState {
+			if runState.Running {
+				label = term.COLOR_GREEN + "Running" + term.COLOR_RESET
+			} else {
+				label = term.COLOR_RED + "Stopped" + term.COLOR_RESET
+			}
+		}
+		fmt.Printf("    %-40s %s\n", rscName, label)
+	}
+
+	return EXIT_SUCCESS, nil
 }
 
 // Lists existing CRM resources, output goes to stdout

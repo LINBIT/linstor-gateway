@@ -138,6 +138,26 @@ func StopResource(
 	return modifyResourceTargetRole(iqn, lun, false)
 }
 
+// Starts/stops existing iSCSI resources
+//
+// Returns: resource state map, program exit code, error object
+func ProbeResource(
+	iqn string,
+	lun uint8,
+) (*map[string]crmcontrol.LrmRunState, int, error) {
+	targetName, err := iqnExtractTarget(iqn)
+	if err != nil {
+		return nil, EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+	}
+
+	rscStateMap, err := crmcontrol.ProbeResource(targetName, lun)
+	if err != nil {
+		return nil, EXIT_FAILED_ACTION, err
+	}
+
+	return &rscStateMap, EXIT_SUCCESS, nil
+}
+
 // Extracts a list of existing CRM (Pacemaker) resources from the CIB XML
 //
 // Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object

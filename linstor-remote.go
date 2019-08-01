@@ -32,6 +32,8 @@ func main() {
 			exit_code, err = application.CliStopResource()
 		case application.ACTION_DELETE.Command:
 			exit_code, err = application.CliDeleteResource()
+		case application.ACTION_PROBE.Command:
+			exit_code, err = application.CliProbeResource()
 		case application.ACTION_LIST.Command:
 			exit_code, err = application.CliListResources()
 		default:

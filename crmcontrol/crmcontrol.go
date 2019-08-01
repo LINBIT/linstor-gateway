@@ -350,6 +350,9 @@ func DeleteCrmLu(
 	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
 }
 
+// Waits for CRM resources to stop
+//
+// Returns: Flag indicating whether resources are stopped (true) or not (false), error object
 func WaitForResourceStop(
 	iscsiTargetName string,
 	lun uint8,
@@ -373,61 +376,25 @@ func WaitForResourceStop(
 	for rscName, _ := range stopItems {
 		_, found := config.RscMap[rscName]
 		if !found {
-			fmt.Printf("Warning: Resource '%s' not found in the CIB\n    Program will not wait for this resource to stop.\n", rscName)
+			fmt.Printf("Warning: Resource '%s' not found in the CIB\n    This resource will be ignored.\n", rscName)
 		}
 		delete(stopItems, rscName)
+	}
+
+	fmt.Print("Waiting for the following CRM resources to stop:\n")
+	for rscName, _ := range stopItems {
+		fmt.Printf("    %s\n", rscName)
 	}
 
 	isStopped := false
 	retries := 0
 	for !isStopped {
-		for key, _ := range stopItems {
-			stopItems[key] = LrmRunState{}
+		err := probeResourceRunState(&stopItems, docRoot)
+		if err != nil {
+			return false, err
 		}
 
-		cib := docRoot.Root()
-		if cib == nil {
-			return false, errors.New("Failed to find the cluster information base (CIB) root element")
-		}
-
-		statusSection := cib.FindElement(CIB_STATUS_XPATH)
-		if statusSection == nil {
-			return false, errors.New("Failed to find any resource status information in the cluster information base (CIB)")
-		}
-
-		for _, nodeElem := range statusSection.ChildElements() {
-			lrmElem := nodeElem.SelectElement(CIB_TAG_LRM)
-			if lrmElem != nil {
-				lrmRscList := lrmElem.SelectElement(CIB_TAG_LRM_RSCLST)
-				if lrmRscList != nil {
-					for _, lrmRsc := range lrmRscList.ChildElements() {
-						idAttr := lrmRsc.SelectAttr(CIB_ATTR_KEY_ID)
-						if idAttr == nil {
-							return false, errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
-						}
-						rscName := idAttr.Value
-						tmpRunState, isStopItem := stopItems[rscName]
-						if isStopItem {
-							itemRunState := tmpRunState.(LrmRunState)
-							updateRunState(rscName, lrmRsc, &itemRunState)
-							stopItems[rscName] = itemRunState
-						}
-					}
-				}
-			}
-		}
-
-		stoppedFlag := true
-		for rscName, tmpRunState := range stopItems {
-			runState := tmpRunState.(LrmRunState)
-			if !runState.HaveState {
-				fmt.Printf("Warning: No run status information for resource '%s'\n", rscName)
-				stoppedFlag = false
-			} else if runState.Running {
-				debug.DbgPrintf("Resource '%s' is still running\n", rscName)
-				stoppedFlag = false
-			}
-		}
+		_, stoppedFlag := checkResourceStopped(&stopItems)
 
 		if !stoppedFlag {
 			if retries > MAX_WAIT_STOP_RETRIES {
@@ -446,6 +413,12 @@ func WaitForResourceStop(
 		}
 
 		retries++
+	}
+
+	if isStopped {
+		fmt.Printf("The resources are stopped")
+	} else {
+		fmt.Printf("Could not confirm that the resources are stopped")
 	}
 
 	return isStopped, nil
@@ -564,6 +537,74 @@ func LoadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, e
 		objMap[name] = nil
 	}
 	return objMap, nil
+}
+
+// Probes the LRM run state of selected resources
+//
+// Each resource name is mapped to an LrmRunState data structure that is then
+// updated with the run state of the respective resource
+func probeResourceRunState(stopItems *map[string]interface{}, docRoot *xmltree.Document) error {
+	for key, _ := range *stopItems {
+		(*stopItems)[key] = LrmRunState{}
+	}
+
+	cib := docRoot.Root()
+	if cib == nil {
+		return errors.New("Failed to find the cluster information base (CIB) root element")
+	}
+
+	statusSection := cib.FindElement(CIB_STATUS_XPATH)
+	if statusSection == nil {
+		return errors.New("Failed to find any resource status information in the cluster information base (CIB)")
+	}
+
+	for _, nodeElem := range statusSection.ChildElements() {
+		lrmElem := nodeElem.SelectElement(CIB_TAG_LRM)
+		if lrmElem != nil {
+			lrmRscList := lrmElem.SelectElement(CIB_TAG_LRM_RSCLST)
+			if lrmRscList != nil {
+				for _, lrmRsc := range lrmRscList.ChildElements() {
+					idAttr := lrmRsc.SelectAttr(CIB_ATTR_KEY_ID)
+					if idAttr == nil {
+						return errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
+					}
+					rscName := idAttr.Value
+					tmpRunState, isStopItem := (*stopItems)[rscName]
+					if isStopItem {
+						itemRunState := tmpRunState.(LrmRunState)
+						updateRunState(rscName, lrmRsc, &itemRunState)
+						(*stopItems)[rscName] = itemRunState
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func checkResourceStopped(stopItems *map[string]interface{}) (bool, bool) {
+	stateCtr := 0
+	stoppedCtr := 0
+	for rscName, tmpRunState := range *stopItems {
+		runState := tmpRunState.(LrmRunState)
+		if runState.HaveState {
+			stateCtr++
+			if runState.Running {
+				fmt.Printf("Resource '%s' is running\n", rscName)
+			} else {
+				fmt.Printf("Resource '%s' is stopped\n", rscName)
+				stoppedCtr++
+			}
+		} else {
+			fmt.Printf("Warning: No run status information for resource '%s'\n", rscName)
+		}
+	}
+
+	haveState := stateCtr == len(*stopItems)
+	stoppedFlag := stoppedCtr == len(*stopItems)
+
+	return haveState, stoppedFlag
 }
 
 func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
@@ -900,12 +941,25 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState *LrmRunSta
 	// there is no stop action present.
 	stopEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_STOP + "']")
 	if stopEntry != nil {
-		rcAttr := stopEntry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
-		if rcAttr != nil {
-			rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
-			if err == nil {
-				if rc == OCF_SUCCESS {
-					if runState.HaveState == false {
+		rc, valid := getLrmRcCode(rscName, stopEntry)
+		if valid {
+			if rc == OCF_SUCCESS {
+				if !runState.HaveState {
+					runState.HaveState = true
+					runState.Running = false
+				}
+			} else {
+				runState.HaveState = true
+				runState.Running = true
+			}
+		}
+	} else {
+		monEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_MONITOR + "']")
+		if monEntry != nil {
+			rc, valid := getLrmRcCode(rscName, monEntry)
+			if valid {
+				if rc == OCF_NOT_RUNNING {
+					if !runState.HaveState {
 						runState.HaveState = true
 						runState.Running = false
 					}
@@ -913,39 +967,49 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState *LrmRunSta
 					runState.HaveState = true
 					runState.Running = true
 				}
-			} else {
-				fmt.Printf("Warning: Unparseable stop action information for resource '%s'\n", rscName)
 			}
 		} else {
-			fmt.Printf("Warning: Stop action information for resource '%s' does not contain a status code\n", rscName)
-		}
-	} else {
-		monEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_MONITOR + "']")
-		if monEntry != nil {
-			rcAttr := monEntry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
-			if rcAttr != nil {
-				rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
-				if err == nil {
-					if rc == OCF_NOT_RUNNING {
-						if runState.HaveState == false {
-							runState.HaveState = true
-							runState.Running = false
-						} else {
-						}
-					} else {
+			startEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_MONITOR + "']")
+			if startEntry != nil {
+				rc, valid := getLrmRcCode(rscName, startEntry)
+				if valid {
+					switch rc {
+					case OCF_RUNNING_MASTER:
+						fallthrough
+					case OCF_SUCCESS:
 						runState.HaveState = true
 						runState.Running = true
+					default:
+						if !runState.HaveState {
+							runState.HaveState = true
+							runState.Running = false
+						}
 					}
-				} else {
-					fmt.Printf("Warning: Unparseable status information for resource '%s'\n", rscName)
 				}
-			} else {
-				fmt.Printf("Warning: Monitor information for resource '%s' does not contain a status code\n", rscName)
 			}
-		} else {
-			fmt.Printf("Warning: No monitor information for resource '%s'\n", rscName)
 		}
 	}
+}
+
+// Extracts the rc-code value from an LRM operation entry
+//
+// Returns: rc-code value and a flag indicating whether the rc-code is valid (true) or invalid/unusable (false)
+func getLrmRcCode(rscName string, entry *xmltree.Element) (int, bool) {
+	validFlag := false
+	rc := 0
+	rcAttr := entry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
+	if rcAttr != nil {
+		parsedRc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
+		if err == nil {
+			validFlag = true
+			rc = int(parsedRc)
+		} else {
+			fmt.Printf("Warning: Unparseable LRM resource operation return code for resource '%s'\n", rscName)
+		}
+	} else {
+		fmt.Printf("Warning: Found LRM resource operation data for resource '%s' without a status code\n", rscName)
+	}
+	return rc, validFlag
 }
 
 // Generates an error indicating that an operation was aborted because it reached the maximum recursion level

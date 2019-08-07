@@ -476,9 +476,6 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	}
 
 	resources := rscSection.ChildElements()
-	if resources == nil {
-		return nil, errors.New("Failed to find any cluster resources in the cluster information base (CIB)")
-	}
 
 	for _, selectedRsc := range resources {
 		idAttr := selectedRsc.SelectAttr("id")

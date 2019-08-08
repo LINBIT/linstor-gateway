@@ -13,12 +13,15 @@ import (
 var probeCmd = &cobra.Command{
 	Use:   "probe",
 	Short: "Probes an iSCSI starget",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Long:
+`Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
+That means Pacemaker will run the status operation on the nodes where the
+resource can run.
+This makes sure that Pacemakers view of the world is updated to the state
+of the world.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+For example:
+./linstor-iscsi probe --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		rscStateMap, _, err := application.ProbeResource(iqn, uint8(lun))

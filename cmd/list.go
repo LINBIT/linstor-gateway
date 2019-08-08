@@ -14,12 +14,12 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lists iSCSI targets",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Long:
+`Lists the iSCSI targets created with this tool and provides an overview
+about the existing Pacemaker and linstor parts
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+For example:
+linstor-iscsi list`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		_, config, _, err := application.ListResources()

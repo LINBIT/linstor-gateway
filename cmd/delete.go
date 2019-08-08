@@ -11,12 +11,12 @@ import (
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes an iSCSI target",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Long:
+`Deletes an iSCSI target by stopping and deliting the pacemaker resource
+primitives and removing the linstor resources.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+For example:
+linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		if _, err := application.DeleteResource(iqn, uint8(lun)); err != nil {

@@ -19,12 +19,22 @@ var sizeKiB uint64
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates an iSCSI target",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Long:
+`Creates a highly available iSCSI target based on LINSTOR and Pacemaker.
+At first it creates a new resouce within the linstor system, using the
+specified resource group. The name of the linstor resources is derived
+from the iqn and the lun number.
+After that it creates resource primitives in the Pacemaker cluster including
+all necessary order and location constraints. The Pacemaker primites are
+prefixed with p_, contain the name and a resource type postfix.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+For example:
+linstor-iscsi create --iqn=iqn.2019-08.com.libit:example --ip=192.168.122.181 \
+ -username=foo --lun=0 --password=bar --resource_group=ssd_thin_2way --size=2G
+
+Creates linstor resources example_lu0 and
+pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
+
 	Args: cobra.NoArgs,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// TODO directly use for size, unit fulfills the flag interface.

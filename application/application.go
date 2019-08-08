@@ -7,11 +7,16 @@ package application
 // and the CRM operations (in package crmcontrol) to form a combined high-level API
 // that performs each operation in both subsystems.
 
-import "strings"
-import "errors"
-import "github.com/LINBIT/linstor-remote-storage/linstorcontrol"
-import "github.com/LINBIT/linstor-remote-storage/crmcontrol"
-import xmltree "github.com/beevik/etree"
+import (
+	"errors"
+	"net"
+	"strings"
+
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
+	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+
+	xmltree "github.com/beevik/etree"
+)
 
 const (
 	// Indicates successful completion of the application
@@ -31,11 +36,10 @@ func CreateResource(
 	sizeKib uint64,
 	storageNodeList []string,
 	clientNodeList []string,
-	serviceIp string,
+	serviceIp net.IP,
 	username string,
 	password string,
-	portals string,
-) (int, error) {
+	portals string) (int, error) {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
@@ -97,10 +101,7 @@ func CreateResource(
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(
-	iqn string,
-	lun uint8,
-) (int, error) {
+func DeleteResource(iqn string, lun uint8) (int, error) {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")

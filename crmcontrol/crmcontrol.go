@@ -16,15 +16,20 @@ package crmcontrol
 //     the cluster configuration.
 // The 'etree' package is used for XML parsing and modification.
 
-import "fmt"
-import "strings"
-import "strconv"
-import "errors"
-import "time"
-import "github.com/LINBIT/linstor-remote-storage/templateproc"
-import "github.com/LINBIT/linstor-remote-storage/extcmd"
-import "github.com/LINBIT/linstor-remote-storage/debug"
-import xmltree "github.com/beevik/etree"
+import (
+	"errors"
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/LINBIT/linstor-remote-storage/debug"
+	"github.com/LINBIT/linstor-remote-storage/extcmd"
+	"github.com/LINBIT/linstor-remote-storage/templateproc"
+
+	xmltree "github.com/beevik/etree"
+)
 
 // Template file names
 const (
@@ -145,7 +150,7 @@ type LrmRunState struct {
 func CreateCrmLu(
 	storageNodeList []string,
 	iscsiTargetName string,
-	ip string,
+	ip net.IP,
 	iscsiTargetIqn string,
 	lun uint8,
 	device string,
@@ -166,7 +171,7 @@ func CreateCrmLu(
 	// Construct the CIB update data from the template
 	var tmplVars map[string]string = make(map[string]string)
 	tmplVars[VAR_LU_NAME] = "lu" + strconv.Itoa(int(lun))
-	tmplVars[VAR_SVC_IP] = ip
+	tmplVars[VAR_SVC_IP] = ip.String()
 	tmplVars[VAR_TGT_NAME] = iscsiTargetName
 	tmplVars[VAR_TGT_IQN] = iscsiTargetIqn
 	tmplVars[VAR_ISCSI_LUN] = strconv.Itoa(int(lun))

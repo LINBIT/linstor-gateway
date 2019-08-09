@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"log"
 	"net"
 	"strconv"
 
 	"github.com/LINBIT/linstor-remote-storage/application"
 	"github.com/rck/unit"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +19,7 @@ var sizeKiB uint64
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates an iSCSI target",
-	Long:
-`Creates a highly available iSCSI target based on LINSTOR and Pacemaker.
+	Long: `Creates a highly available iSCSI target based on LINSTOR and Pacemaker.
 At first it creates a new resouce within the linstor system, using the
 specified resource group. The name of the linstor resources is derived
 from the iqn and the lun number.
@@ -66,7 +65,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			iqn, uint8(lun), sizeKiB, nodes,
 			// clientNodeList not supported yet
 			make([]string, 0),
-			ip, username, password, portals)
+			ip, username, password, portals, log.GetLevel().String())
 		if err != nil {
 			log.Fatal(err)
 		}

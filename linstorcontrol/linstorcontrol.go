@@ -12,11 +12,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 
 	client "github.com/LINBIT/golinstor/client"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,14 +31,14 @@ func CreateVolume(
 	autoPlaceCount uint64,
 	storageStorPool string,
 	clientStorPool string,
-	logStream io.Writer,
+	loglevel string,
 ) (string, error) {
 	if len(storageNodeList) < 1 {
 		return "", errors.New("Invalid CreateVolume() call: Parameter storageNodeList is an empty list")
 	}
 
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: logrus.TraceLevel.String()}
+	logCfg := &client.LogCfg{Level: loglevel}
 	ctrlConn, err := client.NewClient(client.Log(logCfg))
 	if err != nil {
 		return "", err
@@ -105,12 +103,9 @@ func CreateVolume(
 }
 
 // Deletes the LINSTOR resource definition
-func DeleteVolume(
-	iscsiTargetName string,
-	lun uint8,
-) error {
+func DeleteVolume(iscsiTargetName string, lun uint8, loglevel string) error {
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: logrus.TraceLevel.String()}
+	logCfg := &client.LogCfg{Level: loglevel}
 	ctrlConn, err := client.NewClient(client.Log(logCfg))
 	if err != nil {
 		return err
@@ -118,15 +113,4 @@ func DeleteVolume(
 
 	luName := "lu" + strconv.Itoa(int(lun))
 	return ctrlConn.ResourceDefinitions.Delete(clientCtx, iscsiTargetName+"_"+luName)
-}
-
-type debugFormatter struct {
-	logrus.Formatter
-}
-
-// Implements the logrus.Formatter interface; provisional implementation; used for golinstor
-func (formatter *debugFormatter) format(logEntry *logrus.Entry) ([]byte, error) {
-	var output []byte = make([]byte, 0)
-	output = append(output, (*logEntry).Message...)
-	return output, nil
 }

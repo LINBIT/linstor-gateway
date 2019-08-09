@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/LINBIT/linstor-remote-storage/debug"
 	"github.com/LINBIT/linstor-remote-storage/extcmd"
 	"github.com/LINBIT/linstor-remote-storage/templateproc"
+	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"
 )
@@ -215,22 +215,18 @@ func CreateCrmLu(
 
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 
-	fmt.Printf("CRM command execution successful\n\n")
+	log.Info("CRM command execution successful")
 
 	if len(stdoutLines) >= 1 {
-		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
-		debug.PrintTextArrayLimited(stdoutLines, 5)
+		log.Debug("Begin of CRM command stdout output:", stdoutLines)
 	} else {
-		fmt.Printf("No stdout output\n")
+		log.Debug("No stdout output")
 	}
 
 	if len(stderrLines) >= 1 {
-		fmt.Printf("\x1b[1;33mCRM command stderr output:\x1b[0m\n")
-		fmt.Printf("\x1b[1;31m")
-		debug.PrintTextArray(stderrLines)
-		fmt.Printf("\x1b[0m")
+		log.Debug("CRM command stderr output:", stderrLines)
 	} else {
-		fmt.Printf("No stderr output\n")
+		log.Debug("No stdout output")
 	}
 
 	return err
@@ -537,11 +533,7 @@ func ReadConfiguration() (*xmltree.Document, error) {
 	}
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 	if len(stderrLines) > 0 {
-		fmt.Printf("\x1b[1;33m")
-		fmt.Printf("External command error output:")
-		fmt.Printf("\x1b[0m\n")
-		debug.PrintTextArray(stderrLines)
-		fmt.Printf("\n")
+		log.Debug("External command error output:", stderrLines)
 	}
 
 	docData := extcmd.FuseStrings(stdoutLines)
@@ -671,19 +663,15 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
 	}
 
 	if len(stdoutLines) >= 1 {
-		fmt.Printf("\x1b[1;33mBegin of CRM command stdout output:\x1b[0m\n")
-		debug.PrintTextArrayLimited(stdoutLines, 5)
+		log.Debug("Begin of CRM command stdout output:", stdoutLines)
 	} else {
-		fmt.Printf("No stdout output\n")
+		log.Debug("No stdout output\n")
 	}
 
 	if len(stderrLines) >= 1 {
-		fmt.Printf("\x1b[1;33mCRM command stderr output:\x1b[0m\n")
-		fmt.Printf("\x1b[1;31m")
-		debug.PrintTextArray(stderrLines)
-		fmt.Printf("\x1b[0m")
+		log.Debug("CRM command stderr output:", stderrLines)
 	} else {
-		fmt.Printf("No stderr output\n")
+		log.Debug("No stderr output")
 	}
 
 	return err
@@ -747,20 +735,16 @@ func getRscParams(resource *xmltree.Element) []*xmltree.Element {
 // that the external command did not produce such output
 func printCmdOutput(stdoutLines []string, stderrLines []string) {
 	if len(stdoutLines) > 0 {
-		fmt.Printf("Stdout output:\n")
-		debug.PrintTextArray(stdoutLines)
+		log.Debug("Stdout output:", stdoutLines)
 	} else {
-		fmt.Printf("No stdout output\n")
+		log.Debug("No stdout output")
 	}
 
 	if len(stderrLines) > 0 {
-		fmt.Printf("Stderr output:\n")
-		debug.PrintTextArray(stderrLines)
+		log.Debug("Stderr output:", stderrLines)
 	} else {
-		fmt.Printf("No stderr output\n")
+		log.Debug("No stderr output")
 	}
-
-	fmt.Printf("\n")
 }
 
 // Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree

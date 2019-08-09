@@ -2,28 +2,35 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var iqn string
 var lun int
 
+var loglevel string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "linstor-remote-storage",
 	Short: "Manages Highly-Available iSCSI targets",
-	Long:
-`linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
+	Long: `linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
 and Pacemaker. Setting linstor including storage pools and resource groups
 as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
 	Args: cobra.NoArgs,
 	// We could have our custom flag types, but this is really simple enough...
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// TODO: regex most likely needs review
+		level, err := log.ParseLevel(loglevel)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetLevel(level)
+
 		matched, err := regexp.MatchString(`^iqn\.\d{4}-\d{2}\..*:.*`, iqn)
 		if err != nil {
 			log.Fatal(err)
@@ -49,6 +56,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&iqn, "iqn", "i", "", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.libit:unique) (required)")
 	rootCmd.PersistentFlags().IntVarP(&lun, "lun", "l", 0, "Set the LUN Number (required)")
+	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 
 	rootCmd.MarkPersistentFlagRequired("iqn")
 	rootCmd.MarkPersistentFlagRequired("lun")

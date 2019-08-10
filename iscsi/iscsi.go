@@ -29,11 +29,9 @@ func ResourceName(iscsiTargetName string, lun uint8) string {
 func CreateResource(
 	iqn string,
 	lun uint8,
-	sizeKib uint64,
-	storageNodeList []string,
-	clientNodeList []string,
 	serviceIp net.IP,
-	username, password, portals, loglevel string, controllerIP net.IP) error {
+	username, password, portals string, linstor *linstorcontrol.Linstor) error {
+
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
@@ -57,23 +55,15 @@ func CreateResource(
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
-	resourceName := ResourceName(targetName, lun)
-	devPath, err := linstorcontrol.CreateVolume(
-		resourceName,
-		sizeKib,
-		storageNodeList,
-		make([]string, 0),
-		uint64(0),
-		"",
-		"",
-		loglevel, controllerIP)
+	linstor.ResourceName = ResourceName(targetName, lun)
+	devPath, err := linstor.CreateVolume()
 	if err != nil {
 		return errors.New("LINSTOR volume operation failed, error: " + err.Error())
 	}
 
 	// Create CRM resources and constraints for the iSCSI services
 	err = crmcontrol.CreateCrmLu(
-		storageNodeList,
+		linstor.StorageNodeList,
 		targetName,
 		serviceIp,
 		iqn,
@@ -94,7 +84,7 @@ func CreateResource(
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP) error {
+func DeleteResource(iqn string, lun uint8, linstor *linstorcontrol.Linstor) error {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
@@ -107,10 +97,8 @@ func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP)
 	}
 
 	// Delete the LINSTOR resource definition
-	resourceName := ResourceName(targetName, lun)
-	err = linstorcontrol.DeleteVolume(resourceName, loglevel, controllerIP)
-
-	return nil
+	linstor.ResourceName = ResourceName(targetName, lun)
+	return linstor.DeleteVolume()
 }
 
 // Starts existing iSCSI resources

@@ -19,29 +19,31 @@ import (
 	client "github.com/LINBIT/golinstor/client"
 )
 
+type Linstor struct {
+	ResourceName    string
+	VlmSizeKiB      uint64
+	StorageNodeList []string
+	ClientNodeList  []string
+	AutoPlaceCount  uint64
+	StorageStorPool string
+	ClientStorPool  string
+	Loglevel        string
+	ControllerIP    net.IP
+}
+
 func ipToURL(ip net.IP) (*url.URL, error) {
 	return url.Parse("http://" + ip.String() + ":3370")
 }
 
 // Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
-func CreateVolume(
-	resourceName string,
-	vlmSizeKiB uint64,
-	storageNodeList []string,
-	clientNodeList []string,
-	autoPlaceCount uint64,
-	storageStorPool string,
-	clientStorPool string,
-	loglevel string,
-	controllerIP net.IP,
-) (string, error) {
-	if len(storageNodeList) < 1 {
+func (l *Linstor) CreateVolume() (string, error) {
+	if len(l.StorageNodeList) < 1 {
 		return "", errors.New("Invalid CreateVolume() call: Parameter storageNodeList is an empty list")
 	}
 
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: loglevel}
-	u, err := ipToURL(controllerIP)
+	logCfg := &client.LogCfg{Level: l.Loglevel}
+	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +54,7 @@ func CreateVolume(
 
 	// Create a resource definition
 	rscDfnData := client.ResourceDefinitionCreate{
-		ResourceDefinition: client.ResourceDefinition{Name: resourceName},
+		ResourceDefinition: client.ResourceDefinition{Name: l.ResourceName},
 	}
 	err = ctrlConn.ResourceDefinitions.Create(clientCtx, rscDfnData)
 	if err != nil {
@@ -61,7 +63,7 @@ func CreateVolume(
 
 	// Create a volume definition
 	vlmDfnData := client.VolumeDefinitionCreate{
-		VolumeDefinition: client.VolumeDefinition{VolumeNumber: int32(0), SizeKib: vlmSizeKiB},
+		VolumeDefinition: client.VolumeDefinition{VolumeNumber: int32(0), SizeKib: l.VlmSizeKiB},
 	}
 	err = ctrlConn.ResourceDefinitions.CreateVolumeDefinition(
 		clientCtx,
@@ -74,7 +76,7 @@ func CreateVolume(
 
 	// Create resources on all selected nodes
 	crtRscFailed := 0
-	for _, tgtNodeName := range storageNodeList {
+	for _, tgtNodeName := range l.StorageNodeList {
 		rscData := client.ResourceCreate{
 			Resource: client.Resource{
 				Name: rscDfnData.ResourceDefinition.Name, NodeName: tgtNodeName,
@@ -97,7 +99,7 @@ func CreateVolume(
 
 	// Get the volume for the first node back from the LINSTOR server to determine the
 	// device path of the volume
-	vlm, err := ctrlConn.Resources.GetVolumes(clientCtx, rscDfnData.ResourceDefinition.Name, storageNodeList[0], nil)
+	vlm, err := ctrlConn.Resources.GetVolumes(clientCtx, rscDfnData.ResourceDefinition.Name, l.StorageNodeList[0], nil)
 	if err != nil {
 		return "", err
 	}
@@ -109,10 +111,10 @@ func CreateVolume(
 }
 
 // Deletes the LINSTOR resource definition
-func DeleteVolume(resourceName string, loglevel string, controllerIP net.IP) error {
+func (l *Linstor) DeleteVolume() error {
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: loglevel}
-	u, err := ipToURL(controllerIP)
+	logCfg := &client.LogCfg{Level: l.Loglevel}
+	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return err
 	}
@@ -121,5 +123,5 @@ func DeleteVolume(resourceName string, loglevel string, controllerIP net.IP) err
 		return err
 	}
 
-	return ctrlConn.ResourceDefinitions.Delete(clientCtx, resourceName)
+	return ctrlConn.ResourceDefinitions.Delete(clientCtx, l.ResourceName)
 }

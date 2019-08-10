@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
+	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -61,11 +62,13 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		err := iscsi.CreateResource(
-			iqn, uint8(lun), sizeKiB, nodes,
-			// clientNodeList not supported yet
-			make([]string, 0),
-			ip, username, password, portals, log.GetLevel().String(), controller)
+		linstorCfg := &linstorcontrol.Linstor{
+			VlmSizeKiB:      sizeKiB,
+			StorageNodeList: nodes,
+			Loglevel:        log.GetLevel().String(),
+			ControllerIP:    controller,
+		}
+		err := iscsi.CreateResource(iqn, uint8(lun), ip, username, password, portals, linstorCfg)
 		if err != nil {
 			log.Fatal(err)
 		}

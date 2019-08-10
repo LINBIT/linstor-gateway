@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net"
+
 	"github.com/LINBIT/linstor-remote-storage/application"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,7 +19,7 @@ For example:
 linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if _, err := application.DeleteResource(iqn, uint8(lun), log.GetLevel().String()); err != nil {
+		if _, err := application.DeleteResource(iqn, uint8(lun), log.GetLevel().String(), controller); err != nil {
 			log.Fatal(err)
 		}
 	},
@@ -25,4 +27,6 @@ linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
+
+	deleteCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
 }

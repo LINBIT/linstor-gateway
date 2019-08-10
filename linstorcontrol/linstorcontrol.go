@@ -12,6 +12,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"strconv"
 
 	client "github.com/LINBIT/golinstor/client"
@@ -20,6 +22,10 @@ import (
 const (
 	DEBUG_LINSTOR_CONTROLLERS = "10.43.9.28:3370"
 )
+
+func ipToURL(ip net.IP) (*url.URL, error) {
+	return url.Parse("http://" + ip.String() + ":3370")
+}
 
 // Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
 func CreateVolume(
@@ -32,6 +38,7 @@ func CreateVolume(
 	storageStorPool string,
 	clientStorPool string,
 	loglevel string,
+	controllerIP net.IP,
 ) (string, error) {
 	if len(storageNodeList) < 1 {
 		return "", errors.New("Invalid CreateVolume() call: Parameter storageNodeList is an empty list")
@@ -39,7 +46,11 @@ func CreateVolume(
 
 	clientCtx := context.Background()
 	logCfg := &client.LogCfg{Level: loglevel}
-	ctrlConn, err := client.NewClient(client.Log(logCfg))
+	u, err := ipToURL(controllerIP)
+	if err != nil {
+		return "", err
+	}
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
 	if err != nil {
 		return "", err
 	}
@@ -103,10 +114,14 @@ func CreateVolume(
 }
 
 // Deletes the LINSTOR resource definition
-func DeleteVolume(iscsiTargetName string, lun uint8, loglevel string) error {
+func DeleteVolume(iscsiTargetName string, lun uint8, loglevel string, controllerIP net.IP) error {
 	clientCtx := context.Background()
 	logCfg := &client.LogCfg{Level: loglevel}
-	ctrlConn, err := client.NewClient(client.Log(logCfg))
+	u, err := ipToURL(controllerIP)
+	if err != nil {
+		return err
+	}
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
 	if err != nil {
 		return err
 	}

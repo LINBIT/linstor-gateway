@@ -37,7 +37,7 @@ func CreateResource(
 	storageNodeList []string,
 	clientNodeList []string,
 	serviceIp net.IP,
-	username, password, portals, loglevel string) (int, error) {
+	username, password, portals, loglevel string, controllerIP net.IP) (int, error) {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
@@ -70,8 +70,7 @@ func CreateResource(
 		uint64(0),
 		"",
 		"",
-		loglevel,
-	)
+		loglevel, controllerIP)
 	if err != nil {
 		return EXIT_FAILED_ACTION, errors.New("LINSTOR volume operation failed, error: " + err.Error())
 	}
@@ -99,7 +98,7 @@ func CreateResource(
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(iqn string, lun uint8, loglevel string) (int, error) {
+func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP) (int, error) {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
 		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
@@ -112,7 +111,7 @@ func DeleteResource(iqn string, lun uint8, loglevel string) (int, error) {
 	}
 
 	// Delete the LINSTOR resource definition
-	err = linstorcontrol.DeleteVolume(targetName, lun, loglevel)
+	err = linstorcontrol.DeleteVolume(targetName, lun, loglevel, controllerIP)
 
 	return EXIT_SUCCESS, nil
 }

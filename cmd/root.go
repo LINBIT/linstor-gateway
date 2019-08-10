@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 
@@ -13,6 +14,8 @@ var iqn string
 var lun int
 
 var loglevel string
+
+var controller net.IP // create and delete
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

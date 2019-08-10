@@ -65,7 +65,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			iqn, uint8(lun), sizeKiB, nodes,
 			// clientNodeList not supported yet
 			make([]string, 0),
-			ip, username, password, portals, log.GetLevel().String())
+			ip, username, password, portals, log.GetLevel().String(), controller)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -76,6 +76,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 
 	createCmd.Flags().IPVar(&ip, "ip", net.IPv4(127, 0, 0, 1), "Set the service IP of the target (required)")
+	createCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
 	createCmd.Flags().StringSliceVar(&nodes, "nodes", []string{}, "Set up a list of nodes (required)")
 	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username (required)")

@@ -68,7 +68,15 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			Loglevel:        log.GetLevel().String(),
 			ControllerIP:    controller,
 		}
-		err := iscsi.CreateResource(iqn, uint8(lun), ip, username, password, portals, linstorCfg)
+		targetCfg := &iscsi.Target{
+			IQN:       iqn,
+			LUN:       uint8(lun),
+			ServiceIP: ip,
+			Username:  username,
+			Password:  password,
+			Portals:   portals,
+		}
+		err := iscsi.CreateResource(targetCfg, linstorCfg)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -19,7 +19,11 @@ For example:
 linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := iscsi.StartResource(iqn, uint8(lun)); err != nil {
+		targetCfg := &iscsi.Target{
+			IQN: iqn,
+			LUN: uint8(lun),
+		}
+		if err := iscsi.StartResource(targetCfg); err != nil {
 			log.Fatal(err)
 		}
 	},

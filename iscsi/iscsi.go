@@ -23,18 +23,21 @@ func ResourceName(iscsiTargetName string, lun uint8) string {
 	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
 }
 
+type Target struct {
+	IQN                string
+	LUN                uint8
+	ServiceIP          net.IP
+	Username, Password string
+	Portals            string
+}
+
 // Creates a new LINSTOR & iSCSI resource
 //
 // Returns: program exit code, error object
-func CreateResource(
-	iqn string,
-	lun uint8,
-	serviceIp net.IP,
-	username, password, portals string, linstor *linstorcontrol.Linstor) error {
-
-	targetName, err := iqnExtractTarget(iqn)
+func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
+	targetName, err := target.iqnTarget()
 	if err != nil {
-		return errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return err
 	}
 
 	// Read the current configuration from the CRM
@@ -55,7 +58,7 @@ func CreateResource(
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
-	linstor.ResourceName = ResourceName(targetName, lun)
+	linstor.ResourceName = ResourceName(targetName, target.LUN)
 	devPath, err := linstor.CreateVolume()
 	if err != nil {
 		return errors.New("LINSTOR volume operation failed, error: " + err.Error())
@@ -65,13 +68,13 @@ func CreateResource(
 	err = crmcontrol.CreateCrmLu(
 		linstor.StorageNodeList,
 		targetName,
-		serviceIp,
-		iqn,
-		uint8(lun),
+		target.ServiceIP,
+		target.IQN,
+		target.LUN,
 		devPath,
-		username,
-		password,
-		portals,
+		target.Username,
+		target.Password,
+		target.Portals,
 		freeTid,
 	)
 	if err != nil {
@@ -84,47 +87,47 @@ func CreateResource(
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(iqn string, lun uint8, linstor *linstorcontrol.Linstor) error {
-	targetName, err := iqnExtractTarget(iqn)
+func DeleteResource(target *Target, linstor *linstorcontrol.Linstor) error {
+	targetName, err := target.iqnTarget()
 	if err != nil {
-		return errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return err
 	}
 
 	// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.DeleteCrmLu(targetName, lun)
+	err = crmcontrol.DeleteCrmLu(targetName, target.LUN)
 	if err != nil {
 		return err
 	}
 
 	// Delete the LINSTOR resource definition
-	linstor.ResourceName = ResourceName(targetName, lun)
+	linstor.ResourceName = ResourceName(targetName, target.LUN)
 	return linstor.DeleteVolume()
 }
 
 // Starts existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StartResource(iqn string, lun uint8) error {
-	return modifyResourceTargetRole(iqn, lun, true)
+func StartResource(target *Target) error {
+	return modifyResourceTargetRole(target, true)
 }
 
 // Stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StopResource(iqn string, lun uint8) error {
-	return modifyResourceTargetRole(iqn, lun, false)
+func StopResource(target *Target) error {
+	return modifyResourceTargetRole(target, false)
 }
 
 // Starts/stops existing iSCSI resources
 //
 // Returns: resource state map, program exit code, error object
-func ProbeResource(iqn string, lun uint8) (*map[string]crmcontrol.LrmRunState, error) {
-	targetName, err := iqnExtractTarget(iqn)
+func ProbeResource(target *Target) (*map[string]crmcontrol.LrmRunState, error) {
+	targetName, err := target.iqnTarget()
 	if err != nil {
-		return nil, errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return nil, err
 	}
 
-	rscStateMap, err := crmcontrol.ProbeResource(targetName, lun)
+	rscStateMap, err := crmcontrol.ProbeResource(targetName, target.LUN)
 	if err != nil {
 		return nil, err
 	}
@@ -152,14 +155,14 @@ func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
 // Starts/stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func modifyResourceTargetRole(iqn string, lun uint8, startFlag bool) error {
-	targetName, err := iqnExtractTarget(iqn)
+func modifyResourceTargetRole(target *Target, startFlag bool) error {
+	targetName, err := target.iqnTarget()
 	if err != nil {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.ModifyCrmLuTargetRole(targetName, lun, startFlag)
+	err = crmcontrol.ModifyCrmLuTargetRole(targetName, target.LUN, startFlag)
 	if err != nil {
 		return err
 	}
@@ -170,14 +173,11 @@ func modifyResourceTargetRole(iqn string, lun uint8, startFlag bool) error {
 // Extracts the target name from an IQN string
 //
 // e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part
-func iqnExtractTarget(iqn string) (string, error) {
-	var target string
-	var err error = nil
-	idx := strings.IndexByte(iqn, ':')
-	if idx != -1 {
-		target = iqn[idx+1:]
+func (t *Target) iqnTarget() (string, error) {
+	spl := strings.Split(t.IQN, ":")
+	if len(spl) != 2 {
+		return "", errors.New("Malformed argument '" + t.IQN + "'")
 	} else {
-		err = errors.New("Malformed argument '" + iqn + "'")
+		return spl[1], nil
 	}
-	return target, err
 }

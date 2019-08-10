@@ -24,7 +24,11 @@ linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,
 		}
-		if err := iscsi.DeleteResource(iqn, uint8(lun), linstorCfg); err != nil {
+		targetCfg := &iscsi.Target{
+			IQN: iqn,
+			LUN: uint8(lun),
+		}
+		if err := iscsi.DeleteResource(targetCfg, linstorCfg); err != nil {
 			log.Fatal(err)
 		}
 	},

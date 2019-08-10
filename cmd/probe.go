@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/LINBIT/linstor-remote-storage/application"
+	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	term "github.com/LINBIT/linstor-remote-storage/termcontrol"
 	"github.com/spf13/cobra"
 )
@@ -13,8 +13,7 @@ import (
 var probeCmd = &cobra.Command{
 	Use:   "probe",
 	Short: "Probes an iSCSI starget",
-	Long:
-`Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
+	Long: `Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
 That means Pacemaker will run the status operation on the nodes where the
 resource can run.
 This makes sure that Pacemakers view of the world is updated to the state
@@ -24,7 +23,7 @@ For example:
 ./linstor-iscsi probe --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		rscStateMap, _, err := application.ProbeResource(iqn, uint8(lun))
+		rscStateMap, _, err := iscsi.ProbeResource(iqn, uint8(lun))
 		if err != nil {
 			log.Fatal(err)
 		}

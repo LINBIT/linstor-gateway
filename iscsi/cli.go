@@ -1,5 +1,5 @@
 // Command line interface (CLI) functionality
-package application
+package iscsi
 
 // cli module
 //

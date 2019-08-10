@@ -4,7 +4,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/LINBIT/linstor-remote-storage/application"
+	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -56,12 +56,12 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 		sizeKiB = uint64(v.Value / unit.DefaultUnits["K"])
 
 		if portals == "" {
-			portals = ip.String() + ":" + strconv.Itoa(application.DFLT_ISCSI_PORTAL_PORT)
+			portals = ip.String() + ":" + strconv.Itoa(iscsi.DFLT_ISCSI_PORTAL_PORT)
 		}
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := application.CreateResource(
+		_, err := iscsi.CreateResource(
 			iqn, uint8(lun), sizeKiB, nodes,
 			// clientNodeList not supported yet
 			make([]string, 0),

@@ -1,7 +1,7 @@
 // High-level API - entry points for resource creation/deletion/etc.
-package application
+package iscsi
 
-// application module
+// iscsi module
 //
 // This module combines the LINSTOR operations (in package linstorcontrol)
 // and the CRM operations (in package crmcontrol) to form a combined high-level API

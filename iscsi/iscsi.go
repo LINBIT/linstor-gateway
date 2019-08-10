@@ -10,6 +10,7 @@ package iscsi
 import (
 	"errors"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
@@ -26,6 +27,10 @@ const (
 	// Indicates failure due to a failed action, e.g. failure to create a volume
 	EXIT_FAILED_ACTION = 2
 )
+
+func ResourceName(iscsiTargetName string, lun uint8) string {
+	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
+}
 
 // Creates a new LINSTOR & iSCSI resource
 //
@@ -61,9 +66,9 @@ func CreateResource(
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
+	resourceName := ResourceName(targetName, lun)
 	devPath, err := linstorcontrol.CreateVolume(
-		targetName,
-		uint8(lun),
+		resourceName,
 		sizeKib,
 		storageNodeList,
 		make([]string, 0),
@@ -111,7 +116,8 @@ func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP)
 	}
 
 	// Delete the LINSTOR resource definition
-	err = linstorcontrol.DeleteVolume(targetName, lun, loglevel, controllerIP)
+	resourceName := ResourceName(targetName, lun)
+	err = linstorcontrol.DeleteVolume(resourceName, loglevel, controllerIP)
 
 	return EXIT_SUCCESS, nil
 }

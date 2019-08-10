@@ -25,8 +25,7 @@ func ipToURL(ip net.IP) (*url.URL, error) {
 
 // Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
 func CreateVolume(
-	iscsiTargetName string,
-	lun uint8,
+	resourceName string,
 	vlmSizeKiB uint64,
 	storageNodeList []string,
 	clientNodeList []string,
@@ -53,7 +52,7 @@ func CreateVolume(
 
 	// Create a resource definition
 	rscDfnData := client.ResourceDefinitionCreate{
-		ResourceDefinition: client.ResourceDefinition{Name: iscsiTargetName + "_lu" + strconv.Itoa(int(lun))},
+		ResourceDefinition: client.ResourceDefinition{Name: resourceName},
 	}
 	err = ctrlConn.ResourceDefinitions.Create(clientCtx, rscDfnData)
 	if err != nil {
@@ -110,7 +109,7 @@ func CreateVolume(
 }
 
 // Deletes the LINSTOR resource definition
-func DeleteVolume(iscsiTargetName string, lun uint8, loglevel string, controllerIP net.IP) error {
+func DeleteVolume(resourceName string, loglevel string, controllerIP net.IP) error {
 	clientCtx := context.Background()
 	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(controllerIP)
@@ -122,6 +121,5 @@ func DeleteVolume(iscsiTargetName string, lun uint8, loglevel string, controller
 		return err
 	}
 
-	luName := "lu" + strconv.Itoa(int(lun))
-	return ctrlConn.ResourceDefinitions.Delete(clientCtx, iscsiTargetName+"_"+luName)
+	return ctrlConn.ResourceDefinitions.Delete(clientCtx, resourceName)
 }

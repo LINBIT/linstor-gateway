@@ -19,10 +19,6 @@ import (
 	client "github.com/LINBIT/golinstor/client"
 )
 
-const (
-	DEBUG_LINSTOR_CONTROLLERS = "10.43.9.28:3370"
-)
-
 func ipToURL(ip net.IP) (*url.URL, error) {
 	return url.Parse("http://" + ip.String() + ":3370")
 }

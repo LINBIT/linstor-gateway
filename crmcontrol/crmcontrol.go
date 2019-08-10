@@ -17,26 +17,21 @@ package crmcontrol
 // The 'etree' package is used for XML parsing and modification.
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
+	"github.com/LINBIT/linstor-remote-storage/crmtemplate"
 	"github.com/LINBIT/linstor-remote-storage/extcmd"
-	"github.com/LINBIT/linstor-remote-storage/templateproc"
 	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"
-)
-
-// Template file names
-const (
-	CRM_TMPL     = "templates/crm-iscsi.tmpl"
-	CRM_OBJ_TMPL = "templates/crm-obj-names.tmpl"
-	TGT_LOC_TMPL = "templates/target-location-nodes.tmpl"
-	LU_LOC_TMPL  = "templates/lu-location-nodes.tmpl"
 )
 
 // Template variable keys
@@ -160,10 +155,6 @@ func CreateCrmLu(
 	tid int16,
 ) error {
 	// Load the template for modifying the CIB
-	tmplLines, err := templateproc.LoadTemplate(CRM_TMPL)
-	if err != nil {
-		return err
-	}
 
 	// debug.PrintfLnCaption("Template input:")
 	// debug.PrintTextArray(tmplLines)
@@ -182,12 +173,12 @@ func CreateCrmLu(
 	tmplVars[VAR_TID] = strconv.Itoa(int(tid))
 
 	// Create sub XML content, one entry per node, from the iSCSI target location constraint template
-	targetLocData, err := constructNodesTemplate(TGT_LOC_TMPL, storageNodeList, tmplVars)
+	targetLocData, err := constructNodesTemplate(crmtemplate.TARGET_LOCATION_NODES, storageNodeList, tmplVars)
 	if err != nil {
 		return err
 	}
 	// Create sub XML content, one entry per node, from the iSCSI logical unit location constraint template
-	luLocData, err := constructNodesTemplate(LU_LOC_TMPL, storageNodeList, tmplVars)
+	luLocData, err := constructNodesTemplate(crmtemplate.LU_LOCATION_NODES, storageNodeList, tmplVars)
 	if err != nil {
 		return err
 	}
@@ -196,7 +187,12 @@ func CreateCrmLu(
 	tmplVars[VAR_LU_LOC_NODES] = luLocData
 
 	// Replace resource creation template variables
-	cibData := templateproc.ReplaceVariables(tmplLines, tmplVars)
+	iscsitmpl, err := template.New("crmisci").Parse(crmtemplate.CRM_ISCSI)
+	if err != nil {
+		return err
+	}
+	var cibData bytes.Buffer
+	iscsitmpl.Execute(&cibData, tmplVars)
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
 	cmd, cmdPipe, err := extcmd.PipeToExtCmd(CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments)
@@ -204,18 +200,17 @@ func CreateCrmLu(
 		return err
 	}
 
-	for _, line := range cibData {
-		_, err := cmdPipe.WriteString(line)
-		if err != nil {
-			cmd.IoFailed()
-			break
-		}
+	_, err = cmdPipe.WriteString(cibData.String())
+	if err != nil {
+		cmd.IoFailed()
 	}
 	cmdPipe.Flush()
 
 	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 
-	log.Info("CRM command execution successful")
+	if err == nil {
+		log.Info("CRM command execution successful")
+	}
 
 	if len(stdoutLines) >= 1 {
 		log.Debug("Begin of CRM command stdout output:", stdoutLines)
@@ -549,16 +544,21 @@ func ReadConfiguration() (*xmltree.Document, error) {
 // Loads a map of CRM object names from the template
 func LoadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, error) {
 	objMap := make(map[string]interface{})
-	nameTmplList, err := templateproc.LoadTemplate(CRM_OBJ_TMPL)
-	if err != nil {
-		return objMap, err
-	}
 	tmplVars := make(map[string]string)
 	tmplVars[VAR_TGT_NAME] = iscsiTargetName
 	tmplVars[VAR_LU_NAME] = CRM_ISCSI_LU_NAME + strconv.Itoa(int(lun))
-	nameList := templateproc.ReplaceVariables(nameTmplList, tmplVars)
-	for _, nameLine := range nameList {
-		name := strings.TrimRight(nameLine, "\r\n")
+
+	tmpl, err := template.New("crmobjnames").Parse(crmtemplate.CRM_OBJ_NAMES)
+	if err != nil {
+		return objMap, err
+	}
+
+	var buf bytes.Buffer
+	tmpl.Execute(&buf, tmplVars)
+
+	scanner := bufio.NewScanner(bytes.NewReader(buf.Bytes()))
+	for scanner.Scan() {
+		name := strings.TrimRight(scanner.Text(), "\r\n")
 		objMap[name] = nil
 	}
 	return objMap, nil
@@ -691,21 +691,23 @@ func copyMap(srcMap map[string]string) map[string]string {
 // For each node entry, a template is loaded and variable replacement is performed, with one of the variables
 // containing the node name for the current iteration. The templates are concatenated.
 // The resulting XML content is a sub template for insertion into another XML template.
-func constructNodesTemplate(srcFile string, nodeList []string, tmplVars map[string]string) (string, error) {
-	subTmplLines, err := templateproc.LoadTemplate(srcFile)
-	if err != nil {
-		return "", err
-	}
+func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[string]string) (string, error) {
 	subTmplVars := copyMap(tmplVars)
 	var nr uint32 = 0
 	var subDataBld strings.Builder
 	for _, nodename := range nodeList {
 		subTmplVars[VAR_NODE_NAME] = nodename
 		subTmplVars[VAR_NR] = strconv.FormatUint(uint64(nr), 10)
-		subDataLines := templateproc.ReplaceVariables(subTmplLines, subTmplVars)
-		for _, line := range subDataLines {
-			subDataBld.WriteString(line)
+
+		tmpl, err := template.New(nodename).Parse(tmplString)
+		if err != nil {
+			return "", err
 		}
+
+		var buf bytes.Buffer
+		tmpl.Execute(&buf, subTmplVars)
+
+		subDataBld.WriteString(buf.String())
 		nr++
 	}
 	return subDataBld.String(), nil

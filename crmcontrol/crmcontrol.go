@@ -195,31 +195,24 @@ func CreateCrmLu(
 	iscsitmpl.Execute(&cibData, tmplVars)
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	cmd, cmdPipe, err := extcmd.PipeToExtCmd(CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments)
+	forStdin := cibData.String()
+	stdout, stderr, err := extcmd.Execute(&forStdin, CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments...)
 	if err != nil {
 		return err
 	}
-
-	_, err = cmdPipe.WriteString(cibData.String())
-	if err != nil {
-		cmd.IoFailed()
-	}
-	cmdPipe.Flush()
-
-	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
 
 	if err == nil {
 		log.Info("CRM command execution successful")
 	}
 
-	if len(stdoutLines) >= 1 {
-		log.Debug("Begin of CRM command stdout output:", stdoutLines)
+	if len(stdout) >= 1 {
+		log.Debug("Begin of CRM command stdout output:", stdout)
 	} else {
 		log.Debug("No stdout output")
 	}
 
-	if len(stderrLines) >= 1 {
-		log.Debug("CRM command stderr output:", stderrLines)
+	if len(stderr) >= 1 {
+		log.Debug("CRM command stderr output:", stderr)
 	} else {
 		log.Debug("No stdout output")
 	}
@@ -522,18 +515,16 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 
 // Reads the CIB XML document into a string
 func ReadConfiguration() (*xmltree.Document, error) {
-	cmd, _, err := extcmd.PipeToExtCmd(CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments)
+	stdout, stderr, err := extcmd.Execute(nil, CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments...)
 	if err != nil {
 		return nil, err
 	}
-	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
-	if len(stderrLines) > 0 {
-		log.Debug("External command error output:", stderrLines)
+	if len(stderr) > 0 {
+		log.Debug("External command error output:", stderr)
 	}
 
-	docData := extcmd.FuseStrings(stdoutLines)
 	docRoot := xmltree.NewDocument()
-	err = docRoot.ReadFromString(docData)
+	err = docRoot.ReadFromString(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -640,36 +631,25 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
 	}
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	cmd, cmdPipe, err := extcmd.PipeToExtCmd(crmCmd.executable, crmCmd.arguments)
+	stdout, stderr, err := extcmd.Execute(&cibData, crmCmd.executable, crmCmd.arguments...)
 	if err != nil {
-		return err
-	}
-
-	_, err = cmdPipe.WriteString(cibData)
-	if err != nil {
-		cmd.IoFailed()
-	}
-	cmdPipe.Flush()
-
-	stdoutLines, stderrLines, err := cmd.WaitForExtCmd()
-
-	if err == nil {
-		fmt.Print("CRM command execution successful\n\n")
-	} else {
 		fmt.Print("CRM command execution returned an error\n\n")
 		fmt.Print("The updated CIB data sent to the command was:\n")
 		fmt.Print(cibData)
 		fmt.Print("\n\n")
+		return err
 	}
 
-	if len(stdoutLines) >= 1 {
-		log.Debug("Begin of CRM command stdout output:", stdoutLines)
+	fmt.Print("CRM command execution successful\n\n")
+
+	if len(stdout) >= 1 {
+		log.Debug("Begin of CRM command stdout output:", stdout)
 	} else {
 		log.Debug("No stdout output\n")
 	}
 
-	if len(stderrLines) >= 1 {
-		log.Debug("CRM command stderr output:", stderrLines)
+	if len(stderr) >= 1 {
+		log.Debug("CRM command stderr output:", stderr)
 	} else {
 		log.Debug("No stderr output")
 	}

@@ -61,7 +61,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := iscsi.CreateResource(
+		err := iscsi.CreateResource(
 			iqn, uint8(lun), sizeKiB, nodes,
 			// clientNodeList not supported yet
 			make([]string, 0),

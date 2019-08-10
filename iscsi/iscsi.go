@@ -19,15 +19,6 @@ import (
 	xmltree "github.com/beevik/etree"
 )
 
-const (
-	// Indicates successful completion of the application
-	EXIT_SUCCESS = 0
-	// Indicates failure due to an invalid parameter
-	EXIT_INV_PRM = 1
-	// Indicates failure due to a failed action, e.g. failure to create a volume
-	EXIT_FAILED_ACTION = 2
-)
-
 func ResourceName(iscsiTargetName string, lun uint8) string {
 	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
 }
@@ -42,27 +33,27 @@ func CreateResource(
 	storageNodeList []string,
 	clientNodeList []string,
 	serviceIp net.IP,
-	username, password, portals, loglevel string, controllerIP net.IP) (int, error) {
+	username, password, portals, loglevel string, controllerIP net.IP) error {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
-		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	// Read the current configuration from the CRM
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
-		return EXIT_FAILED_ACTION, err
+		return err
 	}
 	// Find resources, allocated target IDs, etc.
 	config, err := crmcontrol.ParseConfiguration(docRoot)
 	if err != nil {
-		return EXIT_FAILED_ACTION, err
+		return err
 	}
 
 	// Find a free target ID number using the set of allocated target IDs
 	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
 	if !haveFreeTid {
-		return EXIT_FAILED_ACTION, errors.New("Failed to allocate a target ID for the new iSCSI target")
+		return errors.New("Failed to allocate a target ID for the new iSCSI target")
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
@@ -77,7 +68,7 @@ func CreateResource(
 		"",
 		loglevel, controllerIP)
 	if err != nil {
-		return EXIT_FAILED_ACTION, errors.New("LINSTOR volume operation failed, error: " + err.Error())
+		return errors.New("LINSTOR volume operation failed, error: " + err.Error())
 	}
 
 	// Create CRM resources and constraints for the iSCSI services
@@ -94,111 +85,98 @@ func CreateResource(
 		freeTid,
 	)
 	if err != nil {
-		return EXIT_FAILED_ACTION, err
+		return err
 	}
 
-	return EXIT_SUCCESS, nil
+	return nil
 }
 
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP) (int, error) {
+func DeleteResource(iqn string, lun uint8, loglevel string, controllerIP net.IP) error {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
-		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
 	err = crmcontrol.DeleteCrmLu(targetName, lun)
 	if err != nil {
-		return EXIT_FAILED_ACTION, err
+		return err
 	}
 
 	// Delete the LINSTOR resource definition
 	resourceName := ResourceName(targetName, lun)
 	err = linstorcontrol.DeleteVolume(resourceName, loglevel, controllerIP)
 
-	return EXIT_SUCCESS, nil
+	return nil
 }
 
 // Starts existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StartResource(
-	iqn string,
-	lun uint8,
-) (int, error) {
+func StartResource(iqn string, lun uint8) error {
 	return modifyResourceTargetRole(iqn, lun, true)
 }
 
 // Stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StopResource(
-	iqn string,
-	lun uint8,
-) (int, error) {
+func StopResource(iqn string, lun uint8) error {
 	return modifyResourceTargetRole(iqn, lun, false)
 }
 
 // Starts/stops existing iSCSI resources
 //
 // Returns: resource state map, program exit code, error object
-func ProbeResource(
-	iqn string,
-	lun uint8,
-) (*map[string]crmcontrol.LrmRunState, int, error) {
+func ProbeResource(iqn string, lun uint8) (*map[string]crmcontrol.LrmRunState, error) {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
-		return nil, EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return nil, errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	rscStateMap, err := crmcontrol.ProbeResource(targetName, lun)
 	if err != nil {
-		return nil, EXIT_FAILED_ACTION, err
+		return nil, err
 	}
 
-	return &rscStateMap, EXIT_SUCCESS, nil
+	return &rscStateMap, nil
 }
 
 // Extracts a list of existing CRM (Pacemaker) resources from the CIB XML
 //
 // Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object
-func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, int, error) {
+func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
-		return nil, nil, EXIT_FAILED_ACTION, err
+		return nil, nil, err
 	}
 
 	config, err := crmcontrol.ParseConfiguration(docRoot)
 	if err != nil {
-		return nil, nil, EXIT_FAILED_ACTION, err
+		return nil, nil, err
 	}
 
-	return docRoot, config, EXIT_SUCCESS, nil
+	return docRoot, config, nil
 }
 
 // Starts/stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func modifyResourceTargetRole(
-	iqn string,
-	lun uint8,
-	startFlag bool,
-) (int, error) {
+func modifyResourceTargetRole(iqn string, lun uint8, startFlag bool) error {
 	targetName, err := iqnExtractTarget(iqn)
 	if err != nil {
-		return EXIT_INV_PRM, errors.New("Invalid IQN format: Missing ':' separator and target name")
+		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
 	err = crmcontrol.ModifyCrmLuTargetRole(targetName, lun, startFlag)
 	if err != nil {
-		return EXIT_FAILED_ACTION, err
+		return err
 	}
 
-	return EXIT_SUCCESS, nil
+	return nil
 }
 
 // Extracts the target name from an IQN string

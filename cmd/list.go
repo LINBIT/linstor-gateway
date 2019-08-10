@@ -21,7 +21,7 @@ For example:
 linstor-iscsi list`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		_, config, _, err := iscsi.ListResources()
+		_, config, err := iscsi.ListResources()
 		if err != nil {
 			log.Fatal(err)
 		}

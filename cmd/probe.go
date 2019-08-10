@@ -23,7 +23,7 @@ For example:
 ./linstor-iscsi probe --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		rscStateMap, _, err := iscsi.ProbeResource(iqn, uint8(lun))
+		rscStateMap, err := iscsi.ProbeResource(iqn, uint8(lun))
 		if err != nil {
 			log.Fatal(err)
 		}

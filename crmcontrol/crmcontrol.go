@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -123,13 +124,25 @@ const WAIT_STOP_POLL_CIB_DELAY = 2500
 // Delay between CIB polls in milliseconds
 const CIB_POLL_RETRY_DELAY = 2000
 
+type TidSet map[int16]struct{}
+
+func (t *TidSet) SortedKeys() []int16 {
+	var keys []int16
+	for k := range *t {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	return keys
+}
+
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	RscMap       map[string]interface{}
 	TargetList   []string
 	LuList       []string
 	OtherRscList []string
-	TidSet       TargetIdSet
+	TidSet       TidSet
 }
 
 type LrmRunState struct {
@@ -449,7 +462,7 @@ func WaitForResourceStop(
 // Information about existing CRM resources is parsed from the CIB XML document and
 // stored in a newly allocated CrmConfiguration data structure
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
-	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewTargetIdSet()}
+	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: make(TidSet)}
 	if docRoot == nil {
 		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
@@ -498,7 +511,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
 					}
 					if tid > 0 {
-						config.TidSet.Insert(int16(tid))
+						config.TidSet[(int16(tid))] = struct{}{}
 					} else {
 						fmt.Printf("\x1b[1;31mWarning: Invalid tid value %d for resource '%s'\x1b[0m\n", tid, idAttr.Value)
 					}

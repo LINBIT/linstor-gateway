@@ -76,16 +76,17 @@ linstor-iscsi list`,
 
 		fmt.Print("\n")
 
-		if config.TidSet.GetSize() > 0 {
+		if len(config.TidSet) > 0 {
 			term.Color(term.COLOR_GREEN)
 			iscsi.IndentPrint(indent, "\x1b[1;32mAllocated TIDs:\x1b[0m\n")
 			term.DefaultColor()
 
 			indent++
-			tidIter := config.TidSet.Iterator()
-			for tid, isValid := tidIter.Next(); isValid; tid, isValid = tidIter.Next() {
+
+			for _, tid := range config.TidSet.SortedKeys() {
 				iscsi.IndentPrintf(indent, "%d\n", tid)
 			}
+
 			indent--
 		} else {
 			term.Color(term.COLOR_DARK_GREEN)
@@ -94,7 +95,7 @@ linstor-iscsi list`,
 		}
 		fmt.Print("\n")
 
-		freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
+		freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.SortedKeys())
 		if haveFreeTid {
 			term.Color(term.COLOR_GREEN)
 			iscsi.IndentPrintf(indent, "\x1b[1;32mNext free TID:\x1b[0m\n    %d\n", int(freeTid))

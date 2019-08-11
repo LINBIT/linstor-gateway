@@ -52,7 +52,7 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 	}
 
 	// Find a free target ID number using the set of allocated target IDs
-	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.ToSortedArray())
+	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.SortedKeys())
 	if !haveFreeTid {
 		return errors.New("Failed to allocate a target ID for the new iSCSI target")
 	}

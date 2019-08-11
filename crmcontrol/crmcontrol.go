@@ -136,6 +136,18 @@ func (t *TidSet) SortedKeys() []int16 {
 	return keys
 }
 
+type elementSet map[int]struct{}
+
+func (e *elementSet) ReverseSortedKeys() []int {
+	var keys []int
+	for k := range *e {
+		keys = append(keys, k)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+
+	return keys
+}
+
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	RscMap       map[string]interface{}
@@ -750,7 +762,7 @@ func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface
 // See dissolveConstraints(...)
 func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) error {
 	// delIdxSet is allocated on-demand only if it is required
-	var delIdxSet *ElemIdxSet = nil
+	var delIdxSet elementSet
 
 	childList := cibElem.ChildElements()
 	for _, subElem := range childList {
@@ -819,10 +831,9 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 		}
 		if dependFlag {
 			if delIdxSet == nil {
-				setInstance := NewElemIdxSet()
-				delIdxSet = &setInstance
+				delIdxSet = make(elementSet)
 			}
-			delIdxSet.Insert(subElem.Index())
+			delIdxSet[subElem.Index()] = struct{}{}
 			idAttr := subElem.SelectAttr("id")
 			if idAttr != nil {
 				fmt.Printf("Deleting type %s dependency '%s'\n", subElem.Tag, idAttr.Value)
@@ -833,8 +844,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 	// deleted later does not change due to reordering elements that had a greater index
 	// than an element thas was deleted from the slice/array.
 	if delIdxSet != nil {
-		delIdxIter := delIdxSet.Iterator()
-		for delIdx, valid := delIdxIter.Next(); valid; delIdx, valid = delIdxIter.Next() {
+		for _, delIdx := range delIdxSet.ReverseSortedKeys() {
 			cibElem.RemoveChildAt(delIdx)
 		}
 	}

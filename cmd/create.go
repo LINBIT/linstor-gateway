@@ -12,8 +12,7 @@ import (
 )
 
 var ip net.IP
-var nodes []string
-var username, password, size, portals string
+var username, password, size, portals, group string
 var sizeKiB uint64
 
 // createCmd represents the create command
@@ -63,10 +62,10 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := &linstorcontrol.Linstor{
-			VlmSizeKiB:      sizeKiB,
-			StorageNodeList: nodes,
-			Loglevel:        log.GetLevel().String(),
-			ControllerIP:    controller,
+			VlmSizeKiB:        sizeKiB,
+			Loglevel:          log.GetLevel().String(),
+			ControllerIP:      controller,
+			ResourceGroupName: group,
 		}
 		targetCfg := &iscsi.Target{
 			IQN:       iqn,
@@ -89,10 +88,10 @@ func init() {
 	createCmd.Flags().IPVar(&ip, "ip", net.IPv4(127, 0, 0, 1), "Set the service IP of the target (required)")
 	createCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
-	createCmd.Flags().StringSliceVar(&nodes, "nodes", []string{}, "Set up a list of nodes (required)")
 	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username (required)")
 	createCmd.Flags().StringVarP(&password, "password", "p", "", "Set the password (required)")
 	createCmd.Flags().StringVar(&size, "size", "1G", "Set the size (required)")
+	createCmd.Flags().StringVarP(&group, "resource-group", "g", "default", "Set the LINSTOR resource-group")
 
 	createCmd.MarkFlagRequired("ip")
 	createCmd.MarkFlagRequired("username")

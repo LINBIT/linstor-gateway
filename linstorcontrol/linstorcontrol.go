@@ -11,103 +11,80 @@ package linstorcontrol
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/url"
-	"strconv"
 
 	client "github.com/LINBIT/golinstor/client"
 )
 
 type Linstor struct {
-	ResourceName    string
-	VlmSizeKiB      uint64
-	StorageNodeList []string
-	ClientNodeList  []string
-	AutoPlaceCount  uint64
-	StorageStorPool string
-	ClientStorPool  string
-	Loglevel        string
-	ControllerIP    net.IP
+	ResourceName      string
+	VlmSizeKiB        uint64
+	ResourceGroupName string
+	Loglevel          string
+	ControllerIP      net.IP
 }
 
 func ipToURL(ip net.IP) (*url.URL, error) {
 	return url.Parse("http://" + ip.String() + ":3370")
 }
 
+type CreateResult struct {
+	DevicePath      string
+	StorageNodeList []string
+}
+
 // Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
-func (l *Linstor) CreateVolume() (string, error) {
-	if len(l.StorageNodeList) < 1 {
-		return "", errors.New("Invalid CreateVolume() call: Parameter storageNodeList is an empty list")
-	}
+func (l *Linstor) CreateVolume() (CreateResult, error) {
+	result := CreateResult{}
 
 	clientCtx := context.Background()
 	logCfg := &client.LogCfg{Level: l.Loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
-		return "", err
+		return result, err
 	}
 	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
 	if err != nil {
-		return "", err
+		return result, err
 	}
 
-	// Create a resource definition
-	rscDfnData := client.ResourceDefinitionCreate{
-		ResourceDefinition: client.ResourceDefinition{Name: l.ResourceName},
+	spawn := client.ResourceGroupSpawn{
+		ResourceDefinitionName: l.ResourceName,
+		VolumeSizes:            []int64{int64(l.VlmSizeKiB)},
 	}
-	err = ctrlConn.ResourceDefinitions.Create(clientCtx, rscDfnData)
+	err = ctrlConn.ResourceGroups.Spawn(clientCtx, l.ResourceGroupName, spawn)
 	if err != nil {
-		return "", err
+		return result, err
 	}
 
-	// Create a volume definition
-	vlmDfnData := client.VolumeDefinitionCreate{
-		VolumeDefinition: client.VolumeDefinition{VolumeNumber: int32(0), SizeKib: l.VlmSizeKiB},
-	}
-	err = ctrlConn.ResourceDefinitions.CreateVolumeDefinition(
-		clientCtx,
-		rscDfnData.ResourceDefinition.Name,
-		vlmDfnData,
-	)
+	var storageNodes []string
+	lopt := client.ListOpts{Resource: []string{l.ResourceName}}
+	resources, err := ctrlConn.Resources.GetResourceView(clientCtx, &lopt)
 	if err != nil {
-		return "", err
+		return result, err
 	}
 
-	// Create resources on all selected nodes
-	crtRscFailed := 0
-	for _, tgtNodeName := range l.StorageNodeList {
-		rscData := client.ResourceCreate{
-			Resource: client.Resource{
-				Name: rscDfnData.ResourceDefinition.Name, NodeName: tgtNodeName,
-			},
+	for _, r := range resources {
+		if r.Name != l.ResourceName {
+			continue
 		}
-		err = ctrlConn.Resources.Create(clientCtx, rscData)
-		if err != nil {
-			crtRscFailed++
-			fmt.Printf("%s\n", err.Error())
+		if len(r.Volumes) == 0 {
+			return result, errors.New("The volume list queried from the LINSTOR server contains no volumes")
+		}
+		if r.Volumes[0].ProviderKind != client.DISKLESS {
+			storageNodes = append(storageNodes, r.NodeName)
+			if result.DevicePath == "" {
+				result.DevicePath = r.Volumes[0].DevicePath
+			}
 		}
 	}
-	rscLabel := "resource"
-	if crtRscFailed > 1 {
-		rscLabel = "resources"
+	if len(storageNodes) == 0 {
+		return result, errors.New("Resource successfully deployed, but now found on on 0 nodes")
 	}
-	if crtRscFailed > 0 {
-		err = errors.New("The creation of " + strconv.Itoa(crtRscFailed) + " " + rscLabel +
-			" of the resource definition " + rscDfnData.ResourceDefinition.Name + " failed")
-	}
+	result.StorageNodeList = storageNodes
 
-	// Get the volume for the first node back from the LINSTOR server to determine the
-	// device path of the volume
-	vlm, err := ctrlConn.Resources.GetVolumes(clientCtx, rscDfnData.ResourceDefinition.Name, l.StorageNodeList[0], nil)
-	if err != nil {
-		return "", err
-	}
-	if len(vlm) < 1 {
-		return "", errors.New("The volume list queried from the LINSTOR server contains no volumes")
-	}
-
-	return vlm[0].DevicePath, err
+	return result, nil
 }
 
 // Deletes the LINSTOR resource definition

@@ -9,6 +9,7 @@ package iscsi
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -59,19 +60,19 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
 	linstor.ResourceName = ResourceName(targetName, target.LUN)
-	devPath, err := linstor.CreateVolume()
+	res, err := linstor.CreateVolume()
 	if err != nil {
-		return errors.New("LINSTOR volume operation failed, error: " + err.Error())
+		return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
 	}
 
 	// Create CRM resources and constraints for the iSCSI services
 	err = crmcontrol.CreateCrmLu(
-		linstor.StorageNodeList,
+		res.StorageNodeList,
 		targetName,
 		target.ServiceIP,
 		target.IQN,
 		target.LUN,
-		devPath,
+		res.DevicePath,
 		target.Username,
 		target.Password,
 		target.Portals,

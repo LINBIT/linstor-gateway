@@ -20,15 +20,16 @@ For example:
 linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		linstorCfg := &linstorcontrol.Linstor{
+		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,
 		}
-		targetCfg := &iscsi.Target{
+		targetCfg := iscsi.Target{
 			IQN: iqn,
 			LUN: uint8(lun),
 		}
-		if err := iscsi.DeleteResource(targetCfg, linstorCfg); err != nil {
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		if err := iscsiCfg.DeleteResource(); err != nil {
 			log.Fatal(err)
 		}
 	},

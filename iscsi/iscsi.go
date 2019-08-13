@@ -25,6 +25,11 @@ func ResourceName(iscsiTargetName string, lun uint8) string {
 	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
 }
 
+type ISCSI struct {
+	Target  Target
+	Linstor linstorcontrol.Linstor
+}
+
 type Target struct {
 	IQN                string
 	LUN                uint8
@@ -36,8 +41,8 @@ type Target struct {
 // Creates a new LINSTOR & iSCSI resource
 //
 // Returns: program exit code, error object
-func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
-	targetName, err := target.iqnTarget()
+func (i *ISCSI) CreateResource() error {
+	targetName, err := i.Target.iqnTarget()
 	if err != nil {
 		return err
 	}
@@ -60,8 +65,8 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
-	linstor.ResourceName = ResourceName(targetName, target.LUN)
-	res, err := linstor.CreateVolume()
+	i.Linstor.ResourceName = ResourceName(targetName, i.Target.LUN)
+	res, err := i.Linstor.CreateVolume()
 	if err != nil {
 		return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
 	}
@@ -70,13 +75,13 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 	err = crmcontrol.CreateCrmLu(
 		res.StorageNodeList,
 		targetName,
-		target.ServiceIP,
-		target.IQN,
-		target.LUN,
+		i.Target.ServiceIP,
+		i.Target.IQN,
+		i.Target.LUN,
 		res.DevicePath,
-		target.Username,
-		target.Password,
-		target.Portals,
+		i.Target.Username,
+		i.Target.Password,
+		i.Target.Portals,
 		int16(freeTid),
 	)
 	if err != nil {
@@ -89,47 +94,47 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 // Deletes existing LINSTOR & iSCSI resources
 //
 // Returns: program exit code, error object
-func DeleteResource(target *Target, linstor *linstorcontrol.Linstor) error {
-	targetName, err := target.iqnTarget()
+func (i *ISCSI) DeleteResource() error {
+	targetName, err := i.Target.iqnTarget()
 	if err != nil {
 		return err
 	}
 
 	// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.DeleteCrmLu(targetName, target.LUN)
+	err = crmcontrol.DeleteCrmLu(targetName, i.Target.LUN)
 	if err != nil {
 		return err
 	}
 
 	// Delete the LINSTOR resource definition
-	linstor.ResourceName = ResourceName(targetName, target.LUN)
-	return linstor.DeleteVolume()
+	i.Linstor.ResourceName = ResourceName(targetName, i.Target.LUN)
+	return i.Linstor.DeleteVolume()
 }
 
 // Starts existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StartResource(target *Target) error {
-	return modifyResourceTargetRole(target, true)
+func (i *ISCSI) StartResource() error {
+	return i.modifyResourceTargetRole(true)
 }
 
 // Stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func StopResource(target *Target) error {
-	return modifyResourceTargetRole(target, false)
+func (i *ISCSI) StopResource() error {
+	return i.modifyResourceTargetRole(false)
 }
 
 // Starts/stops existing iSCSI resources
 //
 // Returns: resource state map, program exit code, error object
-func ProbeResource(target *Target) (*map[string]crmcontrol.LrmRunState, error) {
-	targetName, err := target.iqnTarget()
+func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
+	targetName, err := i.Target.iqnTarget()
 	if err != nil {
 		return nil, err
 	}
 
-	rscStateMap, err := crmcontrol.ProbeResource(targetName, target.LUN)
+	rscStateMap, err := crmcontrol.ProbeResource(targetName, i.Target.LUN)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +145,7 @@ func ProbeResource(target *Target) (*map[string]crmcontrol.LrmRunState, error) {
 // Extracts a list of existing CRM (Pacemaker) resources from the CIB XML
 //
 // Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object
-func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
+func (i *ISCSI) ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
 		return nil, nil, err
@@ -157,14 +162,14 @@ func ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
 // Starts/stops existing iSCSI resources
 //
 // Returns: program exit code, error object
-func modifyResourceTargetRole(target *Target, startFlag bool) error {
-	targetName, err := target.iqnTarget()
+func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
+	targetName, err := i.Target.iqnTarget()
 	if err != nil {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
 	// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.ModifyCrmLuTargetRole(targetName, target.LUN, startFlag)
+	err = crmcontrol.ModifyCrmLuTargetRole(targetName, i.Target.LUN, startFlag)
 	if err != nil {
 		return err
 	}

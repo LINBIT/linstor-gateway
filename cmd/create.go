@@ -61,13 +61,13 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		linstorCfg := &linstorcontrol.Linstor{
+		linstorCfg := linstorcontrol.Linstor{
 			VlmSizeKiB:        sizeKiB,
 			Loglevel:          log.GetLevel().String(),
 			ControllerIP:      controller,
 			ResourceGroupName: group,
 		}
-		targetCfg := &iscsi.Target{
+		targetCfg := iscsi.Target{
 			IQN:       iqn,
 			LUN:       uint8(lun),
 			ServiceIP: ip,
@@ -75,7 +75,8 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			Password:  password,
 			Portals:   portals,
 		}
-		err := iscsi.CreateResource(targetCfg, linstorCfg)
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		err := iscsiCfg.CreateResource()
 		if err != nil {
 			log.Fatal(err)
 		}

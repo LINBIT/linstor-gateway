@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
+	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -18,11 +18,16 @@ For example:
 linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		targetCfg := &iscsi.Target{
+		linstorCfg := linstorcontrol.Linstor{
+			Loglevel:     log.GetLevel().String(),
+			ControllerIP: controller,
+		}
+		targetCfg := iscsi.Target{
 			IQN: iqn,
 			LUN: uint8(lun),
 		}
-		if err := iscsi.StopResource(targetCfg); err != nil {
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		if err := iscsiCfg.StopResource(); err != nil {
 			log.Fatal(err)
 		}
 	},

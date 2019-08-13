@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"math"
 
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
+	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
 	term "github.com/LINBIT/linstor-remote-storage/termcontrol"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +22,16 @@ For example:
 linstor-iscsi list`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		_, config, err := iscsi.ListResources()
+		linstorCfg := linstorcontrol.Linstor{
+			Loglevel:     log.GetLevel().String(),
+			ControllerIP: controller,
+		}
+		targetCfg := iscsi.Target{
+			IQN: iqn,
+			LUN: uint8(lun),
+		}
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		_, config, err := iscsiCfg.ListResources()
 		if err != nil {
 			log.Fatal(err)
 		}

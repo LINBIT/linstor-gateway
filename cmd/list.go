@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"math"
 
-	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	term "github.com/LINBIT/linstor-remote-storage/termcontrol"
 	"github.com/spf13/cobra"
@@ -76,7 +76,7 @@ linstor-iscsi list`,
 
 		fmt.Print("\n")
 
-		if len(config.TidSet) > 0 {
+		if config.TidSet.Len() > 0 {
 			term.Color(term.COLOR_GREEN)
 			iscsi.IndentPrint(indent, "\x1b[1;32mAllocated TIDs:\x1b[0m\n")
 			term.DefaultColor()
@@ -95,8 +95,8 @@ linstor-iscsi list`,
 		}
 		fmt.Print("\n")
 
-		freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.SortedKeys())
-		if haveFreeTid {
+		freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
+		if ok {
 			term.Color(term.COLOR_GREEN)
 			iscsi.IndentPrintf(indent, "\x1b[1;32mNext free TID:\x1b[0m\n    %d\n", int(freeTid))
 		} else {

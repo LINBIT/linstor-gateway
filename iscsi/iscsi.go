@@ -10,6 +10,7 @@ package iscsi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -53,8 +54,8 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 	}
 
 	// Find a free target ID number using the set of allocated target IDs
-	freeTid, haveFreeTid := crmcontrol.GetFreeTargetId(config.TidSet.SortedKeys())
-	if !haveFreeTid {
+	freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
+	if !ok {
 		return errors.New("Failed to allocate a target ID for the new iSCSI target")
 	}
 
@@ -76,7 +77,7 @@ func CreateResource(target *Target, linstor *linstorcontrol.Linstor) error {
 		target.Username,
 		target.Password,
 		target.Portals,
-		freeTid,
+		int16(freeTid),
 	)
 	if err != nil {
 		return err

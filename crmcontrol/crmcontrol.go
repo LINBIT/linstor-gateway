@@ -124,28 +124,49 @@ const WAIT_STOP_POLL_CIB_DELAY = 2500
 // Delay between CIB polls in milliseconds
 const CIB_POLL_RETRY_DELAY = 2000
 
-type TidSet map[int16]struct{}
+type IntSet struct {
+	set map[int]struct{}
+}
 
-func (t *TidSet) SortedKeys() []int16 {
-	var keys []int16
-	for k := range *t {
+func NewIntSet() *IntSet {
+	return &IntSet{set: make(map[int]struct{})}
+}
+
+func (s *IntSet) Keys() []int {
+	var keys []int
+	for k := range s.set {
 		keys = append(keys, k)
 	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 
 	return keys
 }
 
-type elementSet map[int]struct{}
+func (s *IntSet) Add(k int) {
+	s.set[k] = struct{}{}
+}
 
-func (e *elementSet) ReverseSortedKeys() []int {
-	var keys []int
-	for k := range *e {
-		keys = append(keys, k)
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+func (s *IntSet) Len() int { return len(s.set) }
 
+func (s *IntSet) SortedKeys() []int {
+	keys := s.Keys()
+	sort.Ints(keys)
 	return keys
+}
+
+func (s *IntSet) ReverseSortedKeys() []int {
+	keys := s.Keys()
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+	return keys
+}
+
+func (s *IntSet) GetFree(min, max int) (int, bool) {
+	for i := min; i <= max; i++ {
+		if _, ok := s.set[i]; !ok {
+			return i, true
+		}
+	}
+
+	return 0, false
 }
 
 // Data structure for collecting information about (Pacemaker) CRM resources
@@ -154,7 +175,7 @@ type CrmConfiguration struct {
 	TargetList   []string
 	LuList       []string
 	OtherRscList []string
-	TidSet       TidSet
+	TidSet       *IntSet
 }
 
 type LrmRunState struct {
@@ -474,7 +495,7 @@ func WaitForResourceStop(
 // Information about existing CRM resources is parsed from the CIB XML document and
 // stored in a newly allocated CrmConfiguration data structure
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
-	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: make(TidSet)}
+	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewIntSet()}
 	if docRoot == nil {
 		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
@@ -523,7 +544,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
 					}
 					if tid > 0 {
-						config.TidSet[(int16(tid))] = struct{}{}
+						config.TidSet.Add(int(tid))
 					} else {
 						fmt.Printf("\x1b[1;31mWarning: Invalid tid value %d for resource '%s'\x1b[0m\n", tid, idAttr.Value)
 					}
@@ -762,7 +783,7 @@ func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface
 // See dissolveConstraints(...)
 func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) error {
 	// delIdxSet is allocated on-demand only if it is required
-	var delIdxSet elementSet
+	var delIdxSet *IntSet
 
 	childList := cibElem.ChildElements()
 	for _, subElem := range childList {
@@ -831,9 +852,9 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 		}
 		if dependFlag {
 			if delIdxSet == nil {
-				delIdxSet = make(elementSet)
+				delIdxSet = NewIntSet()
 			}
-			delIdxSet[subElem.Index()] = struct{}{}
+			delIdxSet.Add(subElem.Index())
 			idAttr := subElem.SelectAttr("id")
 			if idAttr != nil {
 				fmt.Printf("Deleting type %s dependency '%s'\n", subElem.Tag, idAttr.Value)

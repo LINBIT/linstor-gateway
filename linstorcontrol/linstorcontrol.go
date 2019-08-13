@@ -39,7 +39,11 @@ func (l *Linstor) CreateVolume() (CreateResult, error) {
 	result := CreateResult{}
 
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: l.Loglevel}
+	loglevel := l.Loglevel
+	if loglevel == "" {
+		loglevel = "info"
+	}
+	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return result, err
@@ -90,7 +94,11 @@ func (l *Linstor) CreateVolume() (CreateResult, error) {
 // Deletes the LINSTOR resource definition
 func (l *Linstor) DeleteVolume() error {
 	clientCtx := context.Background()
-	logCfg := &client.LogCfg{Level: l.Loglevel}
+	loglevel := l.Loglevel
+	if loglevel == "" {
+		loglevel = "info"
+	}
+	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return err

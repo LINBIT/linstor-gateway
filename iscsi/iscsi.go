@@ -26,16 +26,17 @@ func ResourceName(iscsiTargetName string, lun uint8) string {
 }
 
 type ISCSI struct {
-	Target  Target
-	Linstor linstorcontrol.Linstor
+	Target  Target                 `json:"target,omitempty"`
+	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
 }
 
 type Target struct {
-	IQN                string
-	LUN                uint8
-	ServiceIP          net.IP
-	Username, Password string
-	Portals            string
+	IQN       string `json:"iqn,omitempty"`
+	LUN       uint8  `json:"lun,omitempty"`
+	ServiceIP net.IP `json:"service_ip,omitempty"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
+	Portals   string `json:"portals,omitempty"`
 }
 
 // Creates a new LINSTOR & iSCSI resource

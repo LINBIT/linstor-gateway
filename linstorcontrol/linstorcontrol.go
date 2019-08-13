@@ -18,11 +18,11 @@ import (
 )
 
 type Linstor struct {
-	ResourceName      string
-	VlmSizeKiB        uint64
-	ResourceGroupName string
-	Loglevel          string
-	ControllerIP      net.IP
+	ResourceName      string `json:"resource_name,omitempty"`
+	VlmSizeKiB        uint64 `json:"size_kib,omitempty"`
+	ResourceGroupName string `json:"resource_group_name,omitempty"`
+	Loglevel          string `json:"loglevel,omitempty"`
+	ControllerIP      net.IP `json:"controller_ip,omitempty"`
 }
 
 func ipToURL(ip net.IP) (*url.URL, error) {

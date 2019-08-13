@@ -24,5 +24,6 @@ linstor-iscsi server --addr=":8080"`,
 func init() {
 	rootCmd.AddCommand(serverCmd)
 
+	serverCmd.ResetCommands()
 	serverCmd.Flags().StringVar(&addr, "addr", ":8080", "Host and port as defined by http.ListenAndServe()")
 }

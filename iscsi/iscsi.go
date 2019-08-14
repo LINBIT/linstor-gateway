@@ -1,6 +1,4 @@
-// Package iscsi combines the LINSTOR operations (in package linstorcontrol)
-// and the CRM operations (in package crmcontrol) to form a combined high-level API
-// that performs each operation in both subsystems.
+// Package iscsi combines LINSTOR operations and the CRM operations to create highly available iSCSI targets.
 package iscsi
 
 import (
@@ -17,15 +15,18 @@ import (
 	xmltree "github.com/beevik/etree"
 )
 
-func ResourceName(iscsiTargetName string, lun uint8) string {
+func resourceName(iscsiTargetName string, lun uint8) string {
 	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
 }
 
+// ISCSI combines the information needed to create highly-available iSCSI targets.
+// It contains a iSCSI target configuration and a LINSTOR configuration.
 type ISCSI struct {
 	Target  Target                 `json:"target,omitempty"`
 	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
 }
 
+// Target contains the information necessary for iSCSI targets.
 type Target struct {
 	IQN       string `json:"iqn,omitempty"`
 	LUN       uint8  `json:"lun,omitempty"`
@@ -35,7 +36,7 @@ type Target struct {
 	Portals   string `json:"portals,omitempty"`
 }
 
-// CreateResource creates a new LINSTOR & iSCSI resource.
+// CreateResource creates a new highly available iSCSI target
 func (i *ISCSI) CreateResource() error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -60,7 +61,7 @@ func (i *ISCSI) CreateResource() error {
 	}
 
 	// Create a LINSTOR resource definition, volume definition and associated resources
-	i.Linstor.ResourceName = ResourceName(targetName, i.Target.LUN)
+	i.Linstor.ResourceName = resourceName(targetName, i.Target.LUN)
 	res, err := i.Linstor.CreateVolume()
 	if err != nil {
 		return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
@@ -86,7 +87,7 @@ func (i *ISCSI) CreateResource() error {
 	return nil
 }
 
-// DeleteResource deletes existing LINSTOR & iSCSI resources.
+// DeleteResource deletes a new highly available iSCSI target
 func (i *ISCSI) DeleteResource() error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -100,7 +101,7 @@ func (i *ISCSI) DeleteResource() error {
 	}
 
 	// Delete the LINSTOR resource definition
-	i.Linstor.ResourceName = ResourceName(targetName, i.Target.LUN)
+	i.Linstor.ResourceName = resourceName(targetName, i.Target.LUN)
 	return i.Linstor.DeleteVolume()
 }
 
@@ -130,7 +131,7 @@ func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 	return &rscStateMap, nil
 }
 
-// Extracts a list of existing CRM (Pacemaker) resources from the CIB XML
+// ListResources lists existing iSCSI targets.
 //
 // Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object
 func (i *ISCSI) ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
@@ -169,7 +170,6 @@ func (t *Target) iqnTarget() (string, error) {
 	spl := strings.Split(t.IQN, ":")
 	if len(spl) != 2 {
 		return "", errors.New("Malformed argument '" + t.IQN + "'")
-	} else {
-		return spl[1], nil
 	}
+	return spl[1], nil
 }

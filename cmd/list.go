@@ -1,15 +1,35 @@
 package cmd
 
 import (
-	"fmt"
-	"math"
+	"os"
+	"strconv"
 
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
-	term "github.com/LINBIT/linstor-remote-storage/termcontrol"
+	"github.com/logrusorgru/aurora"
+	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var (
+	statusOk       = aurora.Green("✓").String()
+	statusStarting = aurora.Yellow("⌛").String()
+	statusBad      = aurora.Red("✗").String()
+)
+
+func stateToStatus(state crmcontrol.LrmRunState) string {
+	if state.HaveState {
+		if state.Running {
+			return statusOk
+		} else {
+			return statusBad
+		}
+	}
+
+	return statusStarting
+}
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
@@ -26,95 +46,48 @@ linstor-iscsi list`,
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,
 		}
-		targetCfg := iscsi.Target{
-			IQN: iqn,
-			LUN: uint8(lun),
-		}
-		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
-		_, config, err := iscsiCfg.ListResources()
+		_, targets, err := iscsi.ListResources()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		term.Color(term.COLOR_YELLOW)
-		fmt.Print("Cluster resources:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetHeader([]string{"Target Name", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP"})
+		whiteBold := tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
+		table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
 
-		indent := 1
-		term.Color(term.COLOR_GREEN)
-		iscsi.IndentPrint(indent, "\x1b[1;32miSCSI resources:\x1b[0m\n")
-		indent++
-		iscsi.IndentPrint(indent, "\x1b[1;32miSCSI targets:\x1b[0m\n")
-		term.DefaultColor()
-
-		indent++
-		if len(config.TargetList) > 0 {
-			for _, rscName := range config.TargetList {
-				iscsi.IndentPrintf(indent, "%s\n", rscName)
+		for _, target := range targets {
+			targetCfg := iscsi.Target{
+				IQN:  target.IQN,
+				LUNs: target.LUNs,
 			}
-		} else {
-			iscsi.IndentPrint(indent, "No resources\n")
-		}
-		indent--
+			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
 
-		term.Color(term.COLOR_GREEN)
-		iscsi.IndentPrint(indent, "\x1b[1;32miSCSI logical units:\x1b[0m\n")
-		term.DefaultColor()
-
-		indent++
-		if len(config.LuList) > 0 {
-			for _, rscName := range config.LuList {
-				iscsi.IndentPrintf(indent, "%s\n", rscName)
-			}
-		} else {
-			iscsi.IndentPrint(indent, "No resources\n")
-		}
-		indent -= 2
-
-		term.Color(term.COLOR_TEAL)
-		iscsi.IndentPrint(indent, "\x1b[1;32mOther cluster resources:\x1b[0m\n")
-		term.DefaultColor()
-
-		indent++
-		if len(config.OtherRscList) > 0 {
-			for _, rscName := range config.OtherRscList {
-				iscsi.IndentPrintf(indent, "%s\n", rscName)
-			}
-		} else {
-			iscsi.IndentPrint(indent, "No resources\n")
-		}
-		indent = 0
-
-		fmt.Print("\n")
-
-		if config.TidSet.Len() > 0 {
-			term.Color(term.COLOR_GREEN)
-			iscsi.IndentPrint(indent, "\x1b[1;32mAllocated TIDs:\x1b[0m\n")
-			term.DefaultColor()
-
-			indent++
-
-			for _, tid := range config.TidSet.SortedKeys() {
-				iscsi.IndentPrintf(indent, "%d\n", tid)
+			rscStateMap, err := iscsiCfg.ProbeResource()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"iqn": target.IQN,
+				}).Warning("Cannot probe target: ", err)
 			}
 
-			indent--
-		} else {
-			term.Color(term.COLOR_DARK_GREEN)
-			iscsi.IndentPrint(indent, "\x1b[1;32mNo TIDs allocated\x1b[0m\n")
-			term.DefaultColor()
-		}
-		fmt.Print("\n")
+			for _, lu := range target.LUNs {
+				state := (*rscStateMap)[target.Name]
+				// TODO stop using this hack and pass the actual
+				// name through once all the data structures are fixed.
+				lunState := (*rscStateMap)[target.Name+"_lu"+strconv.Itoa(int(lu.Id))]
 
-		freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
-		if ok {
-			term.Color(term.COLOR_GREEN)
-			iscsi.IndentPrintf(indent, "\x1b[1;32mNext free TID:\x1b[0m\n    %d\n", int(freeTid))
-		} else {
-			term.Color(term.COLOR_RED)
-			iscsi.IndentPrint(indent, "\x1b[1;31mNo free TIDs\x1b[0m\n")
+				// TODO don't know how to deal with the IPs yet...
+				row := []string{target.Name, strconv.Itoa(int(lu.Id)), stateToStatus(state), stateToStatus(lunState), statusOk}
+				table.Append(row)
+			}
 		}
-		term.DefaultColor()
-		fmt.Print("\n")
+
+		// TODO this would look cool, but it would merge the ticks too...
+		//table.SetAutoMergeCells(true)
+		table.SetAutoFormatHeaders(false)
+		table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
+
+		table.Render() // Send output
 	},
 }
 

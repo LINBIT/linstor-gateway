@@ -69,7 +69,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 		}
 		targetCfg := iscsi.Target{
 			IQN:       iqn,
-			LUN:       uint8(lun),
+			LUNs:      []*iscsi.LUN{&iscsi.LUN{uint8(lun)}},
 			ServiceIP: ip,
 			Username:  username,
 			Password:  password,

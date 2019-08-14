@@ -172,10 +172,33 @@ func (s *IntSet) GetFree(min, max int) (int, bool) {
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	RscMap       map[string]interface{}
-	TargetList   []string
-	LuList       []string
+	TargetList   []*CrmTarget
+	LuList       []*CrmLu
+	IPList       []*CrmIP
 	OtherRscList []string
 	TidSet       *IntSet
+}
+
+type CrmTarget struct {
+	Id       string
+	IQN      string
+	Username string
+	Password string
+	Portals  string
+	Tid      int
+}
+
+type CrmLu struct {
+	Id     string
+	LUN    uint8
+	Target *CrmTarget
+	Path   string
+}
+
+type CrmIP struct {
+	Id      string
+	IP      net.IP
+	Netmask uint8
 }
 
 type LrmRunState struct {
@@ -490,10 +513,238 @@ func WaitForResourceStop(
 	return isStopped, nil
 }
 
-// Parses the CIB XML document and returns information about existing resources
+func getNvPairValue(elem *xmltree.Element, name string) (*xmltree.Attr, error) {
+	xpath := fmt.Sprintf("./instance_attributes/nvpair[@name='%s']", name)
+
+	var nvpair *xmltree.Element
+	if nvpair = elem.FindElement(xpath); nvpair == nil {
+		return nil, errors.New("key not found")
+	}
+
+	var attr *xmltree.Attr
+	if attr = nvpair.SelectAttr("value"); attr == nil {
+		return nil, errors.New("value not found")
+	}
+
+	return attr, nil
+}
+
+func (c *CrmConfiguration) findTargetByIqn(iqn string) (*CrmTarget, error) {
+	for _, t := range c.TargetList {
+		if t.IQN == iqn {
+			return t, nil
+		}
+	}
+
+	return nil, errors.New("no target with IQN found")
+}
+
+func findTargets(rscSection *xmltree.Element) []*CrmTarget {
+	targets := make([]*CrmTarget, 0)
+	for _, target := range rscSection.FindElements("./primitive[@type='iSCSITarget']") {
+		// find ID
+		id := target.SelectAttr("id")
+		if id == nil {
+			log.Debug("Skipping invalid iSCSITarget without id")
+			continue
+		}
+
+		// find IQN
+		iqn, err := getNvPairValue(target, "iqn")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid iSCSITarget without iqn: ", err)
+			continue
+		}
+
+		// find username
+		username, err := getNvPairValue(target, "incoming_username")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"iqn": iqn.Value,
+			}).Debug("Skipping invalid iSCSITarget without username: ", err)
+			continue
+		}
+
+		// find password
+		password, err := getNvPairValue(target, "incoming_password")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"iqn": iqn.Value,
+			}).Debug("Skipping invalid iSCSITarget without username: ", err)
+			continue
+		}
+
+		// find portals
+		portals, err := getNvPairValue(target, "portals")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"iqn": iqn.Value,
+			}).Debug("Skipping invalid iSCSITarget without portals: ", err)
+			continue
+		}
+
+		// find tid
+		tidAttr, err := getNvPairValue(target, "tid")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"iqn": iqn.Value,
+			}).Debug("Skipping invalid iSCSITarget without TID: ", err)
+			continue
+		}
+
+		tid, err := strconv.Atoi(tidAttr.Value)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"iqn": iqn.Value,
+			}).Debug("Skipping invalid iSCSITarget with invalid LUN: ", err)
+			continue
+		}
+
+		crmTarget := &CrmTarget{
+			Id:       id.Value,
+			IQN:      iqn.Value,
+			Username: username.Value,
+			Password: password.Value,
+			Portals:  portals.Value,
+			Tid:      tid,
+		}
+
+		targets = append(targets, crmTarget)
+	}
+	return targets
+}
+
+func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*CrmLu {
+	lus := make([]*CrmLu, 0)
+	for _, lu := range rscSection.FindElements("./primitive[@type='iSCSILogicalUnit']") {
+		// find ID
+		id := lu.SelectAttr("id")
+		if id == nil {
+			log.Debug("Skipping invalid iSCSILogicalUnit without id")
+			continue
+		}
+
+		// find LUN
+		lunAttr, err := getNvPairValue(lu, "lun")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid iSCSILogicalUnit without LUN: ", err)
+			continue
+		}
+
+		lun, err := strconv.ParseInt(lunAttr.Value, 10, 8)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"lun": lunAttr.Value,
+			}).Debug("Skipping invalid iSCSILogicalUnit with invalid LUN: ", err)
+			continue
+		}
+
+		// find target IQN
+		targetIqn, err := getNvPairValue(lu, "target_iqn")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid iSCSILogicalUnit without target iqn: ", err)
+			continue
+		}
+
+		// find associated target
+		target, err := config.findTargetByIqn(targetIqn.Value)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":         id.Value,
+				"target_iqn": targetIqn,
+			}).Debug("Skipping invalid iSCSILogicalUnit with unknown target: ", err)
+			continue
+		}
+
+		// find path
+		path, err := getNvPairValue(lu, "path")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid iSCSILogicalUnit without path: ", err)
+			continue
+		}
+
+		crmLu := &CrmLu{
+			Id:     id.Value,
+			LUN:    uint8(lun),
+			Target: target,
+			Path:   path.Value,
+		}
+
+		lus = append(lus, crmLu)
+	}
+
+	return lus
+}
+
+func findIPs(rscSection *xmltree.Element) []*CrmIP {
+	ips := make([]*CrmIP, 0)
+	for _, ip := range rscSection.FindElements("./primitive[@type='IPaddr2']") {
+		// find ID
+		id := ip.SelectAttr("id")
+		if id == nil {
+			log.Debug("Skipping invalid IPaddr2 without id")
+			continue
+		}
+
+		// find ip
+		ipAddr, err := getNvPairValue(ip, "ip")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid IPaddr2 without ip: ", err)
+			continue
+		}
+
+		// find netmask
+		netmaskAttr, err := getNvPairValue(ip, "")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id": id.Value,
+			}).Debug("Skipping invalid IPaddr2 without netmask: ", err)
+			continue
+		}
+
+		netmask, err := strconv.ParseInt(netmaskAttr.Value, 10, 8)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":  id.Value,
+				"lun": netmaskAttr.Value,
+			}).Debug("Skipping invalid IPaddr2 with invalid netmask: ", err)
+			continue
+		}
+
+		crmIp := &CrmIP{
+			Id:      id.Value,
+			IP:      net.ParseIP(ipAddr.Value),
+			Netmask: uint8(netmask),
+		}
+
+		ips = append(ips, crmIp)
+	}
+
+	return ips
+}
+
+// ParseConfiguration parses the CIB XML document and returns information about
+// existing resources.
 //
 // Information about existing CRM resources is parsed from the CIB XML document and
 // stored in a newly allocated CrmConfiguration data structure
+// TODO THINK: maybe we can replace this whole mess by actual standard Go XML marshalling...
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewIntSet()}
 	if docRoot == nil {
@@ -510,51 +761,9 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 		return nil, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
 	}
 
-	resources := rscSection.ChildElements()
-
-	for _, selectedRsc := range resources {
-		idAttr := selectedRsc.SelectAttr("id")
-		if idAttr != nil {
-			crmRscName := idAttr.Value
-			isTarget := false
-			isLu := false
-			typeAttr := selectedRsc.SelectAttr("type")
-			if typeAttr != nil {
-				isTarget = isTargetEntry(*typeAttr)
-				isLu = isLogicalUnitEntry(*typeAttr)
-			} else {
-				fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mtype\x1b[0m\n")
-			}
-
-			config.RscMap[crmRscName] = nil
-			if isTarget {
-				config.TargetList = append(config.TargetList, crmRscName)
-			} else if isLu {
-				config.LuList = append(config.LuList, crmRscName)
-			} else {
-				config.OtherRscList = append(config.OtherRscList, crmRscName)
-			}
-
-			tidEntry := selectedRsc.FindElement("instance_attributes/nvpair[@name='tid']")
-			if tidEntry != nil {
-				tidAttr := tidEntry.SelectAttr("value")
-				if tidAttr != nil {
-					tid, err := strconv.ParseInt(tidAttr.Value, 10, 16)
-					if err != nil {
-						fmt.Printf("\x1b[1;31mWarning: Unparseable tid parameter '%s' for resource '%s'\x1b[0m\n", tidAttr.Value, idAttr.Value)
-					}
-					if tid > 0 {
-						config.TidSet.Add(int(tid))
-					} else {
-						fmt.Printf("\x1b[1;31mWarning: Invalid tid value %d for resource '%s'\x1b[0m\n", tid, idAttr.Value)
-					}
-
-				}
-			}
-		} else {
-			fmt.Printf("Warning: CIB primitive element has no attribute \x1b[1;32mname\x1b[0m\n")
-		}
-	}
+	config.TargetList = findTargets(rscSection)
+	config.LuList = findLus(rscSection, &config)
+	config.IPList = findIPs(rscSection)
 
 	return &config, nil
 }
@@ -737,26 +946,6 @@ func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[s
 		nr++
 	}
 	return subDataBld.String(), nil
-}
-
-// Identifies CRM iSCSI target resources by checking the resource agent name
-func isTargetEntry(typeAttr xmltree.Attr) bool {
-	return typeAttr.Value == CRM_TYPE_ISCSI_TARGET
-}
-
-// Identifies CRM iSCSI logical unit resources by checking the resource agent name
-func isLogicalUnitEntry(typeAttr xmltree.Attr) bool {
-	return typeAttr.Value == CRM_TYPE_ISCSI_LU
-}
-
-// Returns resource attributes, if present, otherwise nil
-func getRscParams(resource *xmltree.Element) []*xmltree.Element {
-	var attrList []*xmltree.Element
-	instAttr := resource.FindElement(CIB_TAG_INST_ATTR)
-	if instAttr != nil {
-		attrList = instAttr.ChildElements()
-	}
-	return attrList
 }
 
 // Prints collected stdout/stderr output of an external command, or indicates

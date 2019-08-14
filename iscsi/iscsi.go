@@ -26,10 +26,15 @@ type ISCSI struct {
 	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
 }
 
+type LUN struct {
+	Id uint8 `json:"id,omitempty"`
+}
+
 // Target contains the information necessary for iSCSI targets.
 type Target struct {
+	Name      string `json:"name,omitempty"`
 	IQN       string `json:"iqn,omitempty"`
-	LUN       uint8  `json:"lun,omitempty"`
+	LUNs      []*LUN `json:"luns,omitempty"`
 	ServiceIP net.IP `json:"service_ip,omitempty"`
 	Username  string `json:"username,omitempty"`
 	Password  string `json:"password,omitempty"`
@@ -43,45 +48,47 @@ func (i *ISCSI) CreateResource() error {
 		return err
 	}
 
-	// Read the current configuration from the CRM
-	docRoot, err := crmcontrol.ReadConfiguration()
-	if err != nil {
-		return err
-	}
-	// Find resources, allocated target IDs, etc.
-	config, err := crmcontrol.ParseConfiguration(docRoot)
-	if err != nil {
-		return err
-	}
+	for _, lu := range i.Target.LUNs {
+		// Read the current configuration from the CRM
+		docRoot, err := crmcontrol.ReadConfiguration()
+		if err != nil {
+			return err
+		}
+		// Find resources, allocated target IDs, etc.
+		config, err := crmcontrol.ParseConfiguration(docRoot)
+		if err != nil {
+			return err
+		}
 
-	// Find a free target ID number using the set of allocated target IDs
-	freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
-	if !ok {
-		return errors.New("Failed to allocate a target ID for the new iSCSI target")
-	}
+		// Find a free target ID number using the set of allocated target IDs
+		freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
+		if !ok {
+			return errors.New("Failed to allocate a target ID for the new iSCSI target")
+		}
 
-	// Create a LINSTOR resource definition, volume definition and associated resources
-	i.Linstor.ResourceName = resourceName(targetName, i.Target.LUN)
-	res, err := i.Linstor.CreateVolume()
-	if err != nil {
-		return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
-	}
+		// Create a LINSTOR resource definition, volume definition and associated resources
+		i.Linstor.ResourceName = resourceName(targetName, lu.Id)
+		res, err := i.Linstor.CreateVolume()
+		if err != nil {
+			return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
+		}
 
-	// Create CRM resources and constraints for the iSCSI services
-	err = crmcontrol.CreateCrmLu(
-		res.StorageNodeList,
-		targetName,
-		i.Target.ServiceIP,
-		i.Target.IQN,
-		i.Target.LUN,
-		res.DevicePath,
-		i.Target.Username,
-		i.Target.Password,
-		i.Target.Portals,
-		int16(freeTid),
-	)
-	if err != nil {
-		return err
+		// Create CRM resources and constraints for the iSCSI services
+		err = crmcontrol.CreateCrmLu(
+			res.StorageNodeList,
+			targetName,
+			i.Target.ServiceIP,
+			i.Target.IQN,
+			lu.Id,
+			res.DevicePath,
+			i.Target.Username,
+			i.Target.Password,
+			i.Target.Portals,
+			int16(freeTid),
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -94,14 +101,16 @@ func (i *ISCSI) DeleteResource() error {
 		return err
 	}
 
-	// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.DeleteCrmLu(targetName, i.Target.LUN)
-	if err != nil {
-		return err
-	}
+	for _, lu := range i.Target.LUNs {
+		// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
+		err = crmcontrol.DeleteCrmLu(targetName, lu.Id)
+		if err != nil {
+			return err
+		}
 
-	// Delete the LINSTOR resource definition
-	i.Linstor.ResourceName = resourceName(targetName, i.Target.LUN)
+		// Delete the LINSTOR resource definition
+		i.Linstor.ResourceName = resourceName(targetName, lu.Id)
+	}
 	return i.Linstor.DeleteVolume()
 }
 
@@ -123,9 +132,19 @@ func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 		return nil, err
 	}
 
-	rscStateMap, err := crmcontrol.ProbeResource(targetName, i.Target.LUN)
-	if err != nil {
-		return nil, err
+	rscStateMap := make(map[string]crmcontrol.LrmRunState)
+
+	for _, lu := range i.Target.LUNs {
+		tmpMap, err := crmcontrol.ProbeResource(targetName, lu.Id)
+		if err != nil {
+			return nil, err
+		}
+
+		// HACK: combine all the maps into one. the real solution would
+		// be a more sensible data structure
+		for k, v := range tmpMap {
+			rscStateMap[k] = v
+		}
 	}
 
 	return &rscStateMap, nil
@@ -133,8 +152,8 @@ func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 
 // ListResources lists existing iSCSI targets.
 //
-// Returns: CIB XML document tree, CrmConfiguration object, program exit code, error object
-func (i *ISCSI) ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration, error) {
+// Returns: CIB XML document tree, slice of Targets, error object
+func ListResources() (*xmltree.Document, []*Target, error) {
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
 		return nil, nil, err
@@ -145,7 +164,38 @@ func (i *ISCSI) ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration
 		return nil, nil, err
 	}
 
-	return docRoot, config, nil
+	targets := make([]*Target, 0)
+
+	// first, "convert" all targets
+	for _, t := range config.TargetList {
+		target := &Target{
+			Name:     t.Id,
+			IQN:      t.IQN,
+			LUNs:     make([]*LUN, 0),
+			Username: t.Username,
+			Password: t.Password,
+			Portals:  t.Portals,
+		}
+
+		targets = append(targets, target)
+	}
+
+	// then, "convert" and link LUs
+	for _, l := range config.LuList {
+		lun := &LUN{
+			Id: l.LUN,
+		}
+
+		// link to the correct target
+		for _, t := range targets {
+			if t.IQN == l.Target.IQN {
+				t.LUNs = append(t.LUNs, lun)
+				break
+			}
+		}
+	}
+
+	return docRoot, targets, nil
 }
 
 // modifyResourceTargetRole modifies the role of an existing iSCSI resource.
@@ -155,10 +205,12 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
-	// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
-	err = crmcontrol.ModifyCrmLuTargetRole(targetName, i.Target.LUN, startFlag)
-	if err != nil {
-		return err
+	for _, lu := range i.Target.LUNs {
+		// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
+		err = crmcontrol.ModifyCrmLuTargetRole(targetName, lu.Id, startFlag)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

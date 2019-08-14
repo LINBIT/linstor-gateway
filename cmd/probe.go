@@ -29,8 +29,8 @@ For example:
 			ControllerIP: controller,
 		}
 		targetCfg := iscsi.Target{
-			IQN: iqn,
-			LUN: uint8(lun),
+			IQN:  iqn,
+			LUNs: []*iscsi.LUN{&iscsi.LUN{uint8(lun)}},
 		}
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
 		rscStateMap, err := iscsiCfg.ProbeResource()

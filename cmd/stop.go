@@ -23,8 +23,8 @@ linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
 			ControllerIP: controller,
 		}
 		targetCfg := iscsi.Target{
-			IQN: iqn,
-			LUN: uint8(lun),
+			IQN:  iqn,
+			LUNs: []*iscsi.LUN{&iscsi.LUN{uint8(lun)}},
 		}
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
 		if err := iscsiCfg.StopResource(); err != nil {

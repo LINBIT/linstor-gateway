@@ -1,11 +1,7 @@
-// High-level API - entry points for resource creation/deletion/etc.
-package iscsi
-
-// iscsi module
-//
-// This module combines the LINSTOR operations (in package linstorcontrol)
+// Package iscsi combines the LINSTOR operations (in package linstorcontrol)
 // and the CRM operations (in package crmcontrol) to form a combined high-level API
 // that performs each operation in both subsystems.
+package iscsi
 
 import (
 	"errors"
@@ -39,9 +35,7 @@ type Target struct {
 	Portals   string `json:"portals,omitempty"`
 }
 
-// Creates a new LINSTOR & iSCSI resource
-//
-// Returns: program exit code, error object
+// CreateResource creates a new LINSTOR & iSCSI resource.
 func (i *ISCSI) CreateResource() error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -92,9 +86,7 @@ func (i *ISCSI) CreateResource() error {
 	return nil
 }
 
-// Deletes existing LINSTOR & iSCSI resources
-//
-// Returns: program exit code, error object
+// DeleteResource deletes existing LINSTOR & iSCSI resources.
 func (i *ISCSI) DeleteResource() error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -112,23 +104,18 @@ func (i *ISCSI) DeleteResource() error {
 	return i.Linstor.DeleteVolume()
 }
 
-// Starts existing iSCSI resources
-//
-// Returns: program exit code, error object
+// StartResource starts an existing iSCSI resource.
 func (i *ISCSI) StartResource() error {
 	return i.modifyResourceTargetRole(true)
 }
 
-// Stops existing iSCSI resources
-//
-// Returns: program exit code, error object
+// StopResource stops an existing iSCSI resource.
 func (i *ISCSI) StopResource() error {
 	return i.modifyResourceTargetRole(false)
 }
 
-// Starts/stops existing iSCSI resources
-//
-// Returns: resource state map, program exit code, error object
+// ProbeResource gets information about an existing iSCSI resource.
+// It returns a resource state map and an error.
 func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -160,9 +147,7 @@ func (i *ISCSI) ListResources() (*xmltree.Document, *crmcontrol.CrmConfiguration
 	return docRoot, config, nil
 }
 
-// Starts/stops existing iSCSI resources
-//
-// Returns: program exit code, error object
+// modifyResourceTargetRole modifies the role of an existing iSCSI resource.
 func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
@@ -178,9 +163,8 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 	return nil
 }
 
-// Extracts the target name from an IQN string
-//
-// e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part
+// iqnTarget extracts the target name from an IQN string.
+// e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part.
 func (t *Target) iqnTarget() (string, error) {
 	spl := strings.Split(t.IQN, ":")
 	if len(spl) != 2 {

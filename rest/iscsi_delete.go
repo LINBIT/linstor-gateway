@@ -6,6 +6,7 @@ import (
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 )
 
+// ISCSIDelete deletes a highly-available iSCSI target via the REST-API
 func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 	var iscsiCfg iscsi.ISCSI
 	if err := unmarshalBody(w, r, &iscsiCfg); err != nil {
@@ -13,7 +14,7 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := iscsiCfg.DeleteResource(); err != nil {
-		Errorf(http.StatusInternalServerError, w, "Could not delete resource: %v", err)
+		_, _ = Errorf(http.StatusInternalServerError, w, "Could not delete resource: %v", err)
 		return
 	}
 

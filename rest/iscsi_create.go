@@ -6,6 +6,7 @@ import (
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 )
 
+// ISCSICreate creates a highly-available iSCSI target via the REST-API
 func ISCSICreate(w http.ResponseWriter, r *http.Request) {
 	var iscsiCfg iscsi.ISCSI
 	if err := unmarshalBody(w, r, &iscsiCfg); err != nil {
@@ -13,7 +14,7 @@ func ISCSICreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := iscsiCfg.CreateResource(); err != nil {
-		Errorf(http.StatusInternalServerError, w, "Could not create resource: %v", err)
+		_, _ = Errorf(http.StatusInternalServerError, w, "Could not create resource: %v", err)
 		return
 	}
 

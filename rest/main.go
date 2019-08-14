@@ -1,3 +1,4 @@
+// Package rest provides the REST API to create highly-available iSCSI targets.
 package rest
 
 import (
@@ -11,13 +12,17 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type restError struct {
+// Error is the type that is returned in case of an error.
+type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+// Errorf takes a StatusCode, a ResponswWriter and a format string.
+// It sets up the REST response and writes it to the ResponseWriter
+// It also sets the according error code.
 func Errorf(code int, w http.ResponseWriter, format string, a ...interface{}) (n int, err error) {
-	e := restError{
+	e := Error{
 		Code:    http.StatusText(code),
 		Message: fmt.Sprintf(format, a...),
 	}
@@ -36,19 +41,20 @@ func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		s = "Could not read body"
-		Errorf(http.StatusBadRequest, w, s)
+		_, _ = Errorf(http.StatusBadRequest, w, s)
 		return errors.New(s)
 	}
 
 	s = "Could not unmarshal body"
 	if err := json.Unmarshal(body, i); err != nil {
-		Errorf(http.StatusBadRequest, w, s)
+		_, _ = Errorf(http.StatusBadRequest, w, s)
 		return errors.New(s)
 	}
 
 	return nil
 }
 
+// ListenAndServe is the entry point for the REST API
 func ListenAndServe(addr string) {
 	router := mux.NewRouter() //.StrictSlash(true)
 	router.HandleFunc("/api/v1/iscsi", ISCSICreate).Methods("POST")

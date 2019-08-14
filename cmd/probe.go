@@ -5,7 +5,7 @@ import (
 
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
-	term "github.com/LINBIT/linstor-remote-storage/termcontrol"
+	"github.com/logrusorgru/aurora"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -13,7 +13,7 @@ import (
 // probeCmd represents the probe command
 var probeCmd = &cobra.Command{
 	Use:   "probe",
-	Short: "Probes an iSCSI starget",
+	Short: "Probes an iSCSI target",
 	Long: `Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
 That means Pacemaker will run the status operation on the nodes where the
 resource can run.
@@ -40,12 +40,12 @@ For example:
 
 		fmt.Printf("Current state of CRM resources\niSCSI resource %s, logical unit #%d:\n", iqn, uint8(lun))
 		for rscName, runState := range *rscStateMap {
-			label := term.COLOR_YELLOW + "Unknown" + term.COLOR_RESET
+			label := aurora.Yellow("Unknown")
 			if runState.HaveState {
 				if runState.Running {
-					label = term.COLOR_GREEN + "Running" + term.COLOR_RESET
+					label = aurora.Green("Running")
 				} else {
-					label = term.COLOR_RED + "Stopped" + term.COLOR_RESET
+					label = aurora.Red("Stopped")
 				}
 			}
 			fmt.Printf("    %-40s %s\n", rscName, label)

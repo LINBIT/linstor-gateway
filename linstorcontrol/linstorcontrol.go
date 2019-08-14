@@ -1,12 +1,6 @@
-// LINSTOR API - creating/deleting LINSTOR resources/volumes
+// Package linstorcontrol allows creating and deleting LINSTOR resources/volumes.
+// It is a higher level abstraction to the low level golinstor REST package.
 package linstorcontrol
-
-// linstorcontrol module
-//
-// The functions in this module are called by the high-level API in package application
-// (module application.go) to perform operations in the LINSTOR subsystem, such
-// as creating and deleting resources/volumes. The golinstor driver is used
-// for communication with the LINSTOR Controller.
 
 import (
 	"context"
@@ -17,6 +11,7 @@ import (
 	client "github.com/LINBIT/golinstor/client"
 )
 
+// Linstor is a struct containing the the configuration that is needed to create or delete a LINSTOR resource.
 type Linstor struct {
 	ResourceName      string `json:"resource_name,omitempty"`
 	VlmSizeKiB        uint64 `json:"size_kib,omitempty"`
@@ -25,16 +20,16 @@ type Linstor struct {
 	ControllerIP      net.IP `json:"controller_ip,omitempty"`
 }
 
-func ipToURL(ip net.IP) (*url.URL, error) {
-	return url.Parse("http://" + ip.String() + ":3370")
-}
-
+// CreateResult is a struct than is used as the result of a successful create action.
+// It already contains the data that is most likely used by a consumer of a CreateVolume() call.
 type CreateResult struct {
-	DevicePath      string
+	// Linux device path (e.g., /dev/drbd1001)
+	DevicePath string
+	// List of nodes where the actual data got places (i.e., after autoplace)
 	StorageNodeList []string
 }
 
-// Creates a LINSTOR resource definition, volume definition and associated resources on the selected nodes
+// CreateVolume creates a  LINSTOR resource based on a given resource group name.
 func (l *Linstor) CreateVolume() (CreateResult, error) {
 	result := CreateResult{}
 
@@ -91,7 +86,7 @@ func (l *Linstor) CreateVolume() (CreateResult, error) {
 	return result, nil
 }
 
-// Deletes the LINSTOR resource definition
+// DeleteVolume deletes a LINSTOR resource definition (and therefore all resources) identified by name.
 func (l *Linstor) DeleteVolume() error {
 	clientCtx := context.Background()
 	loglevel := l.Loglevel
@@ -109,4 +104,8 @@ func (l *Linstor) DeleteVolume() error {
 	}
 
 	return ctrlConn.ResourceDefinitions.Delete(clientCtx, l.ResourceName)
+}
+
+func ipToURL(ip net.IP) (*url.URL, error) {
+	return url.Parse("http://" + ip.String() + ":3370")
 }

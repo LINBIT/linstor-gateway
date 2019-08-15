@@ -27,7 +27,7 @@ type ISCSI struct {
 }
 
 type LUN struct {
-	Id uint8 `json:"id,omitempty"`
+	ID uint8 `json:"id,omitempty"`
 }
 
 // Target contains the information necessary for iSCSI targets.
@@ -67,7 +67,7 @@ func (i *ISCSI) CreateResource() error {
 		}
 
 		// Create a LINSTOR resource definition, volume definition and associated resources
-		i.Linstor.ResourceName = resourceName(targetName, lu.Id)
+		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
 		res, err := i.Linstor.CreateVolume()
 		if err != nil {
 			return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)
@@ -79,7 +79,7 @@ func (i *ISCSI) CreateResource() error {
 			targetName,
 			i.Target.ServiceIP,
 			i.Target.IQN,
-			lu.Id,
+			lu.ID,
 			res.DevicePath,
 			i.Target.Username,
 			i.Target.Password,
@@ -103,13 +103,13 @@ func (i *ISCSI) DeleteResource() error {
 
 	for _, lu := range i.Target.LUNs {
 		// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-		err = crmcontrol.DeleteCrmLu(targetName, lu.Id)
+		err = crmcontrol.DeleteCrmLu(targetName, lu.ID)
 		if err != nil {
 			return err
 		}
 
 		// Delete the LINSTOR resource definition
-		i.Linstor.ResourceName = resourceName(targetName, lu.Id)
+		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
 	}
 	return i.Linstor.DeleteVolume()
 }
@@ -135,7 +135,7 @@ func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 	rscStateMap := make(map[string]crmcontrol.LrmRunState)
 
 	for _, lu := range i.Target.LUNs {
-		tmpMap, err := crmcontrol.ProbeResource(targetName, lu.Id)
+		tmpMap, err := crmcontrol.ProbeResource(targetName, lu.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 	// then, "convert" and link LUs
 	for _, l := range config.LuList {
 		lun := &LUN{
-			Id: l.LUN,
+			ID: l.LUN,
 		}
 
 		// link to the correct target
@@ -207,7 +207,7 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 
 	for _, lu := range i.Target.LUNs {
 		// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
-		err = crmcontrol.ModifyCrmLuTargetRole(targetName, lu.Id, startFlag)
+		err = crmcontrol.ModifyCrmLuTargetRole(targetName, lu.ID, startFlag)
 		if err != nil {
 			return err
 		}

@@ -14,7 +14,7 @@ import (
 // Linstor is a struct containing the the configuration that is needed to create or delete a LINSTOR resource.
 type Linstor struct {
 	ResourceName      string `json:"resource_name,omitempty"`
-	VlmSizeKiB        uint64 `json:"size_kib,omitempty"`
+	SizeKiB           uint64 `json:"size_kib,omitempty"`
 	ResourceGroupName string `json:"resource_group_name,omitempty"`
 	Loglevel          string `json:"loglevel,omitempty"`
 	ControllerIP      net.IP `json:"controller_ip,omitempty"`
@@ -50,7 +50,7 @@ func (l *Linstor) CreateVolume() (CreateResult, error) {
 
 	spawn := client.ResourceGroupSpawn{
 		ResourceDefinitionName: l.ResourceName,
-		VolumeSizes:            []int64{int64(l.VlmSizeKiB)},
+		VolumeSizes:            []int64{int64(l.SizeKiB)},
 	}
 	err = ctrlConn.ResourceGroups.Spawn(clientCtx, l.ResourceGroupName, spawn)
 	if err != nil {

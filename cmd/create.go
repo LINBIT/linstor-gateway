@@ -62,14 +62,13 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := linstorcontrol.Linstor{
-			SizeKiB:           sizeKiB,
 			Loglevel:          log.GetLevel().String(),
 			ControllerIP:      controller,
 			ResourceGroupName: group,
 		}
 		targetCfg := iscsi.Target{
 			IQN:       iqn,
-			LUNs:      []*iscsi.LUN{&iscsi.LUN{uint8(lun)}},
+			LUNs:      []*iscsi.LUN{&iscsi.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
 			ServiceIP: ip,
 			Username:  username,
 			Password:  password,

@@ -14,7 +14,7 @@ import (
 // Linstor is a struct containing the the configuration that is needed to create or delete a LINSTOR resource.
 type Linstor struct {
 	ResourceName      string `json:"resource_name,omitempty"`
-	SizeKiB           uint64 `json:"size_kib,omitempty"`
+	SizeKiB           uint64
 	ResourceGroupName string `json:"resource_group_name,omitempty"`
 	Loglevel          string `json:"loglevel,omitempty"`
 	ControllerIP      net.IP `json:"controller_ip,omitempty"`

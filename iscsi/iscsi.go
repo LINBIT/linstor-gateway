@@ -27,7 +27,8 @@ type ISCSI struct {
 }
 
 type LUN struct {
-	ID uint8 `json:"id,omitempty"`
+	ID      uint8  `json:"id,omitempty"`
+	SizeKiB uint64 `json:"size_kib,omitempty"`
 }
 
 // Target contains the information necessary for iSCSI targets.
@@ -68,6 +69,7 @@ func (i *ISCSI) CreateResource() error {
 
 		// Create a LINSTOR resource definition, volume definition and associated resources
 		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
+		i.Linstor.SizeKiB = lu.SizeKiB
 		res, err := i.Linstor.CreateVolume()
 		if err != nil {
 			return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)

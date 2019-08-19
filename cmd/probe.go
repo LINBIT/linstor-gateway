@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
 	"github.com/logrusorgru/aurora"
@@ -40,13 +41,14 @@ For example:
 
 		fmt.Printf("Current state of CRM resources\niSCSI resource %s, logical unit #%d:\n", iqn, uint8(lun))
 		for rscName, runState := range *rscStateMap {
-			label := aurora.Yellow("Unknown")
-			if runState.HaveState {
-				if runState.Running {
-					label = aurora.Green("Running")
-				} else {
-					label = aurora.Red("Stopped")
-				}
+			var label aurora.Value
+			switch runState {
+			case crmcontrol.Running:
+				label = aurora.Green("Running")
+			case crmcontrol.Stopped:
+				label = aurora.Red("Stopped")
+			default:
+				label = aurora.Yellow("Unknown")
 			}
 			fmt.Printf("    %-40s %s\n", rscName, label)
 		}

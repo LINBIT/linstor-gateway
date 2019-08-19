@@ -20,15 +20,14 @@ var (
 )
 
 func stateToStatus(state crmcontrol.LrmRunState) string {
-	if state.HaveState {
-		if state.Running {
-			return statusOk
-		} else {
-			return statusBad
-		}
+	switch state {
+	case crmcontrol.Running:
+		return statusOk
+	case crmcontrol.Stopped:
+		return statusBad
+	default:
+		return statusStarting
 	}
-
-	return statusStarting
 }
 
 // listCmd represents the list command

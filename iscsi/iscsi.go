@@ -96,7 +96,7 @@ func (i *ISCSI) CreateResource() error {
 	return nil
 }
 
-// DeleteResource deletes a new highly available iSCSI target
+// DeleteResource deletes a highly available iSCSI target
 func (i *ISCSI) DeleteResource() error {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {

@@ -128,7 +128,7 @@ func (i *ISCSI) StopResource() error {
 
 // ProbeResource gets information about an existing iSCSI resource.
 // It returns a resource state map and an error.
-func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
+func (i *ISCSI) ProbeResource() (map[string]crmcontrol.LrmRunState, error) {
 	targetName, err := i.Target.iqnTarget()
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (i *ISCSI) ProbeResource() (*map[string]crmcontrol.LrmRunState, error) {
 		}
 	}
 
-	return &rscStateMap, nil
+	return rscStateMap, nil
 }
 
 // ListResources lists existing iSCSI targets.

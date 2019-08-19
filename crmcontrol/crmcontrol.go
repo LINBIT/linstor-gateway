@@ -384,7 +384,7 @@ func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error)
 		rscStateMap[name] = Unknown
 	}
 
-	err = probeResourceRunState(&rscStateMap, docRoot)
+	err = probeResourceRunState(rscStateMap, docRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -434,12 +434,12 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 	isStopped := false
 	retries := 0
 	for !isStopped {
-		err := probeResourceRunState(&stopItemStates, docRoot)
+		err := probeResourceRunState(stopItemStates, docRoot)
 		if err != nil {
 			return false, err
 		}
 
-		_, stoppedFlag := checkResourceStopped(&stopItemStates)
+		_, stoppedFlag := checkResourceStopped(stopItemStates)
 
 		if !stoppedFlag {
 			if retries > MAX_WAIT_STOP_RETRIES {
@@ -770,7 +770,7 @@ func loadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, e
 //
 // Each resource name is mapped to an LrmRunState value that is then updated
 // with the run state of the respective resource.
-func probeResourceRunState(stopItems *map[string]LrmRunState, docRoot *xmltree.Document) error {
+func probeResourceRunState(stopItems map[string]LrmRunState, docRoot *xmltree.Document) error {
 	cib := docRoot.Root()
 	if cib == nil {
 		return errors.New("Failed to find the cluster information base (CIB) root element")
@@ -792,8 +792,8 @@ func probeResourceRunState(stopItems *map[string]LrmRunState, docRoot *xmltree.D
 						return errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
 					}
 					rscName := idAttr.Value
-					if itemRunState, ok := (*stopItems)[rscName]; ok {
-						(*stopItems)[rscName] = updateRunState(rscName, lrmRsc, itemRunState)
+					if itemRunState, ok := stopItems[rscName]; ok {
+						stopItems[rscName] = updateRunState(rscName, lrmRsc, itemRunState)
 					}
 				}
 			}
@@ -803,10 +803,10 @@ func probeResourceRunState(stopItems *map[string]LrmRunState, docRoot *xmltree.D
 	return nil
 }
 
-func checkResourceStopped(stopItems *map[string]LrmRunState) (bool, bool) {
+func checkResourceStopped(stopItems map[string]LrmRunState) (bool, bool) {
 	stateCtr := 0
 	stoppedCtr := 0
-	for name, state := range *stopItems {
+	for name, state := range stopItems {
 		contextLog := log.WithFields(log.Fields{"resource": name})
 		if state == Unknown {
 			contextLog.Warning("No run status information for resource")
@@ -822,8 +822,8 @@ func checkResourceStopped(stopItems *map[string]LrmRunState) (bool, bool) {
 		}
 	}
 
-	haveState := stateCtr == len(*stopItems)
-	stoppedFlag := stoppedCtr == len(*stopItems)
+	haveState := stateCtr == len(stopItems)
+	stoppedFlag := stoppedCtr == len(stopItems)
 
 	return haveState, stoppedFlag
 }

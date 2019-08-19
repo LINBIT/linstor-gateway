@@ -72,10 +72,10 @@ linstor-iscsi list`,
 			}
 
 			for _, lu := range target.LUNs {
-				state := (*rscStateMap)[target.Name]
+				state := rscStateMap[target.Name]
 				// TODO stop using this hack and pass the actual
 				// name through once all the data structures are fixed.
-				lunState := (*rscStateMap)[target.Name+"_lu"+strconv.Itoa(int(lu.ID))]
+				lunState := rscStateMap[target.Name+"_lu"+strconv.Itoa(int(lu.ID))]
 
 				// TODO don't know how to deal with the IPs yet...
 				row := []string{target.Name, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), statusOk}

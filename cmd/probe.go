@@ -40,7 +40,7 @@ For example:
 		}
 
 		fmt.Printf("Current state of CRM resources\niSCSI resource %s, logical unit #%d:\n", iqn, uint8(lun))
-		for rscName, runState := range *rscStateMap {
+		for rscName, runState := range rscStateMap {
 			var label aurora.Value
 			switch runState {
 			case crmcontrol.Running:

@@ -883,22 +883,6 @@ func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[s
 	return subDataBld.String(), nil
 }
 
-// Prints collected stdout/stderr output of an external command, or indicates
-// that the external command did not produce such output
-func printCmdOutput(stdoutLines []string, stderrLines []string) {
-	if len(stdoutLines) > 0 {
-		log.Debug("Stdout output:", stdoutLines)
-	} else {
-		log.Debug("No stdout output")
-	}
-
-	if len(stderrLines) > 0 {
-		log.Debug("Stderr output:", stderrLines)
-	} else {
-		log.Debug("No stderr output")
-	}
-}
-
 // Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree
 func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface{}) error {
 	return dissolveConstraintsImpl(cibElem, delItems, 0)

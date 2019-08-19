@@ -70,4 +70,7 @@ func init() {
 	corosyncCmd.ResetCommands()
 	corosyncCmd.Flags().IPSliceVar(&nodeIPs, "ips", []net.IP{net.IPv4(127, 0, 0, 1)}, "comma seprated list of IPs (e.g., 1.2.3.4,1.2.3.5)")
 	corosyncCmd.Flags().StringVar(&clusterName, "cluster-name", "mycluster", "name of the cluster")
+
+	corosyncCmd.MarkPersistentFlagRequired("iqn")
+	corosyncCmd.MarkPersistentFlagRequired("lun")
 }

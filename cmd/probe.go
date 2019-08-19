@@ -55,4 +55,7 @@ For example:
 
 func init() {
 	rootCmd.AddCommand(probeCmd)
+
+	probeCmd.MarkPersistentFlagRequired("iqn")
+	probeCmd.MarkPersistentFlagRequired("lun")
 }

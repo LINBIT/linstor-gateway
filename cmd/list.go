@@ -41,6 +41,8 @@ about the existing Pacemaker and linstor parts
 For example:
 linstor-iscsi list`,
 	Args: cobra.NoArgs,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:     log.GetLevel().String(),

@@ -16,6 +16,8 @@ var serverCmd = &cobra.Command{
 For example:
 linstor-iscsi server --addr=":8080"`,
 	Args: cobra.NoArgs,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		rest.ListenAndServe(addr)
 	},

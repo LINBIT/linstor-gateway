@@ -39,4 +39,7 @@ func init() {
 	rootCmd.AddCommand(deleteCmd)
 
 	deleteCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
+
+	deleteCmd.MarkPersistentFlagRequired("iqn")
+	deleteCmd.MarkPersistentFlagRequired("lun")
 }

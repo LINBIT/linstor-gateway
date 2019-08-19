@@ -98,4 +98,7 @@ func init() {
 	createCmd.MarkFlagRequired("password")
 	createCmd.MarkFlagRequired("nodes")
 	createCmd.MarkFlagRequired("size")
+
+	createCmd.MarkPersistentFlagRequired("iqn")
+	createCmd.MarkPersistentFlagRequired("lun")
 }

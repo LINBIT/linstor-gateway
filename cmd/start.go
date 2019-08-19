@@ -36,4 +36,7 @@ linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+
+	startCmd.MarkPersistentFlagRequired("iqn")
+	startCmd.MarkPersistentFlagRequired("lun")
 }

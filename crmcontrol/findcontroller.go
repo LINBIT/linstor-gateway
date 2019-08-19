@@ -12,13 +12,13 @@ func findLinstorControllerName() (string, error) {
 		return "", err
 	}
 
-	xpath := fmt.Sprintf("%s/%s/%s", CIB_NODE_STATUS_XPATH, CIB_TAG_LRM, CIB_TAG_LRM_RSCLST)
+	xpath := fmt.Sprintf("%s/%s/%s", cibNodeStatusXpath, cibTagLrm, cibTagLrmRsclist)
 	for _, lrm_resources := range doc.FindElements(xpath) {
-		for _, lrm_resource := range lrm_resources.SelectElements(CIB_TAG_LRM_RSC) {
+		for _, lrm_resource := range lrm_resources.SelectElements(cibTagLrmRsc) {
 			typ := lrm_resource.SelectAttrValue("type", "")
 			class := lrm_resource.SelectAttrValue("class", "")
-			if typ == CRM_TYPE_LINSTOR_CTRL && class == "systemd" {
-				if lrm_rsc_op := lrm_resource.SelectElement(CIB_TAG_LRM_RSC_OP); lrm_rsc_op != nil {
+			if typ == crmTypeLinstorCtrl && class == "systemd" {
+				if lrm_rsc_op := lrm_resource.SelectElement(cibTagLrmRscOp); lrm_rsc_op != nil {
 					on_node := lrm_rsc_op.SelectAttrValue("on_node", "")
 					operation := lrm_rsc_op.SelectAttrValue("operation", "")
 					if on_node != "" && operation == "start" {

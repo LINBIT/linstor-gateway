@@ -34,95 +34,95 @@ import (
 
 // Template variable keys
 const (
-	VAR_NODE_NAME     = "CRM_NODE_NAME"
-	VAR_NR            = "NR"
-	VAR_LU_NAME       = "CRM_LU_NAME"
-	VAR_SVC_IP        = "CRM_SVC_IP"
-	VAR_TGT_NAME      = "CRM_TARGET_NAME"
-	VAR_TGT_IQN       = "TARGET_IQN"
-	VAR_ISCSI_LUN     = "LUN"
-	VAR_STOR_DEV      = "DEVICE"
-	VAR_USERNAME      = "USERNAME"
-	VAR_PASSWORD      = "PASSWORD"
-	VAR_PORTALS       = "PORTALS"
-	VAR_TID           = "TID"
-	VAR_TGT_LOC_NODES = "TARGET_LOCATION_NODES"
-	VAR_LU_LOC_NODES  = "LU_LOCATION_NODES"
+	varNodeName    = "CRM_NODE_NAME"
+	varNr          = "NR"
+	varLuName      = "CRM_LU_NAME"
+	varSvcIp       = "CRM_SVC_IP"
+	varTgtName     = "CRM_TARGET_NAME"
+	varTgtIqn      = "TARGET_IQN"
+	varIscsiLun    = "LUN"
+	varStorDev     = "DEVICE"
+	varUsername    = "USERNAME"
+	varPassword    = "PASSWORD"
+	varPortals     = "PORTALS"
+	varTid         = "TID"
+	varTgtLocNodes = "TARGET_LOCATION_NODES"
+	varLuLocNodes  = "LU_LOCATION_NODES"
 )
 
 // Pacemaker CIB XML XPaths
 const (
-	CIB_RSC_XPATH         = "/cib/configuration/resources"
-	CIB_STATUS_XPATH      = "/cib/status"
-	CIB_NODE_STATUS_XPATH = "/cib/status/node_state"
+	cibRscXpath        = "/cib/configuration/resources"
+	cibStatusXpath     = "/cib/status"
+	cibNodeStatusXpath = "/cib/status/node_state"
 )
 
 // Pacemaker CRM resource names, prefixes, suffixes, search patterns, etc.
 const (
-	CRM_ISCSI_RSC_PREFIX  = "p_iscsi_"
-	CRM_ISCSI_LU_NAME     = "lu"
-	CRM_ISCSI_PRM_TID     = "tid"
-	CRM_TYPE_ISCSI_TARGET = "iSCSITarget"
-	CRM_TYPE_ISCSI_LU     = "iSCSILogicalUnit"
-	CRM_TYPE_LINSTOR_CTRL = "linstor-controller"
+	crmIscsiRscPrefix  = "p_iscsi_"
+	crmIscsiLuName     = "lu"
+	crmIscsiPrmTid     = "tid"
+	crmTypeIscsiTarget = "iSCSITarget"
+	crmTypeIscsiLu     = "iSCSILogicalUnit"
+	crmTypeLinstorCtrl = "linstor-controller"
 )
 
 // Pacemaker CIB XML tag names
 const (
-	CIB_TAG_LOCATION   = "rsc_location"
-	CIB_TAG_COLOCATION = "rsc_colocation"
-	CIB_TAG_ORDER      = "rsc_order"
-	CIB_TAG_RSC_REF    = "resource_ref"
-	CIB_TAG_META_ATTR  = "meta_attributes"
-	CIB_TAG_INST_ATTR  = "instance_attributes"
-	CIB_TAG_NV_PAIR    = "nvpair"
-	CIB_TAG_LRM        = "lrm"
-	CIB_TAG_LRM_RSCLST = "lrm_resources"
-	CIB_TAG_LRM_RSC    = "lrm_resource"
-	CIB_TAG_LRM_RSC_OP = "lrm_rsc_op"
+	cibTagLocation   = "rsc_location"
+	cibTagColocation = "rsc_colocation"
+	cibTagOrder      = "rsc_order"
+	cibTagRscRef     = "resource_ref"
+	cibTagMetaAttr   = "meta_attributes"
+	cibTagInstAttr   = "instance_attributes"
+	cibTagNvPair     = "nvpair"
+	cibTagLrm        = "lrm"
+	cibTagLrmRsclist = "lrm_resources"
+	cibTagLrmRsc     = "lrm_resource"
+	cibTagLrmRscOp   = "lrm_rsc_op"
 )
 
 // Pacemaker CIB attribute names
 const (
-	CIB_ATTR_KEY_ID            = "id"
-	CIB_ATTR_KEY_NAME          = "name"
-	CIB_ATTR_KEY_VALUE         = "value"
-	CIB_ATTR_KEY_OPERATION     = "operation"
-	CIB_ATTR_KEY_RC_CODE       = "rc-code"
-	CIB_ATTR_VALUE_TARGET_ROLE = "target-role"
-	CIB_ATTR_VALUE_STARTED     = "Started"
-	CIB_ATTR_VALUE_STOPPED     = "Stopped"
-	CIB_ATTR_VALUE_STOP        = "stop"
-	CIB_ATTR_VALUE_START       = "start"
-	CIB_ATTR_VALUE_MONITOR     = "monitor"
+	cibAttrKeyId           = "id"
+	cibAttrKeyName         = "name"
+	cibAttrKeyValue        = "value"
+	cibAttrKeyOperation    = "operation"
+	cibAttrKeyRcCode       = "rc-code"
+	cibAttrValueTargetRole = "target-role"
+	cibAttrValueStarted    = "Started"
+	cibAttrValueStopped    = "Stopped"
+	cibAttrValueStop       = "stop"
+	cibAttrValueStart      = "start"
+	cibAttrValueMonitor    = "monitor"
 )
 
 // Pacemaker OCF resource agent exit codes
 const (
-	OCF_SUCCESS           = 0
-	OCF_ERR_GENERIC       = 1
-	OCF_ERR_ARGS          = 2
-	OCF_ERR_UNIMPLEMENTED = 3
-	OCF_ERR_PERM          = 4
-	OCF_ERR_INSTALLED     = 5
-	OCF_NOT_RUNNING       = 7
-	OCF_RUNNING_MASTER    = 8
-	OCF_FAILED_MASTER     = 9
+	ocfSuccess          = 0
+	ocfErrGeneric       = 1
+	ocfErrArgs          = 2
+	ocfErrUnimplemented = 3
+	ocfErrPerm          = 4
+	ocfErrInstalled     = 5
+	ocfNotRunning       = 7
+	ocfRunningMaster    = 8
+	ocfFailedMaster     = 9
 )
 
 // Maximum recursion level, currently used to limit recursion during recursive
 // searches of the XML document tree
-const MAX_RECURSION_LEVEL = 40
+const maxRecursionLevel = 40
 
 // Maximum number of CIB poll retries when waiting for CRM resources to stop
-const MAX_WAIT_STOP_RETRIES = 10
+const maxWaitStopRetries = 10
 
 // Initial delay after setting resource target-role=Stopped before starting to poll the CIB
 // to check whether resources have actually stopped
-const WAIT_STOP_POLL_CIB_DELAY = 2500
+const waitStopPollCibDelay = 2500
 
 // Delay between CIB polls in milliseconds
-const CIB_POLL_RETRY_DELAY = 2000
+const cibPollRetryDelay = 2000
 
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
@@ -188,16 +188,16 @@ func CreateCrmLu(
 
 	// Construct the CIB update data from the template
 	var tmplVars map[string]string = make(map[string]string)
-	tmplVars[VAR_LU_NAME] = "lu" + strconv.Itoa(int(lun))
-	tmplVars[VAR_SVC_IP] = ip.String()
-	tmplVars[VAR_TGT_NAME] = iscsiTargetName
-	tmplVars[VAR_TGT_IQN] = iscsiTargetIqn
-	tmplVars[VAR_ISCSI_LUN] = strconv.Itoa(int(lun))
-	tmplVars[VAR_STOR_DEV] = device
-	tmplVars[VAR_USERNAME] = username
-	tmplVars[VAR_PASSWORD] = password
-	tmplVars[VAR_PORTALS] = portal
-	tmplVars[VAR_TID] = strconv.Itoa(int(tid))
+	tmplVars[varLuName] = "lu" + strconv.Itoa(int(lun))
+	tmplVars[varSvcIp] = ip.String()
+	tmplVars[varTgtName] = iscsiTargetName
+	tmplVars[varTgtIqn] = iscsiTargetIqn
+	tmplVars[varIscsiLun] = strconv.Itoa(int(lun))
+	tmplVars[varStorDev] = device
+	tmplVars[varUsername] = username
+	tmplVars[varPassword] = password
+	tmplVars[varPortals] = portal
+	tmplVars[varTid] = strconv.Itoa(int(tid))
 
 	// Create sub XML content, one entry per node, from the iSCSI target location constraint template
 	targetLocData, err := constructNodesTemplate(crmtemplate.TARGET_LOCATION_NODES, storageNodeList, tmplVars)
@@ -210,8 +210,8 @@ func CreateCrmLu(
 		return err
 	}
 	// Load the sub XML content into variables
-	tmplVars[VAR_TGT_LOC_NODES] = targetLocData
-	tmplVars[VAR_LU_LOC_NODES] = luLocData
+	tmplVars[varTgtLocNodes] = targetLocData
+	tmplVars[varLuLocNodes] = luLocData
 
 	// Replace resource creation template variables
 	iscsitmpl, err := template.New("crmisci").Parse(crmtemplate.CRM_ISCSI)
@@ -274,29 +274,29 @@ func ModifyCrmLuTargetRole(
 		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
 		if rscElem != nil {
 			var tgtRoleEntry *xmltree.Element = nil
-			metaAttr := rscElem.FindElement(CIB_TAG_META_ATTR)
+			metaAttr := rscElem.FindElement(cibTagMetaAttr)
 			if metaAttr != nil {
 				// Meta attributes exist, find the entry that sets the target-role
-				tgtRoleEntry = metaAttr.FindElement(CIB_TAG_NV_PAIR + "[@" + CIB_ATTR_KEY_NAME + "='" + CIB_ATTR_VALUE_TARGET_ROLE + "']")
+				tgtRoleEntry = metaAttr.FindElement(cibTagNvPair + "[@" + cibAttrKeyName + "='" + cibAttrValueTargetRole + "']")
 			} else {
 				// No meta attributes present, create XML element
-				metaAttr = rscElem.CreateElement(CIB_TAG_META_ATTR)
-				metaAttr.CreateAttr(CIB_ATTR_KEY_ID, elemId+"_"+CIB_TAG_META_ATTR)
+				metaAttr = rscElem.CreateElement(cibTagMetaAttr)
+				metaAttr.CreateAttr(cibAttrKeyId, elemId+"_"+cibTagMetaAttr)
 			}
 			if tgtRoleEntry == nil {
 				// No entry that sets the target-role, create entry
-				tgtRoleEntry = metaAttr.CreateElement(CIB_TAG_NV_PAIR)
-				tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_ID, elemId+"_"+CIB_ATTR_VALUE_TARGET_ROLE)
-				tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_NAME, CIB_ATTR_VALUE_TARGET_ROLE)
+				tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
+				tgtRoleEntry.CreateAttr(cibAttrKeyId, elemId+"_"+cibAttrValueTargetRole)
+				tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
 			}
 			// Set the target-role
 			var tgtRoleValue string
 			if startFlag {
-				tgtRoleValue = CIB_ATTR_VALUE_STARTED
+				tgtRoleValue = cibAttrValueStarted
 			} else {
-				tgtRoleValue = CIB_ATTR_VALUE_STOPPED
+				tgtRoleValue = cibAttrValueStopped
 			}
-			tgtRoleEntry.CreateAttr(CIB_ATTR_KEY_VALUE, tgtRoleValue)
+			tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
 		} else {
 			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemId)
 		}
@@ -315,7 +315,7 @@ func DeleteCrmLu(
 		return err
 	}
 
-	time.Sleep(time.Duration(WAIT_STOP_POLL_CIB_DELAY * time.Millisecond))
+	time.Sleep(time.Duration(waitStopPollCibDelay * time.Millisecond))
 	isStopped, err := WaitForResourceStop(iscsiTargetName, lun)
 	if err != nil {
 		return err
@@ -443,11 +443,11 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 		_, stoppedFlag := checkResourceStopped(stopItemStates)
 
 		if !stoppedFlag {
-			if retries > MAX_WAIT_STOP_RETRIES {
+			if retries > maxWaitStopRetries {
 				break
 			}
 
-			time.Sleep(time.Duration(CIB_POLL_RETRY_DELAY * time.Millisecond))
+			time.Sleep(time.Duration(cibPollRetryDelay * time.Millisecond))
 
 			// Re-read the current CIB XML
 			docRoot, err = ReadConfiguration()
@@ -713,7 +713,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 		return nil, errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	rscSection := cib.FindElement(CIB_RSC_XPATH)
+	rscSection := cib.FindElement(cibRscXpath)
 	if rscSection == nil {
 		return nil, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
 	}
@@ -748,8 +748,8 @@ func ReadConfiguration() (*xmltree.Document, error) {
 func loadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, error) {
 	objMap := make(map[string]interface{})
 	tmplVars := make(map[string]string)
-	tmplVars[VAR_TGT_NAME] = iscsiTargetName
-	tmplVars[VAR_LU_NAME] = CRM_ISCSI_LU_NAME + strconv.Itoa(int(lun))
+	tmplVars[varTgtName] = iscsiTargetName
+	tmplVars[varLuName] = crmIscsiLuName + strconv.Itoa(int(lun))
 
 	tmpl, err := template.New("crmobjnames").Parse(crmtemplate.CRM_OBJ_NAMES)
 	if err != nil {
@@ -777,18 +777,18 @@ func probeResourceRunState(stopItems map[string]LrmRunState, docRoot *xmltree.Do
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	statusSection := cib.FindElement(CIB_STATUS_XPATH)
+	statusSection := cib.FindElement(cibStatusXpath)
 	if statusSection == nil {
 		return errors.New("Failed to find any resource status information in the cluster information base (CIB)")
 	}
 
 	for _, nodeElem := range statusSection.ChildElements() {
-		lrmElem := nodeElem.SelectElement(CIB_TAG_LRM)
+		lrmElem := nodeElem.SelectElement(cibTagLrm)
 		if lrmElem != nil {
-			lrmRscList := lrmElem.SelectElement(CIB_TAG_LRM_RSCLST)
+			lrmRscList := lrmElem.SelectElement(cibTagLrmRsclist)
 			if lrmRscList != nil {
 				for _, lrmRsc := range lrmRscList.ChildElements() {
-					idAttr := lrmRsc.SelectAttr(CIB_ATTR_KEY_ID)
+					idAttr := lrmRsc.SelectAttr(cibAttrKeyId)
 					if idAttr == nil {
 						return errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
 					}
@@ -882,8 +882,8 @@ func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[s
 	var nr uint32 = 0
 	var subDataBld strings.Builder
 	for _, nodename := range nodeList {
-		subTmplVars[VAR_NODE_NAME] = nodename
-		subTmplVars[VAR_NR] = strconv.FormatUint(uint64(nr), 10)
+		subTmplVars[varNodeName] = nodename
+		subTmplVars[varNr] = strconv.FormatUint(uint64(nr), 10)
 
 		tmpl, err := template.New(nodename).Parse(tmplString)
 		if err != nil {
@@ -929,8 +929,8 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 	for _, subElem := range childList {
 		var dependFlag bool = false
 		var err error
-		if subElem.Tag == CIB_TAG_COLOCATION {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+		if subElem.Tag == cibTagColocation {
+			if recursionLevel < maxRecursionLevel {
 				dependFlag, err = isColocationDependency(subElem, delItems)
 				if err != nil {
 					return err
@@ -944,8 +944,8 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 			} else {
 				return maxRecursionError()
 			}
-		} else if subElem.Tag == CIB_TAG_ORDER {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+		} else if subElem.Tag == cibTagOrder {
+			if recursionLevel < maxRecursionLevel {
 				dependFlag, err = isOrderDependency(subElem, delItems)
 				if err != nil {
 					return err
@@ -959,8 +959,8 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 			} else {
 				return maxRecursionError()
 			}
-		} else if subElem.Tag == CIB_TAG_LOCATION {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+		} else if subElem.Tag == cibTagLocation {
+			if recursionLevel < maxRecursionLevel {
 				dependFlag = isLocationDependency(subElem, delItems)
 				if !dependFlag {
 					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
@@ -971,8 +971,8 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 			} else {
 				return maxRecursionError()
 			}
-		} else if subElem.Tag == CIB_TAG_LRM_RSC {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+		} else if subElem.Tag == cibTagLrmRsc {
+			if recursionLevel < maxRecursionLevel {
 				dependFlag, err = isLrmDependency(subElem, delItems)
 				if err != nil {
 					return err
@@ -981,7 +981,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 				return maxRecursionError()
 			}
 		} else {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+			if recursionLevel < maxRecursionLevel {
 				err := dissolveConstraintsImpl(subElem, delItems, recursionLevel+1)
 				if err != nil {
 					return err
@@ -1020,7 +1020,7 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 	var err error
 	childList := cibElem.ChildElements()
 	for _, subElem := range childList {
-		if subElem.Tag == CIB_TAG_RSC_REF {
+		if subElem.Tag == cibTagRscRef {
 			idAttr := subElem.SelectAttr("id")
 			if idAttr != nil {
 				_, depFlag = delItems[idAttr.Value]
@@ -1028,7 +1028,7 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 				return false, errors.New("Unparseable " + subElem.Tag + " tag, cannot find \"id\" attribute")
 			}
 		} else {
-			if recursionLevel < MAX_RECURSION_LEVEL {
+			if recursionLevel < maxRecursionLevel {
 				depFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
 				if err != nil {
 					return false, err
@@ -1117,20 +1117,20 @@ func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) 
 //
 // For a resource to be considered stopped, this function must find
 // - either a successful stop action
-// - or a monitor action with rc-code OCF_NOT_RUNNING and no stop action
+// - or a monitor action with rc-code ocfNotRunning and no stop action
 //
 // If a stop action is present, the monitor action can still show "running"
-// (rc-code OCF_SUCCESS == 0) although the resource is actually stopped. The
+// (rc-code ocfSuccess == 0) although the resource is actually stopped. The
 // monitor action's rc-code is only interesting if there is no stop action present.
 func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunState) LrmRunState {
 	contextLog := log.WithFields(log.Fields{"resource": rscName})
 	newRunState := runState
-	stopEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_STOP + "']")
+	stopEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStop + "']")
 	if stopEntry != nil {
 		rc, err := getLrmRcCode(rscName, stopEntry)
 		if err != nil {
 			contextLog.Warning(err)
-		} else if rc == OCF_SUCCESS {
+		} else if rc == ocfSuccess {
 			if newRunState == Unknown {
 				newRunState = Stopped
 			}
@@ -1141,12 +1141,12 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 		return newRunState
 	}
 
-	monEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_MONITOR + "']")
+	monEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueMonitor + "']")
 	if monEntry != nil {
 		rc, err := getLrmRcCode(rscName, monEntry)
 		if err != nil {
 			contextLog.Warning(err)
-		} else if rc == OCF_NOT_RUNNING {
+		} else if rc == ocfNotRunning {
 			if newRunState == Unknown {
 				newRunState = Stopped
 			}
@@ -1157,12 +1157,12 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 		return newRunState
 	}
 
-	startEntry := lrmRsc.FindElement(CIB_TAG_LRM_RSC_OP + "[@" + CIB_ATTR_KEY_OPERATION + "='" + CIB_ATTR_VALUE_START + "']")
+	startEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStart + "']")
 	if startEntry != nil {
 		rc, err := getLrmRcCode(rscName, startEntry)
 		if err != nil {
 			contextLog.Warning(err)
-		} else if rc == OCF_RUNNING_MASTER || rc == OCF_SUCCESS {
+		} else if rc == ocfRunningMaster || rc == ocfSuccess {
 			if newRunState == Unknown {
 				newRunState = Running
 			}
@@ -1178,7 +1178,7 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 
 // getLrmRcCode extracts the rc-code value from an LRM operation entry
 func getLrmRcCode(rscName string, entry *xmltree.Element) (int, error) {
-	rcAttr := entry.SelectAttr(CIB_ATTR_KEY_RC_CODE)
+	rcAttr := entry.SelectAttr(cibAttrKeyRcCode)
 	if rcAttr == nil {
 		return 0, errors.New("Found LRM resource operation data without a status code")
 	}

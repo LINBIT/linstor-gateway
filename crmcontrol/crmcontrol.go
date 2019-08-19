@@ -1,13 +1,11 @@
-// CRM (Pacemaker) API
-package crmcontrol
-
-// crmcontrol module
+// Package crmcontrol provides a low-level API to manage Pacemaker.
 //
-// The functions in this module are called by the high-level API in package application
-// (module application.go) to perform operations in the CRM subsystem, such as
-// creating the primitives and constraints that configure iSCSI targets, logical units
-// and the associated service IP addresses.
-// The 'cibadmin' utility is used to modify the cluster's CIB (cluster information base).
+// The functions in this module are called by the high-level API in package
+// iscsi to perform operations in the CRM subsystem, such as creating the
+// primitives and constraints that configure iSCSI targets, logical units and
+// the associated service IP addresses.
+// The 'cibadmin' utility is used to modify the cluster's CIB (cluster
+// information base).
 // The CIB is modified by
 //   - sending XML entries, created from templates, to create new primitives & constraints,
 //     much like a macro processor
@@ -15,6 +13,7 @@ package crmcontrol
 //     (e.g. removing tags and their nested tags) to delete existing entries from
 //     the cluster configuration.
 // The 'etree' package is used for XML parsing and modification.
+package crmcontrol
 
 import (
 	"bufio"

@@ -4,6 +4,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
 	"github.com/rck/unit"
@@ -14,6 +15,7 @@ import (
 var ip net.IP
 var username, password, size, portals, group string
 var sizeKiB uint64
+var ipChanged bool
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
@@ -61,6 +63,12 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
+		if !cmd.Flags().Changed("controller") {
+			foundIP, err := crmcontrol.FindLinstorController()
+			if err == nil { // it might be ok to not find it...
+				controller = foundIP
+			}
+		}
 		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:          log.GetLevel().String(),
 			ControllerIP:      controller,

@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
+	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/gorilla/mux"
 )
 
@@ -60,4 +63,15 @@ func ListenAndServe(addr string) {
 	router.HandleFunc("/api/v1/iscsi", ISCSICreate).Methods("POST")
 	router.HandleFunc("/api/v1/iscsi", ISCSIDelete).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(addr, router))
+}
+
+func maybeSetLinstorController(iscsi *iscsi.ISCSI) {
+	if iscsi.Linstor.ControllerIP == nil {
+		foundIP, err := crmcontrol.FindLinstorController()
+		if err == nil {
+			iscsi.Linstor.ControllerIP = foundIP
+		} else {
+			iscsi.Linstor.ControllerIP = net.IPv4(127, 0, 0, 1)
+		}
+	}
 }

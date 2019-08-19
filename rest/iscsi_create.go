@@ -12,6 +12,7 @@ func ISCSICreate(w http.ResponseWriter, r *http.Request) {
 	if err := unmarshalBody(w, r, &iscsiCfg); err != nil {
 		return
 	}
+	maybeSetLinstorController(&iscsiCfg)
 
 	if err := iscsiCfg.CreateResource(); err != nil {
 		_, _ = Errorf(http.StatusInternalServerError, w, "Could not create resource: %v", err)

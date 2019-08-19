@@ -53,8 +53,9 @@ const (
 
 // Pacemaker CIB XML XPaths
 const (
-	CIB_RSC_XPATH    = "/cib/configuration/resources"
-	CIB_STATUS_XPATH = "/cib/status"
+	CIB_RSC_XPATH         = "/cib/configuration/resources"
+	CIB_STATUS_XPATH      = "/cib/status"
+	CIB_NODE_STATUS_XPATH = "/cib/status/node_state"
 )
 
 // Pacemaker CRM resource names, prefixes, suffixes, search patterns, etc.
@@ -64,6 +65,7 @@ const (
 	CRM_ISCSI_PRM_TID     = "tid"
 	CRM_TYPE_ISCSI_TARGET = "iSCSITarget"
 	CRM_TYPE_ISCSI_LU     = "iSCSILogicalUnit"
+	CRM_TYPE_LINSTOR_CTRL = "linstor-controller"
 )
 
 // Pacemaker CIB XML tag names

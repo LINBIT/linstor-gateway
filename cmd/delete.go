@@ -3,6 +3,7 @@ package cmd
 import (
 	"net"
 
+	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
 	"github.com/LINBIT/linstor-remote-storage/iscsi"
 	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,12 @@ For example:
 linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		if !cmd.Flags().Changed("controller") {
+			foundIP, err := crmcontrol.FindLinstorController()
+			if err == nil { // it might be ok to not find it...
+				controller = foundIP
+			}
+		}
 		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,

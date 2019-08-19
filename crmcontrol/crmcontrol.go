@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/LINBIT/linstor-remote-storage/crmtemplate"
-	"github.com/LINBIT/linstor-remote-storage/extcmd"
 	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"
@@ -265,7 +264,7 @@ func CreateCrmLu(
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
 	forStdin := cibData.String()
-	stdout, stderr, err := extcmd.Execute(&forStdin, CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments...)
+	stdout, stderr, err := execute(&forStdin, CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments...)
 	if err != nil {
 		return err
 	}
@@ -770,7 +769,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 
 // Reads the CIB XML document into a string
 func ReadConfiguration() (*xmltree.Document, error) {
-	stdout, stderr, err := extcmd.Execute(nil, CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments...)
+	stdout, stderr, err := execute(nil, CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -886,7 +885,7 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
 	}
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	stdout, stderr, err := extcmd.Execute(&cibData, crmCmd.executable, crmCmd.arguments...)
+	stdout, stderr, err := execute(&cibData, crmCmd.executable, crmCmd.arguments...)
 	if err != nil {
 		fmt.Print("CRM command execution returned an error\n\n")
 		fmt.Print("The updated CIB data sent to the command was:\n")

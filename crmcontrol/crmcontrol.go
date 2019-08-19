@@ -124,6 +124,8 @@ const waitStopPollCibDelay = 2500
 // Delay between CIB polls in milliseconds
 const cibPollRetryDelay = 2000
 
+var maxRecursionError = errors.New("Exceeding maximum recursion level, operation aborted")
+
 // Data structure for collecting information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	RscMap       map[string]interface{}
@@ -924,7 +926,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError()
+				return maxRecursionError
 			}
 		} else if subElem.Tag == cibTagOrder {
 			if recursionLevel < maxRecursionLevel {
@@ -939,7 +941,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError()
+				return maxRecursionError
 			}
 		} else if subElem.Tag == cibTagLocation {
 			if recursionLevel < maxRecursionLevel {
@@ -951,7 +953,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError()
+				return maxRecursionError
 			}
 		} else if subElem.Tag == cibTagLrmRsc {
 			if recursionLevel < maxRecursionLevel {
@@ -960,7 +962,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					return err
 				}
 			} else {
-				return maxRecursionError()
+				return maxRecursionError
 			}
 		} else {
 			if recursionLevel < maxRecursionLevel {
@@ -969,7 +971,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					return err
 				}
 			} else {
-				return maxRecursionError()
+				return maxRecursionError
 			}
 		}
 		if dependFlag {
@@ -1016,7 +1018,7 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 					return false, err
 				}
 			} else {
-				return false, maxRecursionError()
+				return false, maxRecursionError
 			}
 		}
 		if depFlag {
@@ -1167,9 +1169,4 @@ func getLrmRcCode(rscName string, entry *xmltree.Element) (int, error) {
 
 	rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
 	return int(rc), err
-}
-
-// Generates an error indicating that an operation was aborted because it reached the maximum recursion level
-func maxRecursionError() error {
-	return errors.New("Exceeding maximum recursion level, operation aborted")
 }

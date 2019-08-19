@@ -506,61 +506,48 @@ func findTargets(rscSection *xmltree.Element) []*CrmTarget {
 			continue
 		}
 
+		contextLog := log.WithFields(log.Fields{"id": id.Value})
+
 		// find IQN
 		iqn, err := getNvPairValue(target, "iqn")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid iSCSITarget without iqn: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without iqn: ", err)
 			continue
 		}
+
+		contextLog = log.WithFields(log.Fields{"id": id.Value, "iqn": iqn.Value})
 
 		// find username
 		username, err := getNvPairValue(target, "incoming_username")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"iqn": iqn.Value,
-			}).Debug("Skipping invalid iSCSITarget without username: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without username: ", err)
 			continue
 		}
 
 		// find password
 		password, err := getNvPairValue(target, "incoming_password")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"iqn": iqn.Value,
-			}).Debug("Skipping invalid iSCSITarget without username: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without username: ", err)
 			continue
 		}
 
 		// find portals
 		portals, err := getNvPairValue(target, "portals")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"iqn": iqn.Value,
-			}).Debug("Skipping invalid iSCSITarget without portals: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without portals: ", err)
 			continue
 		}
 
 		// find tid
 		tidAttr, err := getNvPairValue(target, "tid")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"iqn": iqn.Value,
-			}).Debug("Skipping invalid iSCSITarget without TID: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without TID: ", err)
 			continue
 		}
 
 		tid, err := strconv.Atoi(tidAttr.Value)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"iqn": iqn.Value,
-			}).Debug("Skipping invalid iSCSITarget with invalid LUN: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget with invalid LUN: ", err)
 			continue
 		}
 
@@ -588,49 +575,49 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*CrmLu {
 			continue
 		}
 
+		contextLog := log.WithFields(log.Fields{"id": id.Value})
+
 		// find LUN
 		lunAttr, err := getNvPairValue(lu, "lun")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid iSCSILogicalUnit without LUN: ", err)
+			contextLog.Debug("Skipping invalid iSCSILogicalUnit without LUN: ", err)
 			continue
 		}
 
+		contextLog = log.WithFields(log.Fields{"id": id.Value, "lun": lunAttr.Value})
+
 		lun, err := strconv.ParseInt(lunAttr.Value, 10, 8)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"lun": lunAttr.Value,
-			}).Debug("Skipping invalid iSCSILogicalUnit with invalid LUN: ", err)
+			contextLog.Debug("Skipping invalid iSCSILogicalUnit with invalid LUN: ", err)
 			continue
 		}
+
+		contextLog = log.WithFields(log.Fields{"id": id.Value, "lun": lun})
 
 		// find target IQN
 		targetIqn, err := getNvPairValue(lu, "target_iqn")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid iSCSILogicalUnit without target iqn: ", err)
+			contextLog.Debug("Skipping invalid iSCSILogicalUnit without target iqn: ", err)
 			continue
 		}
+
+		contextLog = log.WithFields(log.Fields{
+			"id":     id.Value,
+			"lun":    lun,
+			"target": targetIqn.Value,
+		})
 
 		// find associated target
 		target, err := config.findTargetByIqn(targetIqn.Value)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":         id.Value,
-				"target_iqn": targetIqn,
-			}).Debug("Skipping invalid iSCSILogicalUnit with unknown target: ", err)
+			contextLog.Debug("Skipping invalid iSCSILogicalUnit with unknown target: ", err)
 			continue
 		}
 
 		// find path
 		path, err := getNvPairValue(lu, "path")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid iSCSILogicalUnit without path: ", err)
+			contextLog.Debug("Skipping invalid iSCSILogicalUnit without path: ", err)
 			continue
 		}
 
@@ -657,30 +644,25 @@ func findIPs(rscSection *xmltree.Element) []*CrmIP {
 			continue
 		}
 
+		contextLog := log.WithFields(log.Fields{"id": id.Value})
+
 		// find ip
 		ipAddr, err := getNvPairValue(ip, "ip")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid IPaddr2 without ip: ", err)
+			contextLog.Debug("Skipping invalid IPaddr2 without ip: ", err)
 			continue
 		}
 
 		// find netmask
 		netmaskAttr, err := getNvPairValue(ip, "")
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id": id.Value,
-			}).Debug("Skipping invalid IPaddr2 without netmask: ", err)
+			contextLog.Debug("Skipping invalid IPaddr2 without netmask: ", err)
 			continue
 		}
 
 		netmask, err := strconv.ParseInt(netmaskAttr.Value, 10, 8)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"id":  id.Value,
-				"lun": netmaskAttr.Value,
-			}).Debug("Skipping invalid IPaddr2 with invalid netmask: ", err)
+			contextLog.Debug("Skipping invalid IPaddr2 with invalid netmask: ", err)
 			continue
 		}
 

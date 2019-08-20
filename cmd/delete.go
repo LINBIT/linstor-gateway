@@ -18,7 +18,7 @@ var deleteCmd = &cobra.Command{
 primitives and removing the linstor resources.
 
 For example:
-linstor-iscsi delete --iqn=iqn.2019-08.com.libit:example --lun=0`,
+linstor-iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !cmd.Flags().Changed("controller") {

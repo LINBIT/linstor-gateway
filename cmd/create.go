@@ -30,7 +30,7 @@ all necessary order and location constraints. The Pacemaker primites are
 prefixed with p_, contain the name and a resource type postfix.
 
 For example:
-linstor-iscsi create --iqn=iqn.2019-08.com.libit:example --ip=192.168.122.181 \
+linstor-iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181 \
  -username=foo --lun=0 --password=bar --resource_group=ssd_thin_2way --size=2G
 
 Creates linstor resources example_lu0 and

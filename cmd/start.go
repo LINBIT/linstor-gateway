@@ -16,7 +16,7 @@ In case it does not start use your favourite pacemaker tools to analyze
 the root cause.
 
 For example:
-linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
+linstor-iscsi start --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := linstorcontrol.Linstor{

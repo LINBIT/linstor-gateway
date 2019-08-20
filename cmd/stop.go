@@ -15,7 +15,7 @@ var stopCmd = &cobra.Command{
 This causes pacemaker to stop the components of an iSCSI target.
 
 For example:
-linstor-iscsi start --iqn=iqn.2019-08.com.libit:example --lun=0`,
+linstor-iscsi start --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := linstorcontrol.Linstor{

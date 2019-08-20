@@ -15,8 +15,9 @@ import (
 
 var (
 	statusOk       = aurora.Green("✓").String()
-	statusStarting = aurora.Yellow("⌛").String()
 	statusBad      = aurora.Red("✗").String()
+	statusUnknown  = aurora.Yellow("?").String()
+	statusDegraded = aurora.Yellow("!").String()
 )
 
 func stateToStatus(state crmcontrol.LrmRunState) string {
@@ -26,7 +27,20 @@ func stateToStatus(state crmcontrol.LrmRunState) string {
 	case crmcontrol.Stopped:
 		return statusBad
 	default:
-		return statusStarting
+		return statusUnknown
+	}
+}
+
+func linstorStateToStatus(state linstorcontrol.ResourceState) string {
+	switch state {
+	case linstorcontrol.Ok:
+		return statusOk
+	case linstorcontrol.Degraded:
+		return statusDegraded
+	case linstorcontrol.Bad:
+		return statusBad
+	default:
+		return statusUnknown
 	}
 }
 
@@ -47,21 +61,21 @@ linstor-iscsi list`,
 				controller = foundIP
 			}
 		}
-		linstorCfg := linstorcontrol.Linstor{
-			Loglevel:     log.GetLevel().String(),
-			ControllerIP: controller,
-		}
 		_, targets, err := iscsi.ListResources()
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"IQN", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP"})
+		table.SetHeader([]string{"IQN", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP", "LINSTOR"})
 		whiteBold := tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
-		table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
+		table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
 
 		for _, target := range targets {
+			linstorCfg := linstorcontrol.Linstor{
+				Loglevel:     log.GetLevel().String(),
+				ControllerIP: controller,
+			}
 			targetCfg := iscsi.TargetConfig{
 				IQN:  target.IQN,
 				LUNs: target.LUNs,
@@ -77,13 +91,24 @@ linstor-iscsi list`,
 			}
 
 			for _, lu := range target.LUNs {
+				targetName, err := iscsi.ExtractTargetName(target.IQN)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				linstorCfg.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
 				state := rscStateMap[target.Name]
 				// TODO stop using this hack and pass the actual
 				// name through once all the data structures are fixed.
 				lunState := rscStateMap[target.Name+"_lu"+strconv.Itoa(int(lu.ID))]
 				ipState := rscStateMap[target.Name+"_ip"]
 
-				row := []string{target.IQN, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), stateToStatus(ipState)}
+				linstorState, err := linstorCfg.AggregateResourceState()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				row := []string{target.IQN, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), stateToStatus(ipState), linstorStateToStatus(linstorState)}
 				table.Append(row)
 			}
 		}
@@ -91,7 +116,7 @@ linstor-iscsi list`,
 		// TODO this would look cool, but it would merge the ticks too...
 		//table.SetAutoMergeCells(true)
 		table.SetAutoFormatHeaders(false)
-		table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
+		table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
 
 		table.Render() // Send output
 	},

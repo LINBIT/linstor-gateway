@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"strconv"
 
 	client "github.com/LINBIT/golinstor/client"
 )
@@ -28,6 +29,15 @@ type CreateResult struct {
 	// List of nodes where the actual data got places (i.e., after autoplace)
 	StorageNodeList []string
 }
+
+type ResourceState int
+
+const (
+	Unknown ResourceState = iota
+	Ok
+	Degraded
+	Bad
+)
 
 // CreateVolume creates a  LINSTOR resource based on a given resource group name.
 func (l *Linstor) CreateVolume() (CreateResult, error) {
@@ -106,6 +116,54 @@ func (l *Linstor) DeleteVolume() error {
 	return ctrlConn.ResourceDefinitions.Delete(clientCtx, l.ResourceName)
 }
 
+func (l *Linstor) AggregateResourceState() (ResourceState, error) {
+	clientCtx := context.Background()
+	loglevel := l.Loglevel
+	if loglevel == "" {
+		loglevel = "info"
+	}
+	logCfg := &client.LogCfg{Level: loglevel}
+	u, err := ipToURL(l.ControllerIP)
+	if err != nil {
+		return Unknown, err
+	}
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
+	if err != nil {
+		return Unknown, err
+	}
+
+	resources, err := ctrlConn.Resources.GetResourceView(clientCtx, &client.ListOpts{
+		Resource: []string{l.ResourceName},
+	})
+	if err != nil {
+		return Unknown, err
+	}
+
+	if len(resources) == 0 {
+		return Unknown, errors.New("Specified resource not found")
+	}
+
+	uptodate := 0
+	for _, r := range resources {
+		state := r.Volumes[0].State.DiskState
+		if state == "UpToDate" {
+			uptodate += 1
+		}
+	}
+
+	if uptodate == len(resources) {
+		return Ok, nil
+	} else if uptodate > 0 {
+		return Degraded, nil
+	} else {
+		return Bad, nil
+	}
+}
+
 func ipToURL(ip net.IP) (*url.URL, error) {
 	return url.Parse("http://" + ip.String() + ":3370")
+}
+
+func ResourceNameFromLUN(target string, lun uint8) string {
+	return target + "_lu" + strconv.Itoa(int(lun))
 }

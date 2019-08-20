@@ -8,7 +8,6 @@ import (
 	"math"
 	"net"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
@@ -19,10 +18,6 @@ import (
 
 // Default port for an iSCSI portal
 const DFLT_ISCSI_PORTAL_PORT = 3260
-
-func resourceName(iscsiTargetName string, lun uint8) string {
-	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
-}
 
 // ISCSI combines the information needed to create highly-available iSCSI targets.
 // It contains a iSCSI target configuration and a LINSTOR configuration.
@@ -103,7 +98,7 @@ func NewTargetMust(cfg TargetConfig) Target {
 
 // CreateResource creates a new highly available iSCSI target
 func (i *ISCSI) CreateResource() error {
-	targetName, err := i.Target.iqnTarget()
+	targetName, err := ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return err
 	}
@@ -127,7 +122,7 @@ func (i *ISCSI) CreateResource() error {
 		}
 
 		// Create a LINSTOR resource definition, volume definition and associated resources
-		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
+		i.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
 		i.Linstor.SizeKiB = lu.SizeKiB
 		res, err := i.Linstor.CreateVolume()
 		if err != nil {
@@ -157,7 +152,7 @@ func (i *ISCSI) CreateResource() error {
 
 // DeleteResource deletes a highly available iSCSI target
 func (i *ISCSI) DeleteResource() error {
-	targetName, err := i.Target.iqnTarget()
+	targetName, err := ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return err
 	}
@@ -170,7 +165,7 @@ func (i *ISCSI) DeleteResource() error {
 		}
 
 		// Delete the LINSTOR resource definition
-		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
+		i.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
 		err = i.Linstor.DeleteVolume()
 		if err != nil {
 			return err
@@ -192,7 +187,7 @@ func (i *ISCSI) StopResource() error {
 // ProbeResource gets information about an existing iSCSI resource.
 // It returns a resource state map and an error.
 func (i *ISCSI) ProbeResource() (map[string]crmcontrol.LrmRunState, error) {
-	targetName, err := i.Target.iqnTarget()
+	targetName, err := ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +265,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 
 // modifyResourceTargetRole modifies the role of an existing iSCSI resource.
 func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
-	targetName, err := i.Target.iqnTarget()
+	targetName, err := ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
@@ -286,12 +281,12 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 	return nil
 }
 
-// iqnTarget extracts the target name from an IQN string.
+// ExtractTargetName extracts the target name from an IQN string.
 // e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part.
-func (t *Target) iqnTarget() (string, error) {
-	spl := strings.Split(t.IQN, ":")
+func ExtractTargetName(iqn string) (string, error) {
+	spl := strings.Split(iqn, ":")
 	if len(spl) != 2 {
-		return "", errors.New("Malformed argument '" + t.IQN + "'")
+		return "", errors.New("Malformed argument '" + iqn + "'")
 	}
 	return spl[1], nil
 }

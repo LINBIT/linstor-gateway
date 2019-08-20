@@ -41,6 +41,12 @@ For example:
 linstor-iscsi list`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		if !cmd.Flags().Changed("controller") {
+			foundIP, err := crmcontrol.FindLinstorController()
+			if err == nil { // it might be ok to not find it...
+				controller = foundIP
+			}
+		}
 		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,

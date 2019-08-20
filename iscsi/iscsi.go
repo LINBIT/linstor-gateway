@@ -171,8 +171,12 @@ func (i *ISCSI) DeleteResource() error {
 
 		// Delete the LINSTOR resource definition
 		i.Linstor.ResourceName = resourceName(targetName, lu.ID)
+		err = i.Linstor.DeleteVolume()
+		if err != nil {
+			return err
+		}
 	}
-	return i.Linstor.DeleteVolume()
+	return nil
 }
 
 // StartResource starts an existing iSCSI resource.

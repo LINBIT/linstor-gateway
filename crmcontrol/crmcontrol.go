@@ -128,7 +128,6 @@ var errMaxRecursion = errors.New("Exceeding maximum recursion level, operation a
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
-	RscMap       map[string]interface{}
 	TargetList   []*crmTarget
 	LuList       []*crmLu
 	IPList       []*crmIP
@@ -392,6 +391,10 @@ func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error)
 	return rscStateMap, nil
 }
 
+func resourceInCIB(docRoot *xmltree.Document, id string) bool {
+	return docRoot.FindElement("//primitive[@id='"+id+"']") != nil
+}
+
 // WaitForResourceStop waits for CRM resources to stop
 //
 // It returns a flag indicating whether resources are stopped (true) or
@@ -408,17 +411,13 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 		return false, err
 	}
 
-	config, err := ParseConfiguration(docRoot)
-	if err != nil {
-		return false, err
-	}
-
 	for rscName := range stopItems {
-		_, found := config.RscMap[rscName]
-		if !found {
-			fmt.Printf("Warning: Resource '%s' not found in the CIB\n    This resource will be ignored.\n", rscName)
+		if !resourceInCIB(docRoot, rscName) {
+			log.WithFields(log.Fields{
+				"resource": rscName,
+			}).Warning("Resource not found in the CIB, will be ignored.")
+			delete(stopItems, rscName)
 		}
-		delete(stopItems, rscName)
 	}
 
 	fmt.Print("Waiting for the following CRM resources to stop:\n")
@@ -684,7 +683,7 @@ func findIPs(rscSection *xmltree.Element) []*crmIP {
 // stored in a newly allocated crmConfiguration data structure
 // TODO THINK: maybe we can replace this whole mess by actual standard Go XML marshalling...
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
-	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewIntSet()}
+	config := CrmConfiguration{TidSet: NewIntSet()}
 	if docRoot == nil {
 		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}

@@ -40,8 +40,6 @@ about the existing Pacemaker and linstor parts
 For example:
 linstor-iscsi list`,
 	Args: cobra.NoArgs,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		linstorCfg := linstorcontrol.Linstor{
 			Loglevel:     log.GetLevel().String(),
@@ -58,11 +56,12 @@ linstor-iscsi list`,
 		table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
 
 		for _, target := range targets {
-			targetCfg := iscsi.Target{
+			targetCfg := iscsi.TargetConfig{
 				IQN:  target.IQN,
 				LUNs: target.LUNs,
 			}
-			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+			target := iscsi.NewTargetMust(targetCfg)
+			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 
 			rscStateMap, err := iscsiCfg.ProbeResource()
 			if err != nil {

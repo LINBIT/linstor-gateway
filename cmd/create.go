@@ -74,15 +74,17 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			ControllerIP:      controller,
 			ResourceGroupName: group,
 		}
-		targetCfg := iscsi.Target{
-			IQN:       iqn,
+
+		targetCfg := iscsi.TargetConfig{
 			LUNs:      []*iscsi.LUN{&iscsi.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
+			IQN:       iqn,
 			ServiceIP: ip,
 			Username:  username,
 			Password:  password,
 			Portals:   portals,
 		}
-		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		target := iscsi.NewTargetMust(targetCfg)
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		err := iscsiCfg.CreateResource()
 		if err != nil {
 			log.Fatal(err)

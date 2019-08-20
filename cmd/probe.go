@@ -29,11 +29,12 @@ linstor-iscsi probe --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,
 		}
-		targetCfg := iscsi.Target{
+		targetCfg := iscsi.TargetConfig{
 			IQN:  iqn,
 			LUNs: []*iscsi.LUN{&iscsi.LUN{ID: uint8(lun)}},
 		}
-		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: targetCfg}
+		target := iscsi.NewTargetMust(targetCfg)
+		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		rscStateMap, err := iscsiCfg.ProbeResource()
 		if err != nil {
 			log.Fatal(err)

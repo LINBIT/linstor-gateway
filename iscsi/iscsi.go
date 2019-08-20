@@ -4,8 +4,10 @@ package iscsi
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -34,8 +36,26 @@ type LUN struct {
 	SizeKiB uint64 `json:"size_kib,omitempty"`
 }
 
-// Target contains the information necessary for iSCSI targets.
-type Target struct {
+const (
+	// This format is currently dictated by the iSCSI target backend,
+	// specifically the rtslib-fb library.
+	// A notable difference in this implementation (which also differs from
+	// RFC3720, where the IQN format is defined) is that we require the
+	// "unique" part after the colon to be present.
+	//
+	// See also the source code of rtslib-fb for the original regex:
+	// https://github.com/open-iscsi/rtslib-fb/blob/b5be390be961/rtslib/utils.py#L384
+	regexIQN = `iqn\.\d{4}-[0-1][0-9]\..*\..*`
+
+	// This format is mandated by LINSTOR. Since we use the unique part
+	// directly for LINSTOR resource names, it needs to be compliant.
+	regexResourceName = `[[:alpha:]][[:alnum:]]+`
+
+	regexWWN = `^` + regexIQN + `:` + regexResourceName + `$`
+)
+
+// TargetConfig contains the information necessary for iSCSI targets.
+type TargetConfig struct {
 	Name      string `json:"name,omitempty"`
 	IQN       string `json:"iqn,omitempty"`
 	LUNs      []*LUN `json:"luns,omitempty"`
@@ -43,6 +63,34 @@ type Target struct {
 	Username  string `json:"username,omitempty"`
 	Password  string `json:"password,omitempty"`
 	Portals   string `json:"portals,omitempty"`
+}
+
+// Target wraps a TargetConfig
+type Target struct {
+	TargetConfig
+}
+
+func NewTarget(cfg TargetConfig) (Target, error) {
+	if strings.ContainsAny(cfg.IQN, "_ ") {
+		return Target{}, errors.New("IQN cannot contain the characters '_' (underscore) or ' ' (space)")
+	}
+
+	matched, err := regexp.MatchString(regexWWN, cfg.IQN)
+	if err != nil {
+		return Target{}, err
+	} else if !matched {
+		return Target{}, errors.New("Given IQN does not match the regular expression: " + regexWWN)
+	}
+
+	return Target{cfg}, nil
+}
+
+func NewTargetMust(cfg TargetConfig) Target {
+	t, err := NewTarget(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return t
 }
 
 // CreateResource creates a new highly available iSCSI target
@@ -173,7 +221,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 
 	// first, "convert" all targets
 	for _, t := range config.TargetList {
-		target := &Target{
+		targetCfg := TargetConfig{
 			Name:     t.ID,
 			IQN:      t.IQN,
 			LUNs:     make([]*LUN, 0),
@@ -182,7 +230,12 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 			Portals:  t.Portals,
 		}
 
-		targets = append(targets, target)
+		target, err := NewTarget(targetCfg)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		targets = append(targets, &target)
 	}
 
 	// then, "convert" and link LUs

@@ -233,10 +233,6 @@ func CreateCrmLu(
 		return err
 	}
 
-	if err == nil {
-		log.Info("CRM command execution successful")
-	}
-
 	if len(stdout) >= 1 {
 		log.Debug("Begin of CRM command stdout output:", stdout)
 	} else {
@@ -420,9 +416,9 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 		}
 	}
 
-	fmt.Print("Waiting for the following CRM resources to stop:\n")
+	log.Debug("Waiting for the following CRM resources to stop:")
 	for rscName := range stopItems {
-		fmt.Printf("    %s\n", rscName)
+		log.Debug("    %s", rscName)
 	}
 
 	stopItemStates := make(map[string]LrmRunState)
@@ -460,9 +456,9 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 	}
 
 	if isStopped {
-		fmt.Printf("The resources are stopped")
+		log.Debug("The resources are stopped")
 	} else {
-		fmt.Printf("Could not confirm that the resources are stopped")
+		log.Warning("Could not confirm that the resources are stopped")
 	}
 
 	return isStopped, nil
@@ -819,14 +815,11 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
 	stdout, stderr, err := execute(&cibData, crmCmd.executable, crmCmd.arguments...)
 	if err != nil {
-		fmt.Print("CRM command execution returned an error\n\n")
-		fmt.Print("The updated CIB data sent to the command was:\n")
-		fmt.Print(cibData)
-		fmt.Print("\n\n")
+		log.Warn("CRM command execution returned an error")
+		log.Trace("The updated CIB data sent to the command was:")
+		log.Trace(cibData)
 		return err
 	}
-
-	fmt.Print("CRM command execution successful\n\n")
 
 	if len(stdout) >= 1 {
 		log.Debug("Begin of CRM command stdout output:", stdout)
@@ -961,7 +954,10 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 			delIdxSet.Add(subElem.Index())
 			idAttr := subElem.SelectAttr("id")
 			if idAttr != nil {
-				fmt.Printf("Deleting type %s dependency '%s'\n", subElem.Tag, idAttr.Value)
+				log.WithFields(log.Fields{
+					"type": subElem.Tag,
+					"id":   idAttr.Value,
+				}).Debug("Deleting dependency")
 			}
 		}
 	}

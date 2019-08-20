@@ -60,8 +60,8 @@ linstor-iscsi list`,
 				IQN:  target.IQN,
 				LUNs: target.LUNs,
 			}
-			target := iscsi.NewTargetMust(targetCfg)
-			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
+			tgt := iscsi.NewTargetMust(targetCfg)
+			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: tgt}
 
 			rscStateMap, err := iscsiCfg.ProbeResource()
 			if err != nil {

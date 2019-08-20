@@ -70,16 +70,24 @@ type Target struct {
 	TargetConfig
 }
 
-func NewTarget(cfg TargetConfig) (Target, error) {
-	if strings.ContainsAny(cfg.IQN, "_ ") {
-		return Target{}, errors.New("IQN cannot contain the characters '_' (underscore) or ' ' (space)")
+func CheckIQN(iqn string) error {
+	if strings.ContainsAny(iqn, "_ ") {
+		return errors.New("IQN cannot contain the characters '_' (underscore) or ' ' (space)")
 	}
 
-	matched, err := regexp.MatchString(regexWWN, cfg.IQN)
+	matched, err := regexp.MatchString(regexWWN, iqn)
 	if err != nil {
-		return Target{}, err
+		return err
 	} else if !matched {
-		return Target{}, errors.New("Given IQN does not match the regular expression: " + regexWWN)
+		return errors.New("Given IQN does not match the regular expression: " + regexWWN)
+	}
+
+	return nil
+}
+
+func NewTarget(cfg TargetConfig) (Target, error) {
+	if err := CheckIQN(cfg.IQN); err != nil {
+		return Target{}, err
 	}
 
 	return Target{cfg}, nil

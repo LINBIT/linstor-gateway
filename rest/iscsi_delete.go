@@ -14,6 +14,10 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	maybeSetLinstorController(&iscsiCfg)
 
+	if err := iscsi.CheckIQN(iscsiCfg.Target.IQN); err != nil {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not validate IQN: %v", err)
+		return
+	}
 	if err := iscsiCfg.DeleteResource(); err != nil {
 		_, _ = Errorf(http.StatusInternalServerError, w, "Could not delete resource: %v", err)
 		return

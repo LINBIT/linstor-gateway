@@ -15,6 +15,9 @@ import (
 	xmltree "github.com/beevik/etree"
 )
 
+// Default port for an iSCSI portal
+const DFLT_ISCSI_PORTAL_PORT = 3260
+
 func resourceName(iscsiTargetName string, lun uint8) string {
 	return iscsiTargetName + "_lu" + strconv.Itoa(int(lun))
 }

@@ -261,13 +261,13 @@ func ModifyCrmLuTargetRole(iscsiTargetName string, lun uint8, startFlag bool) er
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	stopItems, err := loadCrmObjMap(iscsiTargetName, lun)
+	stopItems, err := generateCrmObjectNames(iscsiTargetName, lun)
 	if err != nil {
 		return err
 	}
 
 	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
-	for elemID := range stopItems {
+	for _, elemID := range stopItems {
 		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
 			var tgtRoleEntry *xmltree.Element
@@ -330,7 +330,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	delItems, err := loadCrmObjMap(iscsiTargetName, lun)
+	delItems, err := generateCrmObjectNames(iscsiTargetName, lun)
 	if err != nil {
 		return err
 	}
@@ -343,7 +343,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 	}
 
 	// Process the CIB XML document tree, removing the specified CRM resources
-	for elemID := range delItems {
+	for _, elemID := range delItems {
 		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
@@ -364,7 +364,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error) {
 	rscStateMap := make(map[string]LrmRunState)
 
-	stopItems, err := loadCrmObjMap(targetName, lun)
+	stopItems, err := generateCrmObjectNames(targetName, lun)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error)
 		return nil, err
 	}
 
-	for name := range stopItems {
+	for _, name := range stopItems {
 		rscStateMap[name] = Unknown
 	}
 
@@ -391,12 +391,21 @@ func resourceInCIB(docRoot *xmltree.Document, id string) bool {
 	return docRoot.FindElement("//primitive[@id='"+id+"']") != nil
 }
 
+func remove(s []string, r string) []string {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
 // WaitForResourceStop waits for CRM resources to stop
 //
 // It returns a flag indicating whether resources are stopped (true) or
 // not (false), and an error.
 func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
-	stopItems, err := loadCrmObjMap(targetName, lun)
+	stopItems, err := generateCrmObjectNames(targetName, lun)
 	if err != nil {
 		return false, err
 	}
@@ -407,12 +416,12 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 		return false, err
 	}
 
-	for rscName := range stopItems {
+	for _, rscName := range stopItems {
 		if !resourceInCIB(docRoot, rscName) {
 			log.WithFields(log.Fields{
 				"resource": rscName,
 			}).Warning("Resource not found in the CIB, will be ignored.")
-			delete(stopItems, rscName)
+			stopItems = remove(stopItems, rscName)
 		}
 	}
 
@@ -422,7 +431,7 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 	}
 
 	stopItemStates := make(map[string]LrmRunState)
-	for item := range stopItems {
+	for _, item := range stopItems {
 		stopItemStates[item] = Unknown
 	}
 
@@ -720,9 +729,9 @@ func ReadConfiguration() (*xmltree.Document, error) {
 	return docRoot, nil
 }
 
-// loadCrmObjMap loads a map of CRM object names from the template
-func loadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, error) {
-	objMap := make(map[string]interface{})
+// generateCrmObjectNames generates a list of all CRM object names for a target
+func generateCrmObjectNames(iscsiTargetName string, lun uint8) ([]string, error) {
+	objects := make([]string, 0)
 	tmplVars := make(map[string]string)
 	tmplVars[varTgtName] = iscsiTargetName
 	tmplVars[varLuName] = crmIscsiLuName + strconv.Itoa(int(lun))
@@ -738,9 +747,9 @@ func loadCrmObjMap(iscsiTargetName string, lun uint8) (map[string]interface{}, e
 	scanner := bufio.NewScanner(bytes.NewReader(buf.Bytes()))
 	for scanner.Scan() {
 		name := strings.TrimRight(scanner.Text(), "\r\n")
-		objMap[name] = nil
+		objects = append(objects, name)
 	}
-	return objMap, nil
+	return objects, nil
 }
 
 // probeResourceRunState probes the LRM run state of selected resources
@@ -873,12 +882,12 @@ func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[s
 }
 
 // Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree
-func dissolveConstraints(cibElem *xmltree.Element, delItems map[string]interface{}) error {
+func dissolveConstraints(cibElem *xmltree.Element, delItems []string) error {
 	return dissolveConstraintsImpl(cibElem, delItems, 0)
 }
 
 // See dissolveConstraints(...)
-func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) error {
+func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems []string, recursionLevel int) error {
 	// delIdxSet is allocated on-demand only if it is required
 	var delIdxSet *IntSet
 
@@ -974,7 +983,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 }
 
 // Indicates whether an element has sub elements that are resource reference tags that refer to any of the specified delItems names
-func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface{}, recursionLevel int) (bool, error) {
+func hasRscRefDependency(cibElem *xmltree.Element, delItems []string, recursionLevel int) (bool, error) {
 	depFlag := false
 
 	var err error
@@ -983,7 +992,12 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 		if subElem.Tag == cibTagRscRef {
 			idAttr := subElem.SelectAttr("id")
 			if idAttr != nil {
-				_, depFlag = delItems[idAttr.Value]
+				for _, s := range delItems {
+					if s == idAttr.Value {
+						depFlag = true
+						break
+					}
+				}
 			} else {
 				return false, errors.New("Unparseable " + subElem.Tag + " tag, cannot find \"id\" attribute")
 			}
@@ -1006,21 +1020,23 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 }
 
 // Indicates whether the element is a CRM location constraint that refers to any of the specified delItems names
-func isLocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) bool {
-	depFlag := false
-
+func isLocationDependency(cibElem *xmltree.Element, delItems []string) bool {
 	rscAttr := cibElem.SelectAttr("rsc")
-	if rscAttr != nil {
-		_, depFlag = delItems[rscAttr.Value]
+	if rscAttr == nil {
+		return false
 	}
 
-	return depFlag
+	for _, s := range delItems {
+		if s == rscAttr.Value {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Indicates whether the element is a CRM order constraint that refers to any of the specified delItems names
-func isOrderDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
-	depFlag := false
-
+func isOrderDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
 	firstAttr := cibElem.SelectAttr("first")
 	thenAttr := cibElem.SelectAttr("then")
 	if firstAttr == nil {
@@ -1030,18 +1046,17 @@ func isOrderDependency(cibElem *xmltree.Element, delItems map[string]interface{}
 		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"then\" attribute")
 	}
 
-	_, depFlag = delItems[firstAttr.Value]
-	if !depFlag {
-		_, depFlag = delItems[thenAttr.Value]
+	for _, s := range delItems {
+		if s == firstAttr.Value || s == thenAttr.Value {
+			return true, nil
+		}
 	}
 
-	return depFlag, nil
+	return false, nil
 }
 
 // Indicates whether the element is a CRM colocation constraint that refers to any of the specified delItems names
-func isColocationDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
-	depFlag := false
-
+func isColocationDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
 	rscAttr := cibElem.SelectAttr("rsc")
 	withRscAttr := cibElem.SelectAttr("with-rsc")
 	if rscAttr == nil {
@@ -1051,26 +1066,29 @@ func isColocationDependency(cibElem *xmltree.Element, delItems map[string]interf
 		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"with-rsc\" attribute")
 	}
 
-	_, depFlag = delItems[rscAttr.Value]
-	if !depFlag {
-		_, depFlag = delItems[withRscAttr.Value]
+	for _, s := range delItems {
+		if s == rscAttr.Value || s == withRscAttr.Value {
+			return true, nil
+		}
 	}
 
-	return depFlag, nil
+	return false, nil
 }
 
 // Indicates whether the element is an LRM entry that refers to any of the specified delItems names
-func isLrmDependency(cibElem *xmltree.Element, delItems map[string]interface{}) (bool, error) {
-	depFlag := false
-
+func isLrmDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
 	idAttr := cibElem.SelectAttr("id")
 	if idAttr == nil {
 		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"id\" attribute")
 	}
 
-	_, depFlag = delItems[idAttr.Value]
+	for _, s := range delItems {
+		if s == idAttr.Value {
+			return true, nil
+		}
+	}
 
-	return depFlag, nil
+	return false, nil
 }
 
 // updateRunState updates the run state information of a single resource

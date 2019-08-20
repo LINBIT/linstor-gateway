@@ -57,7 +57,7 @@ linstor-iscsi list`,
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Target Name", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP"})
+		table.SetHeader([]string{"IQN", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP"})
 		whiteBold := tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
 		table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
 
@@ -83,7 +83,7 @@ linstor-iscsi list`,
 				lunState := rscStateMap[target.Name+"_lu"+strconv.Itoa(int(lu.ID))]
 				ipState := rscStateMap[target.Name+"_ip"]
 
-				row := []string{target.Name, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), stateToStatus(ipState)}
+				row := []string{target.IQN, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), stateToStatus(ipState)}
 				table.Append(row)
 			}
 		}

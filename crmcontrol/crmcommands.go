@@ -2,20 +2,22 @@ package crmcontrol
 
 // CRM (Pacemaker) commands
 
-type CrmCommand struct {
+type crmCommand struct {
 	executable string
 	arguments  []string
 }
 
 const (
-	CRM_UTILITY = "cibadmin"
+	crmUtility = "cibadmin"
 )
 
-// Command for creating new resources
-var CRM_CREATE_COMMAND = CrmCommand{CRM_UTILITY, []string{"--modify", "--allow-create", "--xml-pipe"}}
+// crmCreateCommand is the command for creating new resources.
+var crmCreateCommand = crmCommand{crmUtility, []string{"--modify", "--allow-create", "--xml-pipe"}}
 
-// Command for updating existing resources; also used for deleting existing resources
-var CRM_UPDATE_COMMAND = CrmCommand{CRM_UTILITY, []string{"--replace", "--xml-pipe"}}
+// crmUpdateCommand is the command for updating existing resources.
+//
+// Also used for deleting existing resources.
+var crmUpdateCommand = crmCommand{crmUtility, []string{"--replace", "--xml-pipe"}}
 
-// Command for reading the CIB
-var CRM_LIST_COMMAND = CrmCommand{CRM_UTILITY, []string{"--query"}}
+// crmListCommand is the command for reading the CIB
+var crmListCommand = crmCommand{crmUtility, []string{"--query"}}

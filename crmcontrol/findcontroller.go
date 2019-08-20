@@ -32,6 +32,7 @@ func findLinstorControllerName() (string, error) {
 	return "", errors.New("Could not find the 'linstor-controller' in the CIB")
 }
 
+// FindLinstorController searches the CIB configuration for a LINSTOR controller IP.
 func FindLinstorController() (net.IP, error) {
 	hostname, err := findLinstorControllerName()
 	if err != nil {

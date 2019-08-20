@@ -171,7 +171,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 	// first, "convert" all targets
 	for _, t := range config.TargetList {
 		target := &Target{
-			Name:     t.Id,
+			Name:     t.ID,
 			IQN:      t.IQN,
 			LUNs:     make([]*LUN, 0),
 			Username: t.Username,

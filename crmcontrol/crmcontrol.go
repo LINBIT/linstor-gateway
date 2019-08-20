@@ -37,7 +37,7 @@ const (
 	varNodeName    = "CRM_NODE_NAME"
 	varNr          = "NR"
 	varLuName      = "CRM_LU_NAME"
-	varSvcIp       = "CRM_SVC_IP"
+	varSvcIP       = "CRM_SVC_IP"
 	varTgtName     = "CRM_TARGET_NAME"
 	varTgtIqn      = "TARGET_IQN"
 	varIscsiLun    = "LUN"
@@ -84,7 +84,7 @@ const (
 
 // Pacemaker CIB attribute names
 const (
-	cibAttrKeyId           = "id"
+	cibAttrKeyID           = "id"
 	cibAttrKeyName         = "name"
 	cibAttrKeyValue        = "value"
 	cibAttrKeyOperation    = "operation"
@@ -124,20 +124,20 @@ const waitStopPollCibDelay = 2500
 // Delay between CIB polls in milliseconds
 const cibPollRetryDelay = 2000
 
-var maxRecursionError = errors.New("Exceeding maximum recursion level, operation aborted")
+var errMaxRecursion = errors.New("Exceeding maximum recursion level, operation aborted")
 
-// Data structure for collecting information about (Pacemaker) CRM resources
+// CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
 	RscMap       map[string]interface{}
-	TargetList   []*CrmTarget
-	LuList       []*CrmLu
-	IPList       []*CrmIP
+	TargetList   []*crmTarget
+	LuList       []*crmLu
+	IPList       []*crmIP
 	OtherRscList []string
 	TidSet       *IntSet
 }
 
-type CrmTarget struct {
-	Id       string
+type crmTarget struct {
+	ID       string
 	IQN      string
 	Username string
 	Password string
@@ -145,28 +145,32 @@ type CrmTarget struct {
 	Tid      int
 }
 
-type CrmLu struct {
-	Id     string
+type crmLu struct {
+	ID     string
 	LUN    uint8
-	Target *CrmTarget
+	Target *crmTarget
 	Path   string
 }
 
-type CrmIP struct {
-	Id      string
+type crmIP struct {
+	ID      string
 	IP      net.IP
 	Netmask uint8
 }
 
+// LrmRunState represents the state of a CRM resource.
 type LrmRunState int
 
 const (
+	// Unknown means that the resource's state could not be retrieved
 	Unknown LrmRunState = iota
+	// Running means that the resource is verified as running
 	Running
+	// Stopped means that the resource is verfied as stopped
 	Stopped
 )
 
-// Creates the CRM resources
+// CreateCrmLu creates a CRM resource for a logical unit.
 //
 // The resources created depend on the contents of the template for resource creation.
 // Typically, it's an iSCSI target, logical unit and service IP address, along
@@ -189,9 +193,9 @@ func CreateCrmLu(
 	// debug.PrintTextArray(tmplLines)
 
 	// Construct the CIB update data from the template
-	var tmplVars map[string]string = make(map[string]string)
+	tmplVars := make(map[string]string)
 	tmplVars[varLuName] = "lu" + strconv.Itoa(int(lun))
-	tmplVars[varSvcIp] = ip.String()
+	tmplVars[varSvcIP] = ip.String()
 	tmplVars[varTgtName] = iscsiTargetName
 	tmplVars[varTgtIqn] = iscsiTargetIqn
 	tmplVars[varIscsiLun] = strconv.Itoa(int(lun))
@@ -225,7 +229,7 @@ func CreateCrmLu(
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
 	forStdin := cibData.String()
-	stdout, stderr, err := execute(&forStdin, CRM_CREATE_COMMAND.executable, CRM_CREATE_COMMAND.arguments...)
+	stdout, stderr, err := execute(&forStdin, crmCreateCommand.executable, crmCreateCommand.arguments...)
 	if err != nil {
 		return err
 	}
@@ -249,12 +253,8 @@ func CreateCrmLu(
 	return err
 }
 
-// Stops the CRM resources
-func ModifyCrmLuTargetRole(
-	iscsiTargetName string,
-	lun uint8,
-	startFlag bool,
-) error {
+// ModifyCrmLuTargetRole sets the target-role of a logical unit in CRM.
+func ModifyCrmLuTargetRole(iscsiTargetName string, lun uint8, startFlag bool) error {
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
@@ -272,10 +272,10 @@ func ModifyCrmLuTargetRole(
 	}
 
 	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
-	for elemId, _ := range stopItems {
-		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
+	for elemID := range stopItems {
+		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
-			var tgtRoleEntry *xmltree.Element = nil
+			var tgtRoleEntry *xmltree.Element
 			metaAttr := rscElem.FindElement(cibTagMetaAttr)
 			if metaAttr != nil {
 				// Meta attributes exist, find the entry that sets the target-role
@@ -283,12 +283,12 @@ func ModifyCrmLuTargetRole(
 			} else {
 				// No meta attributes present, create XML element
 				metaAttr = rscElem.CreateElement(cibTagMetaAttr)
-				metaAttr.CreateAttr(cibAttrKeyId, elemId+"_"+cibTagMetaAttr)
+				metaAttr.CreateAttr(cibAttrKeyID, elemID+"_"+cibTagMetaAttr)
 			}
 			if tgtRoleEntry == nil {
 				// No entry that sets the target-role, create entry
 				tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
-				tgtRoleEntry.CreateAttr(cibAttrKeyId, elemId+"_"+cibAttrValueTargetRole)
+				tgtRoleEntry.CreateAttr(cibAttrKeyID, elemID+"_"+cibAttrValueTargetRole)
 				tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
 			}
 			// Set the target-role
@@ -300,18 +300,15 @@ func ModifyCrmLuTargetRole(
 			}
 			tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
 		} else {
-			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemId)
+			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemID)
 		}
 	}
 
-	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
+	return executeCibUpdate(docRoot, crmUpdateCommand)
 }
 
-// Deletes the CRM resources
-func DeleteCrmLu(
-	iscsiTargetName string,
-	lun uint8,
-) error {
+// DeleteCrmLu deletes the CRM resources for a target
+func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 	err := ModifyCrmLuTargetRole(iscsiTargetName, lun, false)
 	if err != nil {
 		return err
@@ -351,21 +348,21 @@ func DeleteCrmLu(
 	}
 
 	// Process the CIB XML document tree, removing the specified CRM resources
-	for elemId, _ := range delItems {
-		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemId + "']")
+	for elemID := range delItems {
+		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
 			if rscElemParent != nil {
 				rscElemParent.RemoveChildAt(rscElem.Index())
 			} else {
-				return errors.New("Cannot modify CIB, CRM resource '" + elemId + "' has no parent object")
+				return errors.New("Cannot modify CIB, CRM resource '" + elemID + "' has no parent object")
 			}
 		} else {
-			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemId)
+			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemID)
 		}
 	}
 
-	return executeCibUpdate(docRoot, CRM_UPDATE_COMMAND)
+	return executeCibUpdate(docRoot, crmUpdateCommand)
 }
 
 // ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
@@ -383,7 +380,7 @@ func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error)
 		return nil, err
 	}
 
-	for name, _ := range stopItems {
+	for name := range stopItems {
 		rscStateMap[name] = Unknown
 	}
 
@@ -416,7 +413,7 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 		return false, err
 	}
 
-	for rscName, _ := range stopItems {
+	for rscName := range stopItems {
 		_, found := config.RscMap[rscName]
 		if !found {
 			fmt.Printf("Warning: Resource '%s' not found in the CIB\n    This resource will be ignored.\n", rscName)
@@ -425,12 +422,12 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 	}
 
 	fmt.Print("Waiting for the following CRM resources to stop:\n")
-	for rscName, _ := range stopItems {
+	for rscName := range stopItems {
 		fmt.Printf("    %s\n", rscName)
 	}
 
 	stopItemStates := make(map[string]LrmRunState)
-	for item, _ := range stopItems {
+	for item := range stopItems {
 		stopItemStates[item] = Unknown
 	}
 
@@ -488,7 +485,7 @@ func getNvPairValue(elem *xmltree.Element, name string) (*xmltree.Attr, error) {
 	return attr, nil
 }
 
-func (c *CrmConfiguration) findTargetByIqn(iqn string) (*CrmTarget, error) {
+func (c *CrmConfiguration) findTargetByIqn(iqn string) (*crmTarget, error) {
 	for _, t := range c.TargetList {
 		if t.IQN == iqn {
 			return t, nil
@@ -498,8 +495,8 @@ func (c *CrmConfiguration) findTargetByIqn(iqn string) (*CrmTarget, error) {
 	return nil, errors.New("no target with IQN found")
 }
 
-func findTargets(rscSection *xmltree.Element) []*CrmTarget {
-	targets := make([]*CrmTarget, 0)
+func findTargets(rscSection *xmltree.Element) []*crmTarget {
+	targets := make([]*crmTarget, 0)
 	for _, target := range rscSection.FindElements("./primitive[@type='iSCSITarget']") {
 		// find ID
 		id := target.SelectAttr("id")
@@ -553,8 +550,8 @@ func findTargets(rscSection *xmltree.Element) []*CrmTarget {
 			continue
 		}
 
-		crmTarget := &CrmTarget{
-			Id:       id.Value,
+		crmTarget := &crmTarget{
+			ID:       id.Value,
 			IQN:      iqn.Value,
 			Username: username.Value,
 			Password: password.Value,
@@ -567,8 +564,8 @@ func findTargets(rscSection *xmltree.Element) []*CrmTarget {
 	return targets
 }
 
-func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*CrmLu {
-	lus := make([]*CrmLu, 0)
+func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
+	lus := make([]*crmLu, 0)
 	for _, lu := range rscSection.FindElements("./primitive[@type='iSCSILogicalUnit']") {
 		// find ID
 		id := lu.SelectAttr("id")
@@ -623,8 +620,8 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*CrmLu {
 			continue
 		}
 
-		crmLu := &CrmLu{
-			Id:     id.Value,
+		crmLu := &crmLu{
+			ID:     id.Value,
 			LUN:    uint8(lun),
 			Target: target,
 			Path:   path.Value,
@@ -636,11 +633,11 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*CrmLu {
 	return lus
 }
 
-func findIPs(rscSection *xmltree.Element) []*CrmIP {
-	ips := make([]*CrmIP, 0)
-	for _, ip := range rscSection.FindElements("./primitive[@type='IPaddr2']") {
+func findIPs(rscSection *xmltree.Element) []*crmIP {
+	ips := make([]*crmIP, 0)
+	for _, ipElem := range rscSection.FindElements("./primitive[@type='IPaddr2']") {
 		// find ID
-		id := ip.SelectAttr("id")
+		id := ipElem.SelectAttr("id")
 		if id == nil {
 			log.Debug("Skipping invalid IPaddr2 without id")
 			continue
@@ -649,14 +646,14 @@ func findIPs(rscSection *xmltree.Element) []*CrmIP {
 		contextLog := log.WithFields(log.Fields{"id": id.Value})
 
 		// find ip
-		ipAddr, err := getNvPairValue(ip, "ip")
+		ipAddr, err := getNvPairValue(ipElem, "ip")
 		if err != nil {
 			contextLog.Debug("Skipping invalid IPaddr2 without ip: ", err)
 			continue
 		}
 
 		// find netmask
-		netmaskAttr, err := getNvPairValue(ip, "")
+		netmaskAttr, err := getNvPairValue(ipElem, "cidr_netmask")
 		if err != nil {
 			contextLog.Debug("Skipping invalid IPaddr2 without netmask: ", err)
 			continue
@@ -668,13 +665,13 @@ func findIPs(rscSection *xmltree.Element) []*CrmIP {
 			continue
 		}
 
-		crmIp := &CrmIP{
-			Id:      id.Value,
+		ip := &crmIP{
+			ID:      id.Value,
 			IP:      net.ParseIP(ipAddr.Value),
 			Netmask: uint8(netmask),
 		}
 
-		ips = append(ips, crmIp)
+		ips = append(ips, ip)
 	}
 
 	return ips
@@ -684,7 +681,7 @@ func findIPs(rscSection *xmltree.Element) []*CrmIP {
 // existing resources.
 //
 // Information about existing CRM resources is parsed from the CIB XML document and
-// stored in a newly allocated CrmConfiguration data structure
+// stored in a newly allocated crmConfiguration data structure
 // TODO THINK: maybe we can replace this whole mess by actual standard Go XML marshalling...
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config := CrmConfiguration{RscMap: make(map[string]interface{}), TidSet: NewIntSet()}
@@ -709,9 +706,9 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	return &config, nil
 }
 
-// Reads the CIB XML document into a string
+// ReadConfiguration calls the crm list command and parses the XML data it returns.
 func ReadConfiguration() (*xmltree.Document, error) {
-	stdout, stderr, err := execute(nil, CRM_LIST_COMMAND.executable, CRM_LIST_COMMAND.arguments...)
+	stdout, stderr, err := execute(nil, crmListCommand.executable, crmListCommand.arguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -772,7 +769,7 @@ func probeResourceRunState(stopItems map[string]LrmRunState, docRoot *xmltree.Do
 			lrmRscList := lrmElem.SelectElement(cibTagLrmRsclist)
 			if lrmRscList != nil {
 				for _, lrmRsc := range lrmRscList.ChildElements() {
-					idAttr := lrmRsc.SelectAttr(cibAttrKeyId)
+					idAttr := lrmRsc.SelectAttr(cibAttrKeyID)
 					if idAttr == nil {
 						return errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
 					}
@@ -813,7 +810,7 @@ func checkResourceStopped(stopItems map[string]LrmRunState) (bool, bool) {
 	return haveState, stoppedFlag
 }
 
-func executeCibUpdate(docRoot *xmltree.Document, crmCmd CrmCommand) error {
+func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
 	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
 	cibData, err := docRoot.WriteToString()
 	if err != nil {
@@ -863,7 +860,7 @@ func copyMap(srcMap map[string]string) map[string]string {
 // The resulting XML content is a sub template for insertion into another XML template.
 func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[string]string) (string, error) {
 	subTmplVars := copyMap(tmplVars)
-	var nr uint32 = 0
+	nr := 0
 	var subDataBld strings.Builder
 	for _, nodename := range nodeList {
 		subTmplVars[varNodeName] = nodename
@@ -895,7 +892,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 
 	childList := cibElem.ChildElements()
 	for _, subElem := range childList {
-		var dependFlag bool = false
+		dependFlag := false
 		var err error
 		if subElem.Tag == cibTagColocation {
 			if recursionLevel < maxRecursionLevel {
@@ -910,7 +907,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError
+				return errMaxRecursion
 			}
 		} else if subElem.Tag == cibTagOrder {
 			if recursionLevel < maxRecursionLevel {
@@ -925,7 +922,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError
+				return errMaxRecursion
 			}
 		} else if subElem.Tag == cibTagLocation {
 			if recursionLevel < maxRecursionLevel {
@@ -937,7 +934,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					}
 				}
 			} else {
-				return maxRecursionError
+				return errMaxRecursion
 			}
 		} else if subElem.Tag == cibTagLrmRsc {
 			if recursionLevel < maxRecursionLevel {
@@ -946,7 +943,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					return err
 				}
 			} else {
-				return maxRecursionError
+				return errMaxRecursion
 			}
 		} else {
 			if recursionLevel < maxRecursionLevel {
@@ -955,7 +952,7 @@ func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems map[string]inter
 					return err
 				}
 			} else {
-				return maxRecursionError
+				return errMaxRecursion
 			}
 		}
 		if dependFlag {
@@ -1002,7 +999,7 @@ func hasRscRefDependency(cibElem *xmltree.Element, delItems map[string]interface
 					return false, err
 				}
 			} else {
-				return false, maxRecursionError
+				return false, errMaxRecursion
 			}
 		}
 		if depFlag {

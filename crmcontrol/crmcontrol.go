@@ -157,6 +157,12 @@ type crmIP struct {
 	Netmask uint8
 }
 
+type ResourceRunState struct {
+	TargetState LrmRunState
+	LUStates    map[uint8]LrmRunState
+	IPState     LrmRunState
+}
+
 // LrmRunState represents the state of a CRM resource.
 type LrmRunState int
 
@@ -310,7 +316,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 	}
 
 	time.Sleep(time.Duration(waitStopPollCibDelay * time.Millisecond))
-	isStopped, err := WaitForResourceStop(iscsiTargetName, lun)
+	isStopped, err := waitForResourceStop(iscsiTargetName, lun)
 	if err != nil {
 		return err
 	}
@@ -360,31 +366,39 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 	return executeCibUpdate(docRoot, crmUpdateCommand)
 }
 
-// ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
-func ProbeResource(targetName string, lun uint8) (map[string]LrmRunState, error) {
-	rscStateMap := make(map[string]LrmRunState)
+func crmTargetID(target string) string {
+	return "p_iscsi_" + target
+}
 
-	stopItems, err := generateCrmObjectNames(targetName, lun)
-	if err != nil {
-		return nil, err
+func crmLuID(target string, lun uint8) string {
+	return "p_iscsi_" + target + "_lu" + strconv.Itoa(int(lun))
+}
+
+func crmIPID(target string) string {
+	return "p_iscsi_" + target + "_ip"
+}
+
+// ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
+func ProbeResource(target string, luns []uint8) (ResourceRunState, error) {
+	state := ResourceRunState{
+		TargetState: Unknown,
+		LUStates:    make(map[uint8]LrmRunState),
+		IPState:     Unknown,
 	}
 
 	// Read the current CIB XML
-	docRoot, err := ReadConfiguration()
+	doc, err := ReadConfiguration()
 	if err != nil {
-		return nil, err
+		return state, err
 	}
 
-	for _, name := range stopItems {
-		rscStateMap[name] = Unknown
+	state.TargetState = findLrmState(crmTargetID(target), doc)
+	for _, lun := range luns {
+		state.LUStates[lun] = findLrmState(crmLuID(target, lun), doc)
 	}
+	state.IPState = findLrmState(crmIPID(target), doc)
 
-	err = probeResourceRunState(rscStateMap, docRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	return rscStateMap, nil
+	return state, nil
 }
 
 func resourceInCIB(docRoot *xmltree.Document, id string) bool {
@@ -400,11 +414,11 @@ func remove(s []string, r string) []string {
 	return s
 }
 
-// WaitForResourceStop waits for CRM resources to stop
+// waitForResourceStop waits for CRM resources to stop
 //
 // It returns a flag indicating whether resources are stopped (true) or
 // not (false), and an error.
-func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
+func waitForResourceStop(targetName string, lun uint8) (bool, error) {
 	stopItems, err := generateCrmObjectNames(targetName, lun)
 	if err != nil {
 		return false, err
@@ -426,39 +440,41 @@ func WaitForResourceStop(targetName string, lun uint8) (bool, error) {
 	}
 
 	log.Debug("Waiting for the following CRM resources to stop:")
-	for rscName := range stopItems {
-		log.Debug("    %s", rscName)
-	}
-
-	stopItemStates := make(map[string]LrmRunState)
-	for _, item := range stopItems {
-		stopItemStates[item] = Unknown
+	for _, rscName := range stopItems {
+		log.Debugf("    %s", rscName)
 	}
 
 	isStopped := false
 	retries := 0
 	for !isStopped {
-		err := probeResourceRunState(stopItemStates, docRoot)
-		if err != nil {
-			return false, err
-		}
-
-		_, stoppedFlag := checkResourceStopped(stopItemStates)
-
-		if !stoppedFlag {
-			if retries > maxWaitStopRetries {
+		// check if all resources are stopped
+		allStopped := true
+		for _, item := range stopItems {
+			state := findLrmState(item, docRoot)
+			if state != Stopped {
+				allStopped = false
 				break
 			}
+		}
 
-			time.Sleep(time.Duration(cibPollRetryDelay * time.Millisecond))
-
-			// Re-read the current CIB XML
-			docRoot, err = ReadConfiguration()
-			if err != nil {
-				return false, err
-			}
-		} else {
+		if allStopped {
+			// success; we stopped all resources
 			isStopped = true
+			break
+		}
+
+		if retries > maxWaitStopRetries {
+			// timeout
+			isStopped = false
+			break
+		}
+
+		time.Sleep(time.Duration(cibPollRetryDelay * time.Millisecond))
+
+		// Re-read the current CIB XML
+		docRoot, err = ReadConfiguration()
+		if err != nil {
+			return false, err
 		}
 
 		retries++
@@ -752,41 +768,15 @@ func generateCrmObjectNames(iscsiTargetName string, lun uint8) ([]string, error)
 	return objects, nil
 }
 
-// probeResourceRunState probes the LRM run state of selected resources
-//
-// Each resource name is mapped to an LrmRunState value that is then updated
-// with the run state of the respective resource.
-func probeResourceRunState(stopItems map[string]LrmRunState, docRoot *xmltree.Document) error {
-	cib := docRoot.Root()
-	if cib == nil {
-		return errors.New("Failed to find the cluster information base (CIB) root element")
+func findLrmState(id string, doc *xmltree.Document) LrmRunState {
+	state := Unknown
+	xpath := "cib/status/node_state/lrm/lrm_resources/lrm_resource[@id='" + id + "']"
+	elems := doc.FindElements(xpath)
+	for _, elem := range elems {
+		state = updateRunState(id, elem, state)
 	}
 
-	statusSection := cib.FindElement(cibStatusXpath)
-	if statusSection == nil {
-		return errors.New("Failed to find any resource status information in the cluster information base (CIB)")
-	}
-
-	for _, nodeElem := range statusSection.ChildElements() {
-		lrmElem := nodeElem.SelectElement(cibTagLrm)
-		if lrmElem != nil {
-			lrmRscList := lrmElem.SelectElement(cibTagLrmRsclist)
-			if lrmRscList != nil {
-				for _, lrmRsc := range lrmRscList.ChildElements() {
-					idAttr := lrmRsc.SelectAttr(cibAttrKeyID)
-					if idAttr == nil {
-						return errors.New("Unparseable " + lrmRsc.Tag + " entry, cannot find \"id\" attribute")
-					}
-					rscName := idAttr.Value
-					if itemRunState, ok := stopItems[rscName]; ok {
-						stopItems[rscName] = updateRunState(rscName, lrmRsc, itemRunState)
-					}
-				}
-			}
-		}
-	}
-
-	return nil
+	return state
 }
 
 func checkResourceStopped(stopItems map[string]LrmRunState) (bool, bool) {

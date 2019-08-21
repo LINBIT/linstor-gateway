@@ -186,28 +186,18 @@ func (i *ISCSI) StopResource() error {
 
 // ProbeResource gets information about an existing iSCSI resource.
 // It returns a resource state map and an error.
-func (i *ISCSI) ProbeResource() (map[string]crmcontrol.LrmRunState, error) {
+func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 	targetName, err := ExtractTargetName(i.Target.IQN)
 	if err != nil {
-		return nil, err
+		return crmcontrol.ResourceRunState{}, err
 	}
 
-	rscStateMap := make(map[string]crmcontrol.LrmRunState)
-
-	for _, lu := range i.Target.LUNs {
-		tmpMap, err := crmcontrol.ProbeResource(targetName, lu.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// HACK: combine all the maps into one. the real solution would
-		// be a more sensible data structure
-		for k, v := range tmpMap {
-			rscStateMap[k] = v
-		}
+	luns := make([]uint8, len(i.Target.LUNs))
+	for i, lu := range i.Target.LUNs {
+		luns[i] = lu.ID
 	}
 
-	return rscStateMap, nil
+	return crmcontrol.ProbeResource(targetName, luns)
 }
 
 // ListResources lists existing iSCSI targets.

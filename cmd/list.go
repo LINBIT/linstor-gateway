@@ -83,7 +83,7 @@ linstor-iscsi list`,
 			tgt := iscsi.NewTargetMust(targetCfg)
 			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: tgt}
 
-			rscStateMap, err := iscsiCfg.ProbeResource()
+			resourceState, err := iscsiCfg.ProbeResource()
 			if err != nil {
 				log.WithFields(log.Fields{
 					"iqn": target.IQN,
@@ -97,18 +97,23 @@ linstor-iscsi list`,
 				}
 
 				linstorCfg.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
-				state := rscStateMap[target.Name]
-				// TODO stop using this hack and pass the actual
-				// name through once all the data structures are fixed.
-				lunState := rscStateMap[target.Name+"_lu"+strconv.Itoa(int(lu.ID))]
-				ipState := rscStateMap[target.Name+"_ip"]
-
+				targetState := resourceState.TargetState
+				lunState := resourceState.LUStates[lu.ID]
+				ipState := resourceState.IPState
 				linstorState, err := linstorCfg.AggregateResourceState()
 				if err != nil {
-					log.Fatal(err)
+					log.Warning(err)
+					linstorState = linstorcontrol.Unknown
 				}
 
-				row := []string{target.IQN, strconv.Itoa(int(lu.ID)), stateToStatus(state), stateToStatus(lunState), stateToStatus(ipState), linstorStateToStatus(linstorState)}
+				row := []string{
+					target.IQN,
+					strconv.Itoa(int(lu.ID)),
+					stateToStatus(lunState),
+					stateToStatus(targetState),
+					stateToStatus(ipState),
+					linstorStateToStatus(linstorState),
+				}
 				table.Append(row)
 			}
 		}

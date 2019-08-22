@@ -25,4 +25,6 @@ To configure your bash shell to load completions for each session add to your ba
 
 func init() {
 	rootCmd.AddCommand(completionCmd)
+
+	completionCmd.ResetCommands()
 }

@@ -40,5 +40,7 @@ var docsCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(docsCmd)
+
+	docsCmd.ResetCommands()
 	docsCmd.Flags().StringSliceVar(&format, "format", []string{"md"}, "Generate documentation in the given format (md,man)")
 }

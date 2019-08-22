@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
-	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 
 	xmltree "github.com/beevik/etree"
 )

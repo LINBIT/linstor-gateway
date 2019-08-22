@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/LINBIT/linstor-remote-storage/iscsi"
-	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

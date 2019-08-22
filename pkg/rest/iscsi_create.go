@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	"github.com/LINBIT/linstor-remote-storage/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 )
 
 // ISCSICreate creates a highly-available iSCSI target via the REST-API

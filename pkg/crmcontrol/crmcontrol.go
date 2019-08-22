@@ -26,7 +26,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/LINBIT/linstor-remote-storage/crmtemplate"
+	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
 	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"

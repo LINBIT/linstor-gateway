@@ -1,4 +1,4 @@
-module github.com/LINBIT/linstor-remote-storage
+module github.com/LINBIT/linstor-iscsi
 
 require (
 	github.com/LINBIT/golinstor v0.16.3

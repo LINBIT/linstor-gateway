@@ -4,9 +4,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/LINBIT/linstor-remote-storage/crmcontrol"
-	"github.com/LINBIT/linstor-remote-storage/iscsi"
-	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/logrusorgru/aurora"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"

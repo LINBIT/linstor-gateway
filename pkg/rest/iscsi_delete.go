@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/LINBIT/linstor-remote-storage/iscsi"
-	"github.com/LINBIT/linstor-remote-storage/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/gorilla/mux"
 )
 

@@ -423,6 +423,12 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return errors.New("Resource stop was not confirmed for all resources, cannot continue delete action")
 	}
 
+	// Read the current CIB XML
+	docRoot, err = ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
 	cib := docRoot.Root()
 	if cib == nil {
 		return errors.New("Failed to find the cluster information base (CIB) root element")

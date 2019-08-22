@@ -5,6 +5,8 @@ Starts a web server serving a REST API
 ### Synopsis
 
 Starts a web server serving a REST API
+An up to date version of the REST-API documentation can be found here:
+https://app.swaggerhub.com/apis-docs/Linstor/linstor-iscsi/
 
 For example:
 linstor-iscsi server --addr=":8080"

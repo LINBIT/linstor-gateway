@@ -15,3 +15,5 @@ go get github.com/LINBIT/linstor-iscsi
 
 # Documentation
 Start by browsing the documentation [here](./docs/md/linstor-iscsi.md).
+
+The REST-API documentation can be found [here](https://app.swaggerhub.com/apis-docs/Linstor/linstor-iscsi/).

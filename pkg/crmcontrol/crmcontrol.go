@@ -38,6 +38,7 @@ const (
 	varNodeName    = "CRM_NODE_NAME"
 	varNr          = "NR"
 	varLuName      = "CRM_LU_NAME"
+	varLus         = "CRM_LUS"
 	varSvcIP       = "CRM_SVC_IP"
 	varTgtName     = "CRM_TARGET_NAME"
 	varTgtIqn      = "TARGET_IQN"
@@ -434,17 +435,15 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	delItems := generateCrmObjectNames(iscsiTargetName, []uint8{lun})
-
 	// Process the CIB XML document tree, removing constraints that refer to any of the objects
 	// that will be deleted
-	err = dissolveConstraints(cib, delItems)
+	err = dissolveConstraints(cib, ids)
 	if err != nil {
 		return err
 	}
 
 	// Process the CIB XML document tree, removing the specified CRM resources
-	for _, elemID := range delItems {
+	for _, elemID := range ids {
 		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
@@ -841,7 +840,7 @@ func generateCrmObjectNames(iscsiTargetName string, luns []uint8) []string {
 
 	templateVars := make(map[string]interface{})
 	templateVars[varTgtName] = iscsiTargetName
-	templateVars[varLuName] = luns
+	templateVars[varLus] = luns
 
 	tmpl := template.Must(template.New("crmobjnames").Parse(crmtemplate.CRM_OBJ_NAMES))
 

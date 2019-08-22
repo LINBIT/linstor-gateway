@@ -97,3 +97,22 @@ func TestParseConfiguration(t *testing.T) {
 		t.Errorf("Actual: %+v", config.IPList)
 	}
 }
+
+func TestGenerateCrmObjectNames(t *testing.T) {
+	log.SetLevel(log.WarnLevel)
+	expect := []string{"p_iscsi_example_ip",
+		"p_pblock_example",
+		"p_iscsi_example",
+		"p_iscsi_example_lu1",
+		"p_iscsi_example_lu105",
+		"p_iscsi_example_lu12",
+		"p_punblock_example",
+	}
+	actual := generateCrmObjectNames("example", []uint8{1, 105, 12})
+
+	if !cmp.Equal(expect, actual) {
+		t.Errorf("Generated object names are wrong")
+		t.Errorf("Expected: %s", expect)
+		t.Errorf("Actual: %s", actual)
+	}
+}

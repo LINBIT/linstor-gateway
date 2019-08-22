@@ -41,9 +41,5 @@ func execute(forStdin *string, name string, arg ...string) (string, string, erro
 	stdoutSlurp, _ := ioutil.ReadAll(stdout)
 	stderrSlurp, _ := ioutil.ReadAll(stderr)
 
-	if err := cmd.Wait(); err != nil {
-		return "", "", err
-	}
-
-	return string(stdoutSlurp), string(stderrSlurp), nil
+	return string(stdoutSlurp), string(stderrSlurp), cmd.Wait()
 }

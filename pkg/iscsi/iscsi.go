@@ -264,7 +264,11 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 	for i, lu := range i.Target.LUNs {
 		luns[i] = lu.ID
 	}
-	crmcontrol.StopCrmResource(targetName, luns)
+	if startFlag {
+		crmcontrol.StartCrmResource(targetName, luns)
+	} else {
+		crmcontrol.StopCrmResource(targetName, luns)
+	}
 
 	return nil
 }

@@ -297,6 +297,26 @@ func ModifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xml
 	return doc, nil
 }
 
+func StartCrmResource(target string, luns []uint8) error {
+	// Read the current CIB XML
+	doc, err := ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("starting target %s LUNs %v", target, luns)
+
+	ids := generateCrmObjectNames(target, luns)
+	for _, id := range ids {
+		doc, err = ModifyCrmTargetRole(id, true, doc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return executeCibUpdate(doc, crmUpdateCommand)
+}
+
 func StopCrmResource(target string, luns []uint8) error {
 	// Read the current CIB XML
 	doc, err := ReadConfiguration()

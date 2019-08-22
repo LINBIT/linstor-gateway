@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -254,69 +255,146 @@ func CreateCrmLu(
 	return err
 }
 
-// ModifyCrmLuTargetRole sets the target-role of a logical unit in CRM.
-func ModifyCrmLuTargetRole(iscsiTargetName string, lun uint8, startFlag bool) error {
+// ModifyCrmTargetRole sets the target-role of a resource in CRM.
+//
+// The id has to be a valid CRM resource identifier.
+// A target-role of "Stopped" (startFlag == false) indicates to CRM that
+// the it should stop the resource. A target role of "Started" (startFlag == true)
+// indicates that the resource is already started and that CRM should not try
+// to start it.
+func ModifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xmltree.Document, error) {
+	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
+	rscElem := doc.FindElement("/cib/configuration/resources/primitive[@id='" + id + "']")
+	if rscElem == nil {
+		return nil, errors.New("CRM resource not found in the CIB, cannot modify role.")
+	}
+
+	var tgtRoleEntry *xmltree.Element
+	metaAttr := rscElem.FindElement(cibTagMetaAttr)
+	if metaAttr != nil {
+		// Meta attributes exist, find the entry that sets the target-role
+		tgtRoleEntry = metaAttr.FindElement(cibTagNvPair + "[@" + cibAttrKeyName + "='" + cibAttrValueTargetRole + "']")
+	} else {
+		// No meta attributes present, create XML element
+		metaAttr = rscElem.CreateElement(cibTagMetaAttr)
+		metaAttr.CreateAttr(cibAttrKeyID, id+"_"+cibTagMetaAttr)
+	}
+	if tgtRoleEntry == nil {
+		// No entry that sets the target-role, create entry
+		tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
+		tgtRoleEntry.CreateAttr(cibAttrKeyID, id+"_"+cibAttrValueTargetRole)
+		tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
+	}
+	// Set the target-role
+	var tgtRoleValue string
+	if startFlag {
+		tgtRoleValue = cibAttrValueStarted
+	} else {
+		tgtRoleValue = cibAttrValueStopped
+	}
+	tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
+
+	return doc, nil
+}
+
+func StopCrmResource(target string, luns []uint8) error {
+	// Read the current CIB XML
+	doc, err := ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	ids := generateCrmObjectNames(target, luns)
+	for _, id := range ids {
+		doc, err = ModifyCrmTargetRole(id, false, doc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return executeCibUpdate(doc, crmUpdateCommand)
+}
+
+// getIDsToDelete figures out what CRM objects need to be deleted given a LUN.
+func getIDsToDelete(target string, lun uint8) ([]string, error) {
+	// Read the current CIB XML
+	doc, err := ReadConfiguration()
+	if err != nil {
+		return nil, err
+	}
+
+	// Count LUNs in the cluster which belong to this target
+	numLuns := 0
+	lunElems := doc.FindElements("cib/configuration/resources/primitive[@type='iSCSILogicalUnit']")
+	for _, lunElem := range lunElems {
+		idAttr := lunElem.SelectAttr("id")
+		if idAttr == nil {
+			log.WithFields(log.Fields{
+				"target": target,
+			}).Warning("CRM iSCSILogicalUnit without id")
+			continue
+		}
+
+		regexBelongs := `^` + crmTargetID(target) + `_lu\d+$`
+		matched, err := regexp.MatchString(regexBelongs, idAttr.Value)
+		if err != nil {
+			return nil, err
+		} else if !matched {
+			log.WithFields(log.Fields{
+				"target": target,
+				"lu":     idAttr.Value,
+			}).Debug("LU does not seem to belong to target, skipping.")
+			continue
+		}
+
+		numLuns++
+	}
+
+	if numLuns == 0 {
+		return nil, errors.New("Logic error: there should be at least one Logical Unit for this target")
+	} else if numLuns == 1 {
+		// this was the only LU -> delete everything related to this target
+		return generateCrmObjectNames(target, []uint8{lun}), nil
+	} else {
+		// there are still more LUs -> only delete this one
+		return []string{crmLuID(target, lun)}, nil
+	}
+}
+
+// DeleteCrmLu deletes the CRM resources for a target
+func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	cib := docRoot.Root()
-	if cib == nil {
-		return errors.New("Failed to find the cluster information base (CIB) root element")
-	}
-
-	stopItems, err := generateCrmObjectNames(iscsiTargetName, lun)
+	ids, err := getIDsToDelete(iscsiTargetName, lun)
 	if err != nil {
 		return err
 	}
 
-	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
-	for _, elemID := range stopItems {
-		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
-		if rscElem != nil {
-			var tgtRoleEntry *xmltree.Element
-			metaAttr := rscElem.FindElement(cibTagMetaAttr)
-			if metaAttr != nil {
-				// Meta attributes exist, find the entry that sets the target-role
-				tgtRoleEntry = metaAttr.FindElement(cibTagNvPair + "[@" + cibAttrKeyName + "='" + cibAttrValueTargetRole + "']")
-			} else {
-				// No meta attributes present, create XML element
-				metaAttr = rscElem.CreateElement(cibTagMetaAttr)
-				metaAttr.CreateAttr(cibAttrKeyID, elemID+"_"+cibTagMetaAttr)
-			}
-			if tgtRoleEntry == nil {
-				// No entry that sets the target-role, create entry
-				tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
-				tgtRoleEntry.CreateAttr(cibAttrKeyID, elemID+"_"+cibAttrValueTargetRole)
-				tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
-			}
-			// Set the target-role
-			var tgtRoleValue string
-			if startFlag {
-				tgtRoleValue = cibAttrValueStarted
-			} else {
-				tgtRoleValue = cibAttrValueStopped
-			}
-			tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
-		} else {
-			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemID)
-		}
+	log.Debug("Deleting these IDs:")
+	for _, id := range ids {
+		log.Debugf("    %s", id)
 	}
 
-	return executeCibUpdate(docRoot, crmUpdateCommand)
-}
-
-// DeleteCrmLu deletes the CRM resources for a target
-func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
-	err := ModifyCrmLuTargetRole(iscsiTargetName, lun, false)
+	// notify pacemaker to delete the IDs
+	for _, id := range ids {
+		docRoot, err = ModifyCrmTargetRole(id, false, docRoot)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"resource": id,
+			}).Warning("Could not set target-role. Resource will probably fail to stop.")
+		}
+	}
+	err = executeCibUpdate(docRoot, crmUpdateCommand)
 	if err != nil {
 		return err
 	}
 
 	time.Sleep(time.Duration(waitStopPollCibDelay * time.Millisecond))
-	isStopped, err := waitForResourceStop(iscsiTargetName, lun)
+	isStopped, err := waitForResourcesStop(ids)
 	if err != nil {
 		return err
 	}
@@ -325,21 +403,12 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return errors.New("Resource stop was not confirmed for all resources, cannot continue delete action")
 	}
 
-	// Read the current CIB XML
-	docRoot, err := ReadConfiguration()
-	if err != nil {
-		return err
-	}
-
 	cib := docRoot.Root()
 	if cib == nil {
 		return errors.New("Failed to find the cluster information base (CIB) root element")
 	}
 
-	delItems, err := generateCrmObjectNames(iscsiTargetName, lun)
-	if err != nil {
-		return err
-	}
+	delItems := generateCrmObjectNames(iscsiTargetName, []uint8{lun})
 
 	// Process the CIB XML document tree, removing constraints that refer to any of the objects
 	// that will be deleted
@@ -414,34 +483,29 @@ func remove(s []string, r string) []string {
 	return s
 }
 
-// waitForResourceStop waits for CRM resources to stop
+// waitForResourcesStop waits for CRM resources to stop
 //
 // It returns a flag indicating whether resources are stopped (true) or
 // not (false), and an error.
-func waitForResourceStop(targetName string, lun uint8) (bool, error) {
-	stopItems, err := generateCrmObjectNames(targetName, lun)
-	if err != nil {
-		return false, err
-	}
-
+func waitForResourcesStop(idsToStop []string) (bool, error) {
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
 		return false, err
 	}
 
-	for _, rscName := range stopItems {
-		if !resourceInCIB(docRoot, rscName) {
+	for _, id := range idsToStop {
+		if !resourceInCIB(docRoot, id) {
 			log.WithFields(log.Fields{
-				"resource": rscName,
+				"resource": id,
 			}).Warning("Resource not found in the CIB, will be ignored.")
-			stopItems = remove(stopItems, rscName)
+			idsToStop = remove(idsToStop, id)
 		}
 	}
 
 	log.Debug("Waiting for the following CRM resources to stop:")
-	for _, rscName := range stopItems {
-		log.Debugf("    %s", rscName)
+	for _, id := range idsToStop {
+		log.Debugf("    %s", id)
 	}
 
 	isStopped := false
@@ -449,7 +513,7 @@ func waitForResourceStop(targetName string, lun uint8) (bool, error) {
 	for !isStopped {
 		// check if all resources are stopped
 		allStopped := true
-		for _, item := range stopItems {
+		for _, item := range idsToStop {
 			state := findLrmState(item, docRoot)
 			if state != Stopped {
 				allStopped = false
@@ -746,26 +810,28 @@ func ReadConfiguration() (*xmltree.Document, error) {
 }
 
 // generateCrmObjectNames generates a list of all CRM object names for a target
-func generateCrmObjectNames(iscsiTargetName string, lun uint8) ([]string, error) {
+func generateCrmObjectNames(iscsiTargetName string, luns []uint8) []string {
 	objects := make([]string, 0)
-	tmplVars := make(map[string]string)
-	tmplVars[varTgtName] = iscsiTargetName
-	tmplVars[varLuName] = crmIscsiLuName + strconv.Itoa(int(lun))
 
-	tmpl, err := template.New("crmobjnames").Parse(crmtemplate.CRM_OBJ_NAMES)
-	if err != nil {
-		return nil, err
-	}
+	templateVars := make(map[string]interface{})
+	templateVars[varTgtName] = iscsiTargetName
+	templateVars[varLuName] = luns
+
+	tmpl := template.Must(template.New("crmobjnames").Parse(crmtemplate.CRM_OBJ_NAMES))
 
 	var buf bytes.Buffer
-	tmpl.Execute(&buf, tmplVars)
+	tmpl.Execute(&buf, templateVars)
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf.Bytes()))
 	for scanner.Scan() {
+		if scanner.Text() == "" {
+			continue
+		}
 		name := strings.TrimRight(scanner.Text(), "\r\n")
+		log.Debug("crm object name: ", name)
 		objects = append(objects, name)
 	}
-	return objects, nil
+	return objects
 }
 
 func findLrmState(id string, doc *xmltree.Document) LrmRunState {
@@ -817,7 +883,6 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
 		log.Warn("CRM command execution returned an error")
 		log.Trace("The updated CIB data sent to the command was:")
 		log.Trace(cibData)
-		return err
 	}
 
 	if len(stdout) >= 1 {

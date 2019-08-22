@@ -260,13 +260,11 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 		return errors.New("Invalid IQN format: Missing ':' separator and target name")
 	}
 
-	for _, lu := range i.Target.LUNs {
-		// Stop the CRM resources for iSCSI LU, target, service IP addres, etc.
-		err = crmcontrol.ModifyCrmLuTargetRole(targetName, lu.ID, startFlag)
-		if err != nil {
-			return err
-		}
+	luns := make([]uint8, len(i.Target.LUNs))
+	for i, lu := range i.Target.LUNs {
+		luns[i] = lu.ID
 	}
+	crmcontrol.StopCrmResource(targetName, luns)
 
 	return nil
 }

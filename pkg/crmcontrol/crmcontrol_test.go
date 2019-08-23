@@ -1,10 +1,13 @@
 package crmcontrol
 
 import (
+	"bytes"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/rsto/xmltest"
 
 	xmltree "github.com/beevik/etree"
 	log "github.com/sirupsen/logrus"
@@ -43,12 +46,12 @@ func TestParseConfiguration(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	err := docRoot.ReadFromString(xml)
 	if err != nil {
-		t.Errorf("Invalid XML in test data: %v", err)
+		t.Fatalf("Invalid XML in test data: %v", err)
 	}
 
 	config, err := ParseConfiguration(docRoot)
 	if err != nil {
-		t.Errorf("Error while parsing config: %v", err)
+		t.Fatalf("Error while parsing config: %v", err)
 	}
 
 	expectedTargets := []*crmTarget{
@@ -114,5 +117,91 @@ func TestGenerateCrmObjectNames(t *testing.T) {
 		t.Errorf("Generated object names are wrong")
 		t.Errorf("Expected: %s", expect)
 		t.Errorf("Actual: %s", actual)
+	}
+}
+
+func TestModifyCrmTargetRole(t *testing.T) {
+	expect := `<cib><configuration><resources>
+			<primitive id="p_iscsi_example">
+				<meta_attributes id="p_iscsi_example-meta_attributes">
+					<nvpair name="target-role" value="Stopped" id="p_iscsi_example-meta_attributes-target-role"/>
+				</meta_attributes>
+			</primitive>
+		</resources></configuration></cib>`
+
+	cases := []struct {
+		desc        string
+		input       string
+		expectError bool
+	}{{
+		desc: "nvpair present",
+		input: `<cib><configuration><resources>
+			<primitive id="p_iscsi_example">
+				<meta_attributes id="p_iscsi_example-meta_attributes">
+					<nvpair name="target-role" value="Started" id="p_iscsi_example-meta_attributes-target-role"/>
+				</meta_attributes>
+			</primitive>
+		</resources></configuration></cib>`,
+	}, {
+		desc: "no nvpair present",
+		input: `<cib><configuration><resources>
+			<primitive id="p_iscsi_example">
+				<meta_attributes id="p_iscsi_example-meta_attributes">
+				</meta_attributes>
+			</primitive>
+		</resources></configuration></cib>`,
+	}, {
+		desc: "no meta_attributes present",
+		input: `<cib><configuration><resources>
+			<primitive id="p_iscsi_example">
+			</primitive>
+		</resources></configuration></cib>`,
+	}, {
+		desc: "no primitive present",
+		input: `<cib><configuration><resources>
+		</resources></configuration></cib>`,
+		expectError: true,
+	}}
+
+	n := xmltest.Normalizer{OmitWhitespace: true}
+
+	// store normalized version of expected XML
+	var buf bytes.Buffer
+	if err := n.Normalize(&buf, strings.NewReader(expect)); err != nil {
+		t.Fatal(err)
+	}
+	normExpect := buf.String()
+
+	for _, c := range cases {
+		doc := xmltree.NewDocument()
+		err := doc.ReadFromString(c.input)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		doc, err = modifyCrmTargetRole("p_iscsi_example", false, doc)
+		if err != nil {
+			if !c.expectError {
+				t.Error("Unexpected error: ", err)
+			}
+			continue
+		}
+
+		actual, err := doc.WriteToString()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var buf bytes.Buffer
+		if err := n.Normalize(&buf, strings.NewReader(actual)); err != nil {
+			t.Fatal(err)
+		}
+		normActual := buf.String()
+
+		if normActual != normExpect {
+			t.Errorf("XML does not match (input '%s')", c.desc)
+			t.Errorf("Expected: %s", normExpect)
+			t.Errorf("Actual: %s", normActual)
+		}
 	}
 }

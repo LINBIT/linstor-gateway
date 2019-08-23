@@ -278,12 +278,12 @@ func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xml
 	} else {
 		// No meta attributes present, create XML element
 		metaAttr = rscElem.CreateElement(cibTagMetaAttr)
-		metaAttr.CreateAttr(cibAttrKeyID, id+"_"+cibTagMetaAttr)
+		metaAttr.CreateAttr(cibAttrKeyID, id+"-meta_attributes")
 	}
 	if tgtRoleEntry == nil {
-		// No entry that sets the target-role, create entry
+		// No nvpair entry that sets the target-role, create entry
 		tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
-		tgtRoleEntry.CreateAttr(cibAttrKeyID, id+"_"+cibAttrValueTargetRole)
+		tgtRoleEntry.CreateAttr(cibAttrKeyID, id+"-meta_attributes-target-role")
 		tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
 	}
 	// Set the target-role

@@ -36,6 +36,14 @@ func TestCheckIQN(t *testing.T) {
 		input:       "iqn.2019-08.com.linbit:e",
 		expectError: true,
 	}, {
+		descr:       "contains _",
+		input:       "iqn.2019-08.com.lin_bit:example",
+		expectError: true,
+	}, {
+		descr:       "contains space",
+		input:       "iqn.2019-08.com.linbit:exa mple",
+		expectError: true,
+	}, {
 		descr:       "empty string",
 		input:       "",
 		expectError: true,

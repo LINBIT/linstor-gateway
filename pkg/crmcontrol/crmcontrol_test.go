@@ -51,7 +51,8 @@ func TestParseConfiguration(t *testing.T) {
 
 	config, err := ParseConfiguration(docRoot)
 	if err != nil {
-		t.Fatalf("Error while parsing config: %v", err)
+		t.Errorf("Error while parsing config: %v", err)
+		return
 	}
 
 	expectedTargets := []*crmTarget{

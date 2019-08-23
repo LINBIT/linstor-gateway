@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const inouterr = `#!/bin/bash
+const inouterr = `#!/bin/sh
 
 echo "stdout: hi"
 >&2 echo "stderr: hi"

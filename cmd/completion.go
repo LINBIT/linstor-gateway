@@ -27,4 +27,5 @@ func init() {
 	rootCmd.AddCommand(completionCmd)
 
 	completionCmd.ResetCommands()
+	completionCmd.DisableAutoGenTag = true
 }

@@ -73,4 +73,5 @@ func init() {
 
 	corosyncCmd.MarkPersistentFlagRequired("iqn")
 	corosyncCmd.MarkPersistentFlagRequired("lun")
+	corosyncCmd.DisableAutoGenTag = true
 }

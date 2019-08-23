@@ -43,4 +43,5 @@ func init() {
 
 	docsCmd.ResetCommands()
 	docsCmd.Flags().StringSliceVar(&format, "format", []string{"md"}, "Generate documentation in the given format (md,man)")
+	docsCmd.DisableAutoGenTag = true
 }

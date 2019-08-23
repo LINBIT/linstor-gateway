@@ -130,11 +130,10 @@ var errMaxRecursion = errors.New("Exceeding maximum recursion level, operation a
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
-	TargetList   []*crmTarget
-	LuList       []*crmLu
-	IPList       []*crmIP
-	OtherRscList []string
-	TidSet       *IntSet
+	Targets []*crmTarget
+	LUs     []*crmLu
+	IPs     []*crmIP
+	TIDs    *IntSet
 }
 
 type crmTarget struct {
@@ -595,7 +594,7 @@ func getNvPairValue(elem *xmltree.Element, name string) (*xmltree.Attr, error) {
 }
 
 func (c *CrmConfiguration) findTargetByIqn(iqn string) (*crmTarget, error) {
-	for _, t := range c.TargetList {
+	for _, t := range c.Targets {
 		if t.IQN == iqn {
 			return t, nil
 		}
@@ -793,7 +792,7 @@ func findIPs(rscSection *xmltree.Element) []*crmIP {
 // stored in a newly allocated crmConfiguration data structure
 // TODO THINK: maybe we can replace this whole mess by actual standard Go XML marshalling...
 func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
-	config := CrmConfiguration{TidSet: NewIntSet()}
+	config := CrmConfiguration{TIDs: NewIntSet()}
 	if docRoot == nil {
 		return nil, errors.New("Internal error: ParseConfiguration() called with docRoot == nil")
 	}
@@ -808,9 +807,9 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 		return nil, errors.New("Failed to find the cluster resources section in the cluster information base (CIB)")
 	}
 
-	config.TargetList = findTargets(rscSection)
-	config.LuList = findLus(rscSection, &config)
-	config.IPList = findIPs(rscSection)
+	config.Targets = findTargets(rscSection)
+	config.LUs = findLus(rscSection, &config)
+	config.IPs = findIPs(rscSection)
 
 	return &config, nil
 }

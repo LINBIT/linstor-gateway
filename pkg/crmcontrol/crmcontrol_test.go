@@ -65,10 +65,10 @@ func TestParseConfiguration(t *testing.T) {
 		},
 	}
 
-	if !cmp.Equal(config.TargetList, expectedTargets) {
+	if !cmp.Equal(config.Targets, expectedTargets) {
 		t.Errorf("Targets are not equal")
 		t.Errorf("Expected: %+v", expectedTargets)
-		t.Errorf("Actual: %+v", config.TargetList)
+		t.Errorf("Actual: %+v", config.Targets)
 	}
 
 	expectedLus := []*crmLu{
@@ -80,10 +80,10 @@ func TestParseConfiguration(t *testing.T) {
 		},
 	}
 
-	if !cmp.Equal(config.LuList, expectedLus) {
+	if !cmp.Equal(config.LUs, expectedLus) {
 		t.Errorf("LUs are not equal")
 		t.Errorf("Expected: %+v", expectedLus)
-		t.Errorf("Actual: %+v", config.LuList)
+		t.Errorf("Actual: %+v", config.LUs)
 	}
 
 	expectedIPs := []*crmIP{
@@ -94,10 +94,10 @@ func TestParseConfiguration(t *testing.T) {
 		},
 	}
 
-	if !cmp.Equal(config.IPList, expectedIPs) {
+	if !cmp.Equal(config.IPs, expectedIPs) {
 		t.Errorf("IPs are not equal")
 		t.Errorf("Expected: %+v", expectedIPs)
-		t.Errorf("Actual: %+v", config.IPList)
+		t.Errorf("Actual: %+v", config.IPs)
 	}
 }
 

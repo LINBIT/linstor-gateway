@@ -116,7 +116,7 @@ func (i *ISCSI) CreateResource() error {
 		}
 
 		// Find a free target ID number using the set of allocated target IDs
-		freeTid, ok := config.TidSet.GetFree(1, math.MaxInt16)
+		freeTid, ok := config.TIDs.GetFree(1, math.MaxInt16)
 		if !ok {
 			return errors.New("Failed to allocate a target ID for the new iSCSI target")
 		}
@@ -217,7 +217,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 	targets := make([]*Target, 0)
 
 	// first, "convert" all targets
-	for _, t := range config.TargetList {
+	for _, t := range config.Targets {
 		targetCfg := TargetConfig{
 			Name:     t.ID,
 			IQN:      t.IQN,
@@ -236,7 +236,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 	}
 
 	// then, "convert" and link LUs
-	for _, l := range config.LuList {
+	for _, l := range config.LUs {
 		lun := &LUN{
 			ID: l.LUN,
 		}

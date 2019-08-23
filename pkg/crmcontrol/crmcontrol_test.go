@@ -187,6 +187,11 @@ func TestModifyCrmTargetRole(t *testing.T) {
 			continue
 		}
 
+		if c.expectError {
+			t.Error("Expected error")
+			continue
+		}
+
 		actual, err := doc.WriteToString()
 		if err != nil {
 			t.Fatal(err)

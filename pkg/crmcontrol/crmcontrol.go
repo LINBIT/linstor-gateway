@@ -256,14 +256,14 @@ func CreateCrmLu(
 	return err
 }
 
-// ModifyCrmTargetRole sets the target-role of a resource in CRM.
+// modifyCrmTargetRole sets the target-role of a resource in CRM.
 //
 // The id has to be a valid CRM resource identifier.
 // A target-role of "Stopped" (startFlag == false) indicates to CRM that
 // the it should stop the resource. A target role of "Started" (startFlag == true)
 // indicates that the resource is already started and that CRM should not try
 // to start it.
-func ModifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xmltree.Document, error) {
+func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xmltree.Document, error) {
 	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
 	rscElem := doc.FindElement("/cib/configuration/resources/primitive[@id='" + id + "']")
 	if rscElem == nil {
@@ -309,7 +309,7 @@ func StartCrmResource(target string, luns []uint8) error {
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
-		doc, err = ModifyCrmTargetRole(id, true, doc)
+		doc, err = modifyCrmTargetRole(id, true, doc)
 		if err != nil {
 			return err
 		}
@@ -327,7 +327,7 @@ func StopCrmResource(target string, luns []uint8) error {
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
-		doc, err = ModifyCrmTargetRole(id, false, doc)
+		doc, err = modifyCrmTargetRole(id, false, doc)
 		if err != nil {
 			return err
 		}
@@ -402,7 +402,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 
 	// notify pacemaker to delete the IDs
 	for _, id := range ids {
-		docRoot, err = ModifyCrmTargetRole(id, false, docRoot)
+		docRoot, err = modifyCrmTargetRole(id, false, docRoot)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"resource": id,

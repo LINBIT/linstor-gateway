@@ -31,7 +31,7 @@ type LUN struct {
 	SizeKiB uint64 `json:"size_kib,omitempty"`
 }
 
-const (
+var (
 	// This format is currently dictated by the iSCSI target backend,
 	// specifically the rtslib-fb library.
 	// A notable difference in this implementation (which also differs from
@@ -46,7 +46,7 @@ const (
 	// directly for LINSTOR resource names, it needs to be compliant.
 	regexResourceName = `[[:alpha:]][[:alnum:]]+`
 
-	regexWWN = `^` + regexIQN + `:` + regexResourceName + `$`
+	regexWWN = regexp.MustCompile(`^` + regexIQN + `:` + regexResourceName + `$`)
 )
 
 // TargetConfig contains the information necessary for iSCSI targets.
@@ -70,11 +70,8 @@ func CheckIQN(iqn string) error {
 		return errors.New("IQN cannot contain the characters '_' (underscore) or ' ' (space)")
 	}
 
-	matched, err := regexp.MatchString(regexWWN, iqn)
-	if err != nil {
-		return err
-	} else if !matched {
-		return errors.New("Given IQN does not match the regular expression: " + regexWWN)
+	if !regexWWN.MatchString(iqn) {
+		return errors.New("Given IQN does not match the regular expression: " + regexWWN.String())
 	}
 
 	return nil

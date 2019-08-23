@@ -211,3 +211,115 @@ func TestModifyCrmTargetRole(t *testing.T) {
 		}
 	}
 }
+
+func TestDissolveConstraints(t *testing.T) {
+	xml := `<cib><configuration><constraints>
+<rsc_location id="lo_iscsi_example" resource-discovery="never">
+	<resource_set id="lo_iscsi_example-0">
+		<resource_ref id="p_iscsi_example_lu1"/>
+		<resource_ref id="p_iscsi_example"/>
+	</resource_set>
+	<rule score="-INFINITY" id="lo_iscsi_example-rule">
+		<expression attribute="#uname" operation="ne" value="li0" id="lo_iscsi_example-rule-expression-0"/>
+		<expression attribute="#uname" operation="ne" value="li1" id="lo_iscsi_example-rule-expression-1"/>
+	</rule>
+</rsc_location>
+<rsc_colocation id="co_pblock_example" score="INFINITY" rsc="p_pblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_colocation id="co_iscsi_example" score="INFINITY" rsc="p_iscsi_example" with-rsc="p_pblock_example"/>
+<rsc_colocation id="co_iscsi_example_lu1" score="INFINITY" rsc="p_iscsi_example_lu1" with-rsc="p_iscsi_example"/>
+<rsc_colocation id="co_punblock_example" score="INFINITY" rsc="p_punblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_location id="lo_iscsi_example_lu1" rsc="p_iscsi_example_lu1" resource-discovery="never">
+	<rule score="0" id="lo_iscsi_example_lu1-rule">
+		<expression attribute="#uname" operation="ne" value="li0" id="lo_iscsi_example_lu1-rule-expression-0"/>
+		<expression attribute="#uname" operation="ne" value="li1" id="lo_iscsi_example_lu1-rule-expression-1"/>
+	</rule>
+</rsc_location>
+<rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
+<rsc_order id="o_iscsi_example" score="INFINITY" first="p_pblock_example" then="p_iscsi_example"/>
+<rsc_order id="o_iscsi_example_lu1" score="INFINITY" first="p_iscsi_example" then="p_iscsi_example_lu1"/>
+<rsc_order id="o_punblock_example" score="INFINITY" first="p_iscsi_example_lu1" then="p_punblock_example"/>
+</constraints></configuration></cib>`
+
+	docRoot := xmltree.NewDocument()
+	err := docRoot.ReadFromString(xml)
+	if err != nil {
+		t.Fatalf("Invalid XML in test data: %v", err)
+	}
+
+	cases := []struct {
+		desc        string
+		resources   []string
+		expect      string
+		expectError bool
+	}{{
+		desc:      "remove target",
+		resources: []string{"p_iscsi_example"},
+		expect: `<cib><configuration><constraints>
+<rsc_colocation id="co_pblock_example" score="INFINITY" rsc="p_pblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_colocation id="co_punblock_example" score="INFINITY" rsc="p_punblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_location id="lo_iscsi_example_lu1" rsc="p_iscsi_example_lu1" resource-discovery="never">
+	<rule score="0" id="lo_iscsi_example_lu1-rule">
+		<expression attribute="#uname" operation="ne" value="li0" id="lo_iscsi_example_lu1-rule-expression-0"/>
+		<expression attribute="#uname" operation="ne" value="li1" id="lo_iscsi_example_lu1-rule-expression-1"/>
+	</rule>
+</rsc_location>
+<rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
+<rsc_order id="o_punblock_example" score="INFINITY" first="p_iscsi_example_lu1" then="p_punblock_example"/>
+</constraints></configuration></cib>`,
+	}, {
+		desc:      "remove target, lu",
+		resources: []string{"p_iscsi_example", "p_iscsi_example_lu1"},
+		expect: `<cib><configuration><constraints>
+<rsc_colocation id="co_pblock_example" score="INFINITY" rsc="p_pblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_colocation id="co_punblock_example" score="INFINITY" rsc="p_punblock_example" with-rsc="p_iscsi_example_ip"/>
+<rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
+</constraints></configuration></cib>`,
+	}, {
+		desc:      "remove target, lu, ip",
+		resources: []string{"p_iscsi_example", "p_iscsi_example_lu1", "p_iscsi_example_ip"},
+		expect:    `<cib><configuration><constraints></constraints></configuration></cib>`,
+	}}
+
+	n := xmltest.Normalizer{OmitWhitespace: true}
+
+	for _, c := range cases {
+		// store normalized version of expected XML
+		var buf bytes.Buffer
+		if err := n.Normalize(&buf, strings.NewReader(c.expect)); err != nil {
+			t.Fatal(err)
+		}
+		normExpect := buf.String()
+
+		doc := docRoot.Copy()
+
+		err = dissolveConstraints(doc.Root(), c.resources)
+		if err != nil {
+			if !c.expectError {
+				t.Error("Unexpected error: ", err)
+			}
+			continue
+		}
+
+		if c.expectError {
+			t.Error("Expected error")
+			continue
+		}
+
+		actual, err := doc.WriteToString()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		buf.Reset()
+		if err := n.Normalize(&buf, strings.NewReader(actual)); err != nil {
+			t.Fatal(err)
+		}
+		normActual := buf.String()
+
+		if normActual != normExpect {
+			t.Errorf("XML does not match (input '%s')", c.desc)
+			t.Errorf("Expected: %s", normExpect)
+			t.Errorf("Actual: %s", normActual)
+		}
+	}
+}

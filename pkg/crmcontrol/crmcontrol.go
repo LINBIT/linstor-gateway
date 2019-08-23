@@ -869,31 +869,6 @@ func findLrmState(id string, doc *xmltree.Document) LrmRunState {
 	return state
 }
 
-func checkResourceStopped(stopItems map[string]LrmRunState) (bool, bool) {
-	stateCtr := 0
-	stoppedCtr := 0
-	for name, state := range stopItems {
-		contextLog := log.WithFields(log.Fields{"resource": name})
-		if state == Unknown {
-			contextLog.Warning("No run status information for resource")
-			continue
-		}
-
-		stateCtr++
-		if state == Running {
-			contextLog.Debug("Resource is running")
-		} else {
-			contextLog.Debug("Resource is stopped")
-			stoppedCtr++
-		}
-	}
-
-	haveState := stateCtr == len(stopItems)
-	stoppedFlag := stoppedCtr == len(stopItems)
-
-	return haveState, stoppedFlag
-}
-
 func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
 	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
 	cibData, err := docRoot.WriteToString()

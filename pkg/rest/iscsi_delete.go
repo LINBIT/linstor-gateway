@@ -14,8 +14,18 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 	restMutex.Lock()
 	defer restMutex.Unlock()
 
-	tgt := mux.Vars(r)["target"]
-	lid, err := strconv.Atoi(mux.Vars(r)["lun"])
+	tgt, ok := mux.Vars(r)["target"]
+	if !ok {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not find 'target' in your request")
+		return
+	}
+
+	l, ok := mux.Vars(r)["lun"]
+	if !ok {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not find 'lun' in your request")
+		return
+	}
+	lid, err := strconv.Atoi(l)
 	if err != nil {
 		_, _ = Errorf(http.StatusBadRequest, w, "Could not convert LUN to number: %v", err)
 		return

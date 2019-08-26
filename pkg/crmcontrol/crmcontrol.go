@@ -878,7 +878,7 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 	newRunState := runState
 	stopEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStop + "']")
 	if stopEntry != nil {
-		rc, err := getLrmRcCode(rscName, stopEntry)
+		rc, err := getLrmRcCode(stopEntry)
 		if err != nil {
 			contextLog.Warning(err)
 		} else if rc == ocfSuccess {
@@ -894,7 +894,7 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 
 	monEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueMonitor + "']")
 	if monEntry != nil {
-		rc, err := getLrmRcCode(rscName, monEntry)
+		rc, err := getLrmRcCode(monEntry)
 		if err != nil {
 			contextLog.Warning(err)
 		} else if rc == ocfNotRunning {
@@ -910,7 +910,7 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 
 	startEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStart + "']")
 	if startEntry != nil {
-		rc, err := getLrmRcCode(rscName, startEntry)
+		rc, err := getLrmRcCode(startEntry)
 		if err != nil {
 			contextLog.Warning(err)
 		} else if rc == ocfRunningMaster || rc == ocfSuccess {
@@ -928,7 +928,7 @@ func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunStat
 }
 
 // getLrmRcCode extracts the rc-code value from an LRM operation entry
-func getLrmRcCode(rscName string, entry *xmltree.Element) (int, error) {
+func getLrmRcCode(entry *xmltree.Element) (int, error) {
 	rcAttr := entry.SelectAttr(cibAttrKeyRcCode)
 	if rcAttr == nil {
 		return 0, errors.New("Found LRM resource operation data without a status code")

@@ -276,13 +276,7 @@ func StopCrmResource(target string, luns []uint8) error {
 }
 
 // getIDsToDelete figures out what CRM objects need to be deleted given a LUN.
-func getIDsToDelete(target string, lun uint8) ([]string, error) {
-	// Read the current CIB XML
-	doc, err := ReadConfiguration()
-	if err != nil {
-		return nil, err
-	}
-
+func getIDsToDelete(target string, lun uint8, doc *xmltree.Document) ([]string, error) {
 	// Count LUNs in the cluster which belong to this target
 	numLuns := 0
 	lunElems := doc.FindElements("cib/configuration/resources/primitive[@type='iSCSILogicalUnit']")
@@ -329,7 +323,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return err
 	}
 
-	ids, err := getIDsToDelete(iscsiTargetName, lun)
+	ids, err := getIDsToDelete(iscsiTargetName, lun, docRoot)
 	if err != nil {
 		return err
 	}

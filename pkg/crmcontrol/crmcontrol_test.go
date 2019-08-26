@@ -549,5 +549,92 @@ func TestGetIDsToDelete(t *testing.T) {
 			t.Errorf("Actual:   %v", ids)
 		}
 	}
+}
 
+func TestFindLrmState(t *testing.T) {
+	xml := `<cib><status>
+	<node_state><lrm id="171"><lrm_resources>
+		<lrm_resource id="p_iscsi_example1">
+			<lrm_rsc_op operation="monitor" rc-code="7"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example2">
+			<lrm_rsc_op operation="monitor" rc-code="8"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example3">
+			<lrm_rsc_op operation="stop" rc-code="0"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example4">
+			<lrm_rsc_op operation="stop" rc-code="1"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example5">
+			<lrm_rsc_op operation="start" rc-code="0"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example6">
+			<lrm_rsc_op operation="start" rc-code="1"/>
+		</lrm_resource>
+		<lrm_resource id="p_iscsi_example7"/>
+		<lrm_resource id="p_iscsi_example8">
+			<lrm_rsc_op operation="start"/>
+		</lrm_resource>
+	</lrm_resources></lrm></node_state>
+</status></cib>`
+	doc := xmltree.NewDocument()
+	err := doc.ReadFromString(xml)
+	if err != nil {
+		t.Fatalf("Invalid XML in test data: %v", err)
+	}
+
+	cases := []struct {
+		desc   string
+		id     string
+		expect LrmRunState
+	}{{
+		desc:   "nonexistent ID",
+		id:     "p_iscsi_notexample",
+		expect: Unknown,
+	}, {
+		desc:   "monitor action with rc-code 'not running'",
+		id:     "p_iscsi_example1",
+		expect: Stopped,
+	}, {
+		desc:   "monitor action with rc-code 'running master'",
+		id:     "p_iscsi_example2",
+		expect: Running,
+	}, {
+		desc:   "successful stop action",
+		id:     "p_iscsi_example3",
+		expect: Stopped,
+	}, {
+		desc:   "unsucessful stop action",
+		id:     "p_iscsi_example4",
+		expect: Running,
+	}, {
+		desc:   "successful start action",
+		id:     "p_iscsi_example5",
+		expect: Running,
+	}, {
+		desc:   "unsucessful start action",
+		id:     "p_iscsi_example6",
+		expect: Stopped,
+	}, {
+		desc:   "ID without op",
+		id:     "p_iscsi_example7",
+		expect: Unknown,
+	}, {
+		desc:   "op without rc-code",
+		id:     "p_iscsi_example8",
+		expect: Unknown,
+	}}
+
+	// to hide the warning on "op without rc-code"
+	log.SetLevel(log.FatalLevel)
+
+	for _, c := range cases {
+		actual := findLrmState(c.id, doc)
+		if actual != c.expect {
+			t.Errorf("State does not match for case %s", c.desc)
+			t.Errorf("Expected: %v", c.expect)
+			t.Errorf("Actual: %v", actual)
+		}
+	}
 }

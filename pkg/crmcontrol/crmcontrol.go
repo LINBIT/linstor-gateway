@@ -170,50 +170,32 @@ const (
 	Stopped
 )
 
-// CreateCrmLu creates a CRM resource for a logical unit.
-//
-// The resources created depend on the contents of the template for resource creation.
-// Typically, it's an iSCSI target, logical unit and service IP address, along
-// with constraints that bundle them and place them on the selected nodes
-func CreateCrmLu(
-	storageNodeList []string,
-	iscsiTargetName string,
-	ip net.IP,
-	iscsiTargetIqn string,
-	lun uint8,
-	device string,
-	username string,
-	password string,
-	portal string,
-	tid int16,
-) error {
-	// Load the template for modifying the CIB
-
-	// debug.PrintfLnCaption("Template input:")
-	// debug.PrintTextArray(tmplLines)
-
+func generateCreateLuXML(storageNodeList []string, iscsiTargetName string, ip net.IP,
+	iscsiTargetIqn string, lun uint8, device string, username string,
+	password string, portal string, tid int16) (string, error) {
 	// Construct the CIB update data from the template
-	tmplVars := make(map[string]string)
-	tmplVars[varLuName] = "lu" + strconv.Itoa(int(lun))
-	tmplVars[varSvcIP] = ip.String()
-	tmplVars[varTgtName] = iscsiTargetName
-	tmplVars[varTgtIqn] = iscsiTargetIqn
-	tmplVars[varIscsiLun] = strconv.Itoa(int(lun))
-	tmplVars[varStorDev] = device
-	tmplVars[varUsername] = username
-	tmplVars[varPassword] = password
-	tmplVars[varPortals] = portal
-	tmplVars[varTid] = strconv.Itoa(int(tid))
+	tmplVars := map[string]string{
+		varLuName:   "lu" + strconv.Itoa(int(lun)),
+		varSvcIP:    ip.String(),
+		varTgtName:  iscsiTargetName,
+		varTgtIqn:   iscsiTargetIqn,
+		varIscsiLun: strconv.Itoa(int(lun)),
+		varStorDev:  device,
+		varUsername: username,
+		varPassword: password,
+		varPortals:  portal,
+		varTid:      strconv.Itoa(int(tid)),
+	}
 
 	// Create sub XML content, one entry per node, from the iSCSI target location constraint template
 	targetLocData, err := constructNodesTemplate(crmtemplate.TARGET_LOCATION_NODES, storageNodeList, tmplVars)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Create sub XML content, one entry per node, from the iSCSI logical unit location constraint template
 	luLocData, err := constructNodesTemplate(crmtemplate.LU_LOCATION_NODES, storageNodeList, tmplVars)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Load the sub XML content into variables
 	tmplVars[varTgtLocNodes] = targetLocData
@@ -222,13 +204,30 @@ func CreateCrmLu(
 	// Replace resource creation template variables
 	iscsitmpl, err := template.New("crmisci").Parse(crmtemplate.CRM_ISCSI)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var cibData bytes.Buffer
 	iscsitmpl.Execute(&cibData, tmplVars)
 
+	return cibData.String(), nil
+}
+
+// CreateCrmLu creates a CRM resource for a logical unit.
+//
+// The resources created depend on the contents of the template for resource creation.
+// Typically, it's an iSCSI target, logical unit and service IP address, along
+// with constraints that bundle them and place them on the selected nodes
+func CreateCrmLu(storageNodeList []string, iscsiTargetName string, ip net.IP,
+	iscsiTargetIqn string, lun uint8, device string, username string,
+	password string, portal string, tid int16) error {
+	// Load the template for modifying the CIB
+	forStdin, err := generateCreateLuXML(storageNodeList, iscsiTargetName, ip,
+		iscsiTargetIqn, lun, device, username, password, portal, tid)
+	if err != nil {
+		return err
+	}
+
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	forStdin := cibData.String()
 	stdout, stderr, err := execute(&forStdin, crmCreateCommand.executable, crmCreateCommand.arguments...)
 	if err != nil {
 		return err
@@ -245,7 +244,6 @@ func CreateCrmLu(
 	} else {
 		log.Debug("No stdout output")
 	}
-
 	return err
 }
 

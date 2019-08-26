@@ -11,6 +11,9 @@ import (
 
 // ISCSIDelete deletes a highly-available iSCSI target via the REST-API
 func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
+	restMutex.Lock()
+	defer restMutex.Unlock()
+
 	tgt := mux.Vars(r)["target"]
 	lid, err := strconv.Atoi(mux.Vars(r)["lun"])
 	if err != nil {

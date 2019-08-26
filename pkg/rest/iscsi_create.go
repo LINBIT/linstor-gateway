@@ -8,6 +8,9 @@ import (
 
 // ISCSICreate creates a highly-available iSCSI target via the REST-API
 func ISCSICreate(w http.ResponseWriter, r *http.Request) {
+	restMutex.Lock()
+	defer restMutex.Unlock()
+
 	var iscsiCfg iscsi.ISCSI
 	if err := unmarshalBody(w, r, &iscsiCfg); err != nil {
 		return

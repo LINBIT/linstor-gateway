@@ -9,11 +9,14 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/gorilla/mux"
 )
+
+var restMutex sync.Mutex
 
 // Error is the type that is returned in case of an error.
 type Error struct {

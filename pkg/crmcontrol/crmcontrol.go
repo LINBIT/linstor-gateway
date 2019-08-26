@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"
@@ -35,27 +36,13 @@ import (
 
 // Template variable keys
 const (
-	varNodeName    = "CRM_NODE_NAME"
-	varNr          = "NR"
-	varLuName      = "CRM_LU_NAME"
-	varLus         = "CRM_LUS"
-	varSvcIP       = "CRM_SVC_IP"
-	varTgtName     = "CRM_TARGET_NAME"
-	varTgtIqn      = "TARGET_IQN"
-	varIscsiLun    = "LUN"
-	varStorDev     = "DEVICE"
-	varUsername    = "USERNAME"
-	varPassword    = "PASSWORD"
-	varPortals     = "PORTALS"
-	varTid         = "TID"
-	varTgtLocNodes = "TARGET_LOCATION_NODES"
-	varLuLocNodes  = "LU_LOCATION_NODES"
+	varLus     = "CRM_LUS"
+	varTgtName = "CRM_TARGET_NAME"
 )
 
 // Pacemaker CIB XML XPaths
 const (
 	cibRscXpath        = "/cib/configuration/resources"
-	cibStatusXpath     = "/cib/status"
 	cibNodeStatusXpath = "/cib/status/node_state"
 )
 
@@ -170,46 +157,21 @@ const (
 	Stopped
 )
 
-func generateCreateLuXML(storageNodeList []string, iscsiTargetName string, ip net.IP,
-	iscsiTargetIqn string, lun uint8, device string, username string,
-	password string, portal string, tid int16) (string, error) {
-	// Construct the CIB update data from the template
-	tmplVars := map[string]string{
-		varLuName:   "lu" + strconv.Itoa(int(lun)),
-		varSvcIP:    ip.String(),
-		varTgtName:  iscsiTargetName,
-		varTgtIqn:   iscsiTargetIqn,
-		varIscsiLun: strconv.Itoa(int(lun)),
-		varStorDev:  device,
-		varUsername: username,
-		varPassword: password,
-		varPortals:  portal,
-		varTid:      strconv.Itoa(int(tid)),
+func generateCreateLuXML(target targetutil.Target, storageNodes []string,
+	device string, tid int16) (string, error) {
+	tmplVars := map[string]interface{}{
+		"Target":       target,
+		"StorageNodes": storageNodes,
+		"Device":       device,
+		"TID":          tid,
 	}
-
-	// Create sub XML content, one entry per node, from the iSCSI target location constraint template
-	targetLocData, err := constructNodesTemplate(crmtemplate.TARGET_LOCATION_NODES, storageNodeList, tmplVars)
-	if err != nil {
-		return "", err
-	}
-	// Create sub XML content, one entry per node, from the iSCSI logical unit location constraint template
-	luLocData, err := constructNodesTemplate(crmtemplate.LU_LOCATION_NODES, storageNodeList, tmplVars)
-	if err != nil {
-		return "", err
-	}
-	// Load the sub XML content into variables
-	tmplVars[varTgtLocNodes] = targetLocData
-	tmplVars[varLuLocNodes] = luLocData
 
 	// Replace resource creation template variables
-	iscsitmpl, err := template.New("crmisci").Parse(crmtemplate.CRM_ISCSI)
-	if err != nil {
-		return "", err
-	}
-	var cibData bytes.Buffer
-	iscsitmpl.Execute(&cibData, tmplVars)
+	iscsitmpl := template.Must(template.New("crmisci").Parse(crmtemplate.CRM_ISCSI))
 
-	return cibData.String(), nil
+	var cibData bytes.Buffer
+	err := iscsitmpl.Execute(&cibData, tmplVars)
+	return cibData.String(), err
 }
 
 // CreateCrmLu creates a CRM resource for a logical unit.
@@ -217,12 +179,10 @@ func generateCreateLuXML(storageNodeList []string, iscsiTargetName string, ip ne
 // The resources created depend on the contents of the template for resource creation.
 // Typically, it's an iSCSI target, logical unit and service IP address, along
 // with constraints that bundle them and place them on the selected nodes
-func CreateCrmLu(storageNodeList []string, iscsiTargetName string, ip net.IP,
-	iscsiTargetIqn string, lun uint8, device string, username string,
-	password string, portal string, tid int16) error {
+func CreateCrmLu(target targetutil.Target, storageNodes []string,
+	device string, tid int16) error {
 	// Load the template for modifying the CIB
-	forStdin, err := generateCreateLuXML(storageNodeList, iscsiTargetName, ip,
-		iscsiTargetIqn, lun, device, username, password, portal, tid)
+	forStdin, err := generateCreateLuXML(target, storageNodes, device, tid)
 	if err != nil {
 		return err
 	}
@@ -890,33 +850,6 @@ func copyMap(srcMap map[string]string) map[string]string {
 		resultMap[key] = value
 	}
 	return resultMap
-}
-
-// Constructs a sub template for each node entry
-//
-// For each node entry, a template is loaded and variable replacement is performed, with one of the variables
-// containing the node name for the current iteration. The templates are concatenated.
-// The resulting XML content is a sub template for insertion into another XML template.
-func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[string]string) (string, error) {
-	subTmplVars := copyMap(tmplVars)
-	nr := 0
-	var subDataBld strings.Builder
-	for _, nodename := range nodeList {
-		subTmplVars[varNodeName] = nodename
-		subTmplVars[varNr] = strconv.FormatUint(uint64(nr), 10)
-
-		tmpl, err := template.New(nodename).Parse(tmplString)
-		if err != nil {
-			return "", err
-		}
-
-		var buf bytes.Buffer
-		tmpl.Execute(&buf, subTmplVars)
-
-		subDataBld.WriteString(buf.String())
-		nr++
-	}
-	return subDataBld.String(), nil
 }
 
 // Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree

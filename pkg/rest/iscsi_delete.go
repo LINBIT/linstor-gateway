@@ -6,6 +6,7 @@ import (
 
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/gorilla/mux"
 )
 
@@ -31,12 +32,12 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lun := iscsi.LUN{ID: uint8(lid)}
-	targetConfig := iscsi.TargetConfig{
+	lun := targetutil.LUN{ID: uint8(lid)}
+	targetConfig := targetutil.TargetConfig{
 		IQN:  "iqn.1981-09.at.rck:" + tgt,
-		LUNs: []*iscsi.LUN{&lun},
+		LUNs: []*targetutil.LUN{&lun},
 	}
-	target, err := iscsi.NewTarget(targetConfig)
+	target, err := targetutil.NewTarget(targetConfig)
 	if err != nil {
 		_, _ = Errorf(http.StatusInternalServerError, w, "Could not create target from target config: %v", err)
 		return
@@ -49,7 +50,7 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 
 	maybeSetLinstorController(&iscsiCfg)
 
-	if err := iscsi.CheckIQN(iscsiCfg.Target.IQN); err != nil {
+	if err := targetutil.CheckIQN(iscsiCfg.Target.IQN); err != nil {
 		_, _ = Errorf(http.StatusBadRequest, w, "Could not validate IQN: %v", err)
 		return
 	}

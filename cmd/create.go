@@ -7,6 +7,7 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -75,15 +76,15 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			ResourceGroupName: group,
 		}
 
-		targetCfg := iscsi.TargetConfig{
-			LUNs:      []*iscsi.LUN{&iscsi.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
+		targetCfg := targetutil.TargetConfig{
+			LUNs:      []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
 			IQN:       iqn,
 			ServiceIP: ip,
 			Username:  username,
 			Password:  password,
 			Portals:   portals,
 		}
-		target := iscsi.NewTargetMust(targetCfg)
+		target := targetutil.NewTargetMust(targetCfg)
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		err := iscsiCfg.CreateResource()
 		if err != nil {

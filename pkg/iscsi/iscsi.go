@@ -4,14 +4,12 @@ package iscsi
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
-	"net"
-	"regexp"
 	"strings"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 
 	xmltree "github.com/beevik/etree"
 )
@@ -22,75 +20,8 @@ const DFLT_ISCSI_PORTAL_PORT = 3260
 // ISCSI combines the information needed to create highly-available iSCSI targets.
 // It contains a iSCSI target configuration and a LINSTOR configuration.
 type ISCSI struct {
-	Target  Target                 `json:"target,omitempty"`
+	Target  targetutil.Target      `json:"target,omitempty"`
 	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
-}
-
-type LUN struct {
-	ID      uint8  `json:"id,omitempty"`
-	SizeKiB uint64 `json:"size_kib,omitempty"`
-}
-
-var (
-	// This format is currently dictated by the iSCSI target backend,
-	// specifically the rtslib-fb library.
-	// A notable difference in this implementation (which also differs from
-	// RFC3720, where the IQN format is defined) is that we require the
-	// "unique" part after the colon to be present.
-	//
-	// See also the source code of rtslib-fb for the original regex:
-	// https://github.com/open-iscsi/rtslib-fb/blob/b5be390be961/rtslib/utils.py#L384
-	regexIQN = `iqn\.\d{4}-[0-1][0-9]\..*\..*`
-
-	// This format is mandated by LINSTOR. Since we use the unique part
-	// directly for LINSTOR resource names, it needs to be compliant.
-	regexResourceName = `[[:alpha:]][[:alnum:]]+`
-
-	regexWWN = regexp.MustCompile(`^` + regexIQN + `:` + regexResourceName + `$`)
-)
-
-// TargetConfig contains the information necessary for iSCSI targets.
-type TargetConfig struct {
-	Name      string `json:"name,omitempty"`
-	IQN       string `json:"iqn,omitempty"`
-	LUNs      []*LUN `json:"luns,omitempty"`
-	ServiceIP net.IP `json:"service_ip,omitempty"`
-	Username  string `json:"username,omitempty"`
-	Password  string `json:"password,omitempty"`
-	Portals   string `json:"portals,omitempty"`
-}
-
-// Target wraps a TargetConfig
-type Target struct {
-	TargetConfig
-}
-
-func CheckIQN(iqn string) error {
-	if strings.ContainsAny(iqn, "_ ") {
-		return errors.New("IQN cannot contain the characters '_' (underscore) or ' ' (space)")
-	}
-
-	if !regexWWN.MatchString(iqn) {
-		return errors.New("Given IQN does not match the regular expression: " + regexWWN.String())
-	}
-
-	return nil
-}
-
-func NewTarget(cfg TargetConfig) (Target, error) {
-	if err := CheckIQN(cfg.IQN); err != nil {
-		return Target{}, err
-	}
-
-	return Target{cfg}, nil
-}
-
-func NewTargetMust(cfg TargetConfig) Target {
-	t, err := NewTarget(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return t
 }
 
 // CreateResource creates a new highly available iSCSI target
@@ -127,18 +58,8 @@ func (i *ISCSI) CreateResource() error {
 		}
 
 		// Create CRM resources and constraints for the iSCSI services
-		err = crmcontrol.CreateCrmLu(
-			res.StorageNodeList,
-			targetName,
-			i.Target.ServiceIP,
-			i.Target.IQN,
-			lu.ID,
-			res.DevicePath,
-			i.Target.Username,
-			i.Target.Password,
-			i.Target.Portals,
-			int16(freeTid),
-		)
+		err = crmcontrol.CreateCrmLu(i.Target, res.StorageNodeList,
+			res.DevicePath, int16(freeTid))
 		if err != nil {
 			return err
 		}
@@ -200,7 +121,7 @@ func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 // ListResources lists existing iSCSI targets.
 //
 // Returns: CIB XML document tree, slice of Targets, error object
-func ListResources() (*xmltree.Document, []*Target, error) {
+func ListResources() (*xmltree.Document, []*targetutil.Target, error) {
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
 		return nil, nil, err
@@ -211,20 +132,20 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 		return nil, nil, err
 	}
 
-	targets := make([]*Target, 0)
+	targets := make([]*targetutil.Target, 0)
 
 	// first, "convert" all targets
 	for _, t := range config.Targets {
-		targetCfg := TargetConfig{
+		targetCfg := targetutil.TargetConfig{
 			Name:     t.ID,
 			IQN:      t.IQN,
-			LUNs:     make([]*LUN, 0),
+			LUNs:     make([]*targetutil.LUN, 0),
 			Username: t.Username,
 			Password: t.Password,
 			Portals:  t.Portals,
 		}
 
-		target, err := NewTarget(targetCfg)
+		target, err := targetutil.NewTarget(targetCfg)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -234,7 +155,7 @@ func ListResources() (*xmltree.Document, []*Target, error) {
 
 	// then, "convert" and link LUs
 	for _, l := range config.LUs {
-		lun := &LUN{
+		lun := &targetutil.LUN{
 			ID: l.LUN,
 		}
 

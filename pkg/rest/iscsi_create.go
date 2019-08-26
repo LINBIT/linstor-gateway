@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 )
 
 // ISCSICreate creates a highly-available iSCSI target via the REST-API
@@ -17,7 +18,7 @@ func ISCSICreate(w http.ResponseWriter, r *http.Request) {
 	}
 	maybeSetLinstorController(&iscsiCfg)
 
-	if err := iscsi.CheckIQN(iscsiCfg.Target.IQN); err != nil {
+	if err := targetutil.CheckIQN(iscsiCfg.Target.IQN); err != nil {
 		_, _ = Errorf(http.StatusBadRequest, w, "Could not validate IQN: %v", err)
 		return
 	}

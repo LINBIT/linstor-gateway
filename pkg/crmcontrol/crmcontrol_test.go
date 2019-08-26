@@ -2,10 +2,12 @@ package crmcontrol
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net"
 	"strings"
 	"testing"
 
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/google/go-cmp/cmp"
 	"github.com/rsto/xmltest"
 
@@ -455,18 +457,21 @@ func TestGenerateCreateLuXML(t *testing.T) {
 	}
 	normExpect := buf.String()
 
-	storageNodeList := []string{"node0", "node1"}
-	iscsiTargetName := "example"
-	ip := net.ParseIP("192.168.1.1")
-	iscsiTargetIqn := "iqn.2019-08.com.linbit:example"
-	lun := uint8(0)
+	storageNodes := []string{"node0", "node1"}
 	device := "/dev/drbd1000"
-	username := "user"
-	password := "password"
-	portal := "192.168.1.1:3260"
 	tid := int16(0)
-	actual, err := generateCreateLuXML(storageNodeList, iscsiTargetName, ip,
-		iscsiTargetIqn, lun, device, username, password, portal, tid)
+
+	target := targetutil.NewTargetMust(targetutil.TargetConfig{
+		Name:      "example",
+		IQN:       "iqn.2019-08.com.linbit:example",
+		LUNs:      []*targetutil.LUN{&targetutil.LUN{ID: 0, SizeKiB: 1000}},
+		ServiceIP: net.ParseIP("192.168.1.1"),
+		Username:  "user",
+		Password:  "password",
+		Portals:   "192.168.1.1:3260",
+	})
+
+	actual, err := generateCreateLuXML(target, storageNodes, device, tid)
 	if err != nil {
 		t.Error(err)
 		return
@@ -479,6 +484,8 @@ func TestGenerateCreateLuXML(t *testing.T) {
 	normActual := buf.String()
 
 	if normActual != normExpect {
+		ioutil.WriteFile("expect.xml", []byte(normExpect), 0644)
+		ioutil.WriteFile("actual.xml", []byte(normActual), 0644)
 		t.Error("XML does not match")
 		t.Errorf("Expected: %s", normExpect)
 		t.Errorf("Actual: %s", normActual)

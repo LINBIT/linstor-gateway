@@ -7,6 +7,7 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/logrusorgru/aurora"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
@@ -76,11 +77,11 @@ linstor-iscsi list`,
 				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}
-			targetCfg := iscsi.TargetConfig{
+			targetCfg := targetutil.TargetConfig{
 				IQN:  target.IQN,
 				LUNs: target.LUNs,
 			}
-			tgt := iscsi.NewTargetMust(targetCfg)
+			tgt := targetutil.NewTargetMust(targetCfg)
 			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: tgt}
 
 			resourceState, err := iscsiCfg.ProbeResource()

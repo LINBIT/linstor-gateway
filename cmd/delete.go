@@ -6,6 +6,7 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -31,11 +32,11 @@ linstor-iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			Loglevel:     log.GetLevel().String(),
 			ControllerIP: controller,
 		}
-		targetCfg := iscsi.TargetConfig{
+		targetCfg := targetutil.TargetConfig{
 			IQN:  iqn,
-			LUNs: []*iscsi.LUN{&iscsi.LUN{ID: uint8(lun)}},
+			LUNs: []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun)}},
 		}
-		target := iscsi.NewTargetMust(targetCfg)
+		target := targetutil.NewTargetMust(targetCfg)
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		if err := iscsiCfg.DeleteResource(); err != nil {
 			log.Fatal(err)

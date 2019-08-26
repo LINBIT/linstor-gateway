@@ -112,10 +112,6 @@ const (
 	ocfFailedMaster     = 9
 )
 
-// Maximum recursion level, currently used to limit recursion during recursive
-// searches of the XML document tree
-const maxRecursionLevel = 40
-
 // Maximum number of CIB poll retries when waiting for CRM resources to stop
 const maxWaitStopRetries = 10
 
@@ -125,8 +121,6 @@ const waitStopPollCibDelay = 2500
 
 // Delay between CIB polls in milliseconds
 const cibPollRetryDelay = 2000
-
-var errMaxRecursion = errors.New("Exceeding maximum recursion level, operation aborted")
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
@@ -429,21 +423,13 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return err
 	}
 
-	cib := docRoot.Root()
-	if cib == nil {
-		return errors.New("Failed to find the cluster information base (CIB) root element")
-	}
-
 	// Process the CIB XML document tree, removing constraints that refer to any of the objects
 	// that will be deleted
-	err = dissolveConstraints(cib, ids)
-	if err != nil {
-		return err
-	}
+	dissolveConstraints(docRoot, ids)
 
 	// Process the CIB XML document tree, removing the specified CRM resources
 	for _, elemID := range ids {
-		rscElem := cib.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
+		rscElem := docRoot.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
 			if rscElemParent != nil {
@@ -936,213 +922,48 @@ func constructNodesTemplate(tmplString string, nodeList []string, tmplVars map[s
 }
 
 // Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree
-func dissolveConstraints(cibElem *xmltree.Element, delItems []string) error {
-	return dissolveConstraintsImpl(cibElem, delItems, 0)
-}
+func dissolveConstraints(doc *xmltree.Document, delItems []string) {
+	// TODO: I think it's possible to to "XPath injection" here. Since
+	// delItems is user controlled, inserting a ' or something could
+	// potentially make the program panic. But let's worry about this
+	// another day...
 
-// See dissolveConstraints(...)
-func dissolveConstraintsImpl(cibElem *xmltree.Element, delItems []string, recursionLevel int) error {
-	// delIdxSet is allocated on-demand only if it is required
-	var delIdxSet *IntSet
+	xpaths := []string{
+		// colocation references (if we had a better xpath library we could do this at once...)
+		`configuration/constraints/rsc_colocation[@rsc='%s']`,
+		`configuration/constraints/rsc_colocation[@with-rsc='%s']`,
+		// order references
+		`configuration/constraints/rsc_order[@first='%s']`,
+		`configuration/constraints/rsc_order[@then='%s']`,
+		// rsc_location -> resource_ref references
+		`configuration/constraints/rsc_location/resource_set/resource_ref[@id='%s']/../..`,
+		// rsc_location with direct rsc
+		`configuration/constraints/rsc_location[@rsc='%s']`,
+		// lrm status references
+		`status/node_state/lrm/lrm_resources/lrm_resource[@id='%s']`,
+	}
 
-	childList := cibElem.ChildElements()
-	for _, subElem := range childList {
-		dependFlag := false
-		var err error
-		if subElem.Tag == cibTagColocation {
-			if recursionLevel < maxRecursionLevel {
-				dependFlag, err = isColocationDependency(subElem, delItems)
-				if err != nil {
-					return err
+	for _, resourceName := range delItems {
+		for _, xpathFormat := range xpaths {
+			xpath := fmt.Sprintf(xpathFormat, resourceName)
+			elems := doc.Root().FindElements(xpath)
+			for _, elem := range elems {
+				parent := elem.Parent()
+				if parent == nil {
+					continue
 				}
-				if !dependFlag {
-					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
-					if err != nil {
-						return err
-					}
+				parent.RemoveChild(elem)
+
+				idAttr := elem.SelectAttr("id")
+				if idAttr != nil {
+					log.WithFields(log.Fields{
+						"type": elem.Tag,
+						"id":   idAttr.Value,
+					}).Debug("Deleting dependency")
 				}
-			} else {
-				return errMaxRecursion
-			}
-		} else if subElem.Tag == cibTagOrder {
-			if recursionLevel < maxRecursionLevel {
-				dependFlag, err = isOrderDependency(subElem, delItems)
-				if err != nil {
-					return err
-				}
-				if !dependFlag {
-					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				return errMaxRecursion
-			}
-		} else if subElem.Tag == cibTagLocation {
-			if recursionLevel < maxRecursionLevel {
-				dependFlag = isLocationDependency(subElem, delItems)
-				if !dependFlag {
-					dependFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				return errMaxRecursion
-			}
-		} else if subElem.Tag == cibTagLrmRsc {
-			if recursionLevel < maxRecursionLevel {
-				dependFlag, err = isLrmDependency(subElem, delItems)
-				if err != nil {
-					return err
-				}
-			} else {
-				return errMaxRecursion
-			}
-		} else {
-			if recursionLevel < maxRecursionLevel {
-				err := dissolveConstraintsImpl(subElem, delItems, recursionLevel+1)
-				if err != nil {
-					return err
-				}
-			} else {
-				return errMaxRecursion
-			}
-		}
-		if dependFlag {
-			if delIdxSet == nil {
-				delIdxSet = NewIntSet()
-			}
-			delIdxSet.Add(subElem.Index())
-			idAttr := subElem.SelectAttr("id")
-			if idAttr != nil {
-				log.WithFields(log.Fields{
-					"type": subElem.Tag,
-					"id":   idAttr.Value,
-				}).Debug("Deleting dependency")
 			}
 		}
 	}
-	// Elements are deleted in order of descending index, so that the index of elements
-	// deleted later does not change due to reordering elements that had a greater index
-	// than an element thas was deleted from the slice/array.
-	if delIdxSet != nil {
-		for _, delIdx := range delIdxSet.ReverseSortedKeys() {
-			cibElem.RemoveChildAt(delIdx)
-		}
-	}
-
-	return nil
-}
-
-// Indicates whether an element has sub elements that are resource reference tags that refer to any of the specified delItems names
-func hasRscRefDependency(cibElem *xmltree.Element, delItems []string, recursionLevel int) (bool, error) {
-	depFlag := false
-
-	var err error
-	childList := cibElem.ChildElements()
-	for _, subElem := range childList {
-		if subElem.Tag == cibTagRscRef {
-			idAttr := subElem.SelectAttr("id")
-			if idAttr != nil {
-				for _, s := range delItems {
-					if s == idAttr.Value {
-						depFlag = true
-						break
-					}
-				}
-			} else {
-				return false, errors.New("Unparseable " + subElem.Tag + " tag, cannot find \"id\" attribute")
-			}
-		} else {
-			if recursionLevel < maxRecursionLevel {
-				depFlag, err = hasRscRefDependency(subElem, delItems, recursionLevel+1)
-				if err != nil {
-					return false, err
-				}
-			} else {
-				return false, errMaxRecursion
-			}
-		}
-		if depFlag {
-			break
-		}
-	}
-
-	return depFlag, nil
-}
-
-// Indicates whether the element is a CRM location constraint that refers to any of the specified delItems names
-func isLocationDependency(cibElem *xmltree.Element, delItems []string) bool {
-	rscAttr := cibElem.SelectAttr("rsc")
-	if rscAttr == nil {
-		return false
-	}
-
-	for _, s := range delItems {
-		if s == rscAttr.Value {
-			return true
-		}
-	}
-
-	return false
-}
-
-// Indicates whether the element is a CRM order constraint that refers to any of the specified delItems names
-func isOrderDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
-	firstAttr := cibElem.SelectAttr("first")
-	thenAttr := cibElem.SelectAttr("then")
-	if firstAttr == nil {
-		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"first\" attribute")
-	}
-	if thenAttr == nil {
-		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"then\" attribute")
-	}
-
-	for _, s := range delItems {
-		if s == firstAttr.Value || s == thenAttr.Value {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-// Indicates whether the element is a CRM colocation constraint that refers to any of the specified delItems names
-func isColocationDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
-	rscAttr := cibElem.SelectAttr("rsc")
-	withRscAttr := cibElem.SelectAttr("with-rsc")
-	if rscAttr == nil {
-		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"rsc\" attribute")
-	}
-	if withRscAttr == nil {
-		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"with-rsc\" attribute")
-	}
-
-	for _, s := range delItems {
-		if s == rscAttr.Value || s == withRscAttr.Value {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-// Indicates whether the element is an LRM entry that refers to any of the specified delItems names
-func isLrmDependency(cibElem *xmltree.Element, delItems []string) (bool, error) {
-	idAttr := cibElem.SelectAttr("id")
-	if idAttr == nil {
-		return false, errors.New("Unparseable " + cibElem.Tag + " constraint, cannot find \"id\" attribute")
-	}
-
-	for _, s := range delItems {
-		if s == idAttr.Value {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 // updateRunState updates the run state information of a single resource

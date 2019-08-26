@@ -238,7 +238,15 @@ func TestDissolveConstraints(t *testing.T) {
 <rsc_order id="o_iscsi_example" score="INFINITY" first="p_pblock_example" then="p_iscsi_example"/>
 <rsc_order id="o_iscsi_example_lu1" score="INFINITY" first="p_iscsi_example" then="p_iscsi_example_lu1"/>
 <rsc_order id="o_punblock_example" score="INFINITY" first="p_iscsi_example_lu1" then="p_punblock_example"/>
-</constraints></configuration></cib>`
+</constraints></configuration><status>
+	<node_state><lrm id="171"><lrm_resources>
+		<lrm_resource id="p_iscsi_example_ip" type="IPaddr2" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_pblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_iscsi_example" type="iSCSITarget" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_iscsi_example_lu1" type="iSCSILogicalUnit" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_punblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+	</lrm_resources></lrm></node_state>
+</status></cib>`
 
 	docRoot := xmltree.NewDocument()
 	err := docRoot.ReadFromString(xml)
@@ -247,10 +255,9 @@ func TestDissolveConstraints(t *testing.T) {
 	}
 
 	cases := []struct {
-		desc        string
-		resources   []string
-		expect      string
-		expectError bool
+		desc      string
+		resources []string
+		expect    string
 	}{{
 		desc:      "remove target",
 		resources: []string{"p_iscsi_example"},
@@ -265,7 +272,14 @@ func TestDissolveConstraints(t *testing.T) {
 </rsc_location>
 <rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
 <rsc_order id="o_punblock_example" score="INFINITY" first="p_iscsi_example_lu1" then="p_punblock_example"/>
-</constraints></configuration></cib>`,
+</constraints></configuration><status>
+	<node_state><lrm id="171"><lrm_resources>
+		<lrm_resource id="p_iscsi_example_ip" type="IPaddr2" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_pblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_iscsi_example_lu1" type="iSCSILogicalUnit" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_punblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+	</lrm_resources></lrm></node_state>
+</status></cib>`,
 	}, {
 		desc:      "remove target, lu",
 		resources: []string{"p_iscsi_example", "p_iscsi_example_lu1"},
@@ -273,11 +287,26 @@ func TestDissolveConstraints(t *testing.T) {
 <rsc_colocation id="co_pblock_example" score="INFINITY" rsc="p_pblock_example" with-rsc="p_iscsi_example_ip"/>
 <rsc_colocation id="co_punblock_example" score="INFINITY" rsc="p_punblock_example" with-rsc="p_iscsi_example_ip"/>
 <rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
-</constraints></configuration></cib>`,
+</constraints></configuration><status>
+	<node_state><lrm id="171"><lrm_resources>
+		<lrm_resource id="p_iscsi_example_ip" type="IPaddr2" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_pblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_punblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+	</lrm_resources></lrm></node_state>
+</status></cib>`,
 	}, {
 		desc:      "remove target, lu, ip",
 		resources: []string{"p_iscsi_example", "p_iscsi_example_lu1", "p_iscsi_example_ip"},
-		expect:    `<cib><configuration><constraints></constraints></configuration></cib>`,
+		expect: `<cib><configuration><constraints></constraints></configuration><status>
+	<node_state><lrm id="171"><lrm_resources>
+		<lrm_resource id="p_pblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+		<lrm_resource id="p_punblock_example" type="portblock" class="ocf" provider="heartbeat"/>
+	</lrm_resources></lrm></node_state>
+</status></cib>`,
+	}, {
+		desc:      "remove target, lu, ip, pblock",
+		resources: []string{"p_iscsi_example", "p_iscsi_example_lu1", "p_iscsi_example_ip", "p_pblock_example", "p_punblock_example"},
+		expect:    `<cib><configuration><constraints></constraints></configuration><status><node_state><lrm id="171"><lrm_resources></lrm_resources></lrm></node_state></status></cib>`,
 	}}
 
 	n := xmltest.Normalizer{OmitWhitespace: true}
@@ -292,18 +321,7 @@ func TestDissolveConstraints(t *testing.T) {
 
 		doc := docRoot.Copy()
 
-		err = dissolveConstraints(doc.Root(), c.resources)
-		if err != nil {
-			if !c.expectError {
-				t.Error("Unexpected error: ", err)
-			}
-			continue
-		}
-
-		if c.expectError {
-			t.Error("Expected error")
-			continue
-		}
+		dissolveConstraints(doc, c.resources)
 
 		actual, err := doc.WriteToString()
 		if err != nil {

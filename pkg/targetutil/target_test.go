@@ -1,4 +1,4 @@
-package iscsi
+package targetutil
 
 import "testing"
 

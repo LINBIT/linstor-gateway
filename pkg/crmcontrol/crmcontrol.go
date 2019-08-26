@@ -188,21 +188,9 @@ func CreateCrmLu(target targetutil.Target, storageNodes []string,
 	}
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	stdout, stderr, err := execute(&forStdin, crmCreateCommand.executable, crmCreateCommand.arguments...)
+	_, _, err = execute(&forStdin, crmCreateCommand.executable, crmCreateCommand.arguments...)
 	if err != nil {
 		return err
-	}
-
-	if len(stdout) >= 1 {
-		log.Debug("Begin of CRM command stdout output:", stdout)
-	} else {
-		log.Debug("No stdout output")
-	}
-
-	if len(stderr) >= 1 {
-		log.Debug("CRM command stderr output:", stderr)
-	} else {
-		log.Debug("No stdout output")
 	}
 	return err
 }
@@ -760,12 +748,9 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 
 // ReadConfiguration calls the crm list command and parses the XML data it returns.
 func ReadConfiguration() (*xmltree.Document, error) {
-	stdout, stderr, err := execute(nil, crmListCommand.executable, crmListCommand.arguments...)
+	stdout, _, err := execute(nil, crmListCommand.executable, crmListCommand.arguments...)
 	if err != nil {
 		return nil, err
-	}
-	if len(stderr) > 0 {
-		log.Debug("External command error output:", stderr)
 	}
 
 	docRoot := xmltree.NewDocument()
@@ -821,23 +806,11 @@ func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
 	}
 
 	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	stdout, stderr, err := execute(&cibData, crmCmd.executable, crmCmd.arguments...)
+	_, _, err = execute(&cibData, crmCmd.executable, crmCmd.arguments...)
 	if err != nil {
 		log.Warn("CRM command execution returned an error")
 		log.Trace("The updated CIB data sent to the command was:")
 		log.Trace(cibData)
-	}
-
-	if len(stdout) >= 1 {
-		log.Debug("Begin of CRM command stdout output:", stdout)
-	} else {
-		log.Debug("No stdout output\n")
-	}
-
-	if len(stderr) >= 1 {
-		log.Debug("CRM command stderr output:", stderr)
-	} else {
-		log.Debug("No stderr output")
 	}
 
 	return err

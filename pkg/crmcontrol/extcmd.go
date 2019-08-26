@@ -4,6 +4,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // execute executes a command that optionally takes a string that is sent to the command's stdin
@@ -40,6 +42,18 @@ func execute(forStdin *string, name string, arg ...string) (string, string, erro
 
 	stdoutSlurp, _ := ioutil.ReadAll(stdout)
 	stderrSlurp, _ := ioutil.ReadAll(stderr)
+
+	if len(stdoutSlurp) >= 1 {
+		log.Debug("CRM command stdout output:", string(stdoutSlurp))
+	} else {
+		log.Debug("No stdout output")
+	}
+
+	if len(stderrSlurp) >= 1 {
+		log.Debug("CRM command stderr output:", string(stderrSlurp))
+	} else {
+		log.Debug("No stderr output")
+	}
 
 	return string(stdoutSlurp), string(stderrSlurp), cmd.Wait()
 }

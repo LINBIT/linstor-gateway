@@ -560,7 +560,7 @@ func findTargets(rscSection *xmltree.Element) []*crmTarget {
 		// find password
 		password, err := getNvPairValue(target, "incoming_password")
 		if err != nil {
-			contextLog.Debug("Skipping invalid iSCSITarget without username: ", err)
+			contextLog.Debug("Skipping invalid iSCSITarget without password: ", err)
 			continue
 		}
 

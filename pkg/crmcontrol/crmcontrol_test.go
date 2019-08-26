@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net"
+	"sort"
 	"strings"
 	"testing"
 
@@ -490,4 +491,63 @@ func TestGenerateCreateLuXML(t *testing.T) {
 		t.Errorf("Expected: %s", normExpect)
 		t.Errorf("Actual: %s", normActual)
 	}
+}
+
+func TestGetIDsToDelete(t *testing.T) {
+	xml := `<cib><configuration><resources>
+	<primitive id="p_iscsi_example" type="iSCSITarget"/>
+	<primitive id="p_iscsi_example_lu1" type="iSCSILogicalUnit"/>
+	<primitive id="p_iscsi_example_lu2" type="iSCSILogicalUnit"/>
+	<primitive id="p_iscsi_example_ip" type="IPaddr2"/>
+	<primitive id="p_pblock_example" type="portblock"/>
+	<primitive id="p_punblock_example" type="portblock"/>
+
+	<primitive id="p_iscsi_example2" type="iSCSITarget"/>
+	<primitive id="p_iscsi_example2_lu1" type="iSCSILogicalUnit"/>
+	<primitive id="p_iscsi_example2_ip" type="IPaddr2"/>
+	<primitive id="p_pblock_example2" type="portblock"/>
+	<primitive id="p_punblock_example2" type="portblock"/>
+</resources></configuration></cib>`
+
+	doc := xmltree.NewDocument()
+	err := doc.ReadFromString(xml)
+	if err != nil {
+		t.Fatalf("Invalid XML in test data: %v", err)
+	}
+
+	cases := []struct {
+		name   string
+		lun    uint8
+		expect []string
+	}{{
+		name: "example",
+		lun:  1,
+		// we only expect the LU because a second LU is present
+		expect: []string{"p_iscsi_example_lu1"},
+	}, {
+		name: "example2",
+		lun:  1,
+		// we expect everything to be deleted because LU1 is the last LU
+		expect: []string{"p_iscsi_example2", "p_iscsi_example2_lu1",
+			"p_iscsi_example2_ip", "p_pblock_example2",
+			"p_punblock_example2"},
+	}}
+
+	for _, c := range cases {
+		ids, err := getIDsToDelete(c.name, c.lun, doc)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		sort.Strings(ids)
+		sort.Strings(c.expect)
+
+		if !cmp.Equal(ids, c.expect) {
+			t.Errorf("IDs do not match for input %s", c.name)
+			t.Errorf("Expected: %v", c.expect)
+			t.Errorf("Actual:   %v", ids)
+		}
+	}
+
 }

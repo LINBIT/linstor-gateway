@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	xmltree "github.com/beevik/etree"
 )
 
-func findLinstorControllerName() (string, error) {
-	doc, err := ReadConfiguration()
-	if err != nil {
-		return "", err
-	}
-
+func findLinstorControllerName(doc *xmltree.Document) (string, error) {
 	xpath := fmt.Sprintf("%s/%s/%s", cibNodeStatusXpath, cibTagLrm, cibTagLrmRsclist)
 	for _, lrm_resources := range doc.FindElements(xpath) {
 		for _, lrm_resource := range lrm_resources.SelectElements(cibTagLrmRsc) {
@@ -34,7 +31,12 @@ func findLinstorControllerName() (string, error) {
 
 // FindLinstorController searches the CIB configuration for a LINSTOR controller IP.
 func FindLinstorController() (net.IP, error) {
-	hostname, err := findLinstorControllerName()
+	doc, err := ReadConfiguration()
+	if err != nil {
+		return nil, err
+	}
+
+	hostname, err := findLinstorControllerName(doc)
 	if err != nil {
 		return nil, err
 	}

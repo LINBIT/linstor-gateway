@@ -14,35 +14,64 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	statusOk       = aurora.Green("✓").String()
-	statusBad      = aurora.Red("✗").String()
-	statusUnknown  = aurora.Yellow("?").String()
-	statusDegraded = aurora.Yellow("!").String()
+const (
+	statusOk       = "✓"
+	statusBad      = "✗"
+	statusUnknown  = "?"
+	statusDegraded = "!"
 )
 
-func stateToStatus(state crmcontrol.LrmRunState) string {
+func stateToColor(state crmcontrol.LrmRunState) func(interface{}) aurora.Value {
 	switch state {
 	case crmcontrol.Running:
-		return statusOk
+		return aurora.Green
 	case crmcontrol.Stopped:
-		return statusBad
+		return aurora.Red
 	default:
-		return statusUnknown
+		return aurora.Yellow
 	}
 }
 
-func linstorStateToStatus(state linstorcontrol.ResourceState) string {
+func linstorStateToColor(state linstorcontrol.ResourceState) func(interface{}) aurora.Value {
 	switch state {
 	case linstorcontrol.Ok:
-		return statusOk
+		return aurora.Green
 	case linstorcontrol.Degraded:
-		return statusDegraded
+		return aurora.Yellow
 	case linstorcontrol.Bad:
-		return statusBad
+		return aurora.Red
 	default:
-		return statusUnknown
+		return aurora.Yellow
 	}
+}
+
+func stateToStatus(state crmcontrol.LrmRunState) string {
+	var str string
+	switch state {
+	case crmcontrol.Running:
+		str = statusOk
+	case crmcontrol.Stopped:
+		str = statusBad
+	default:
+		str = statusUnknown
+	}
+
+	return stateToColor(state)(str).String()
+}
+
+func linstorStateToStatus(state linstorcontrol.ResourceState) string {
+	var str string
+	switch state {
+	case linstorcontrol.Ok:
+		str = statusOk
+	case linstorcontrol.Degraded:
+		str = statusDegraded
+	case linstorcontrol.Bad:
+		str = statusBad
+	default:
+		str = statusUnknown
+	}
+	return linstorStateToColor(state)(str).String()
 }
 
 // listCmd represents the list command

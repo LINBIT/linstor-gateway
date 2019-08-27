@@ -14,7 +14,7 @@ import (
 
 const (
 	longStatusOk       = "Ok"
-	longStatusBad      = "Bad"
+	longStatusBad      = "Stopped"
 	longStatusUnknown  = "Unknown"
 	longStatusDegraded = "Degraded"
 )

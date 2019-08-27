@@ -15,7 +15,7 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 	restMutex.Lock()
 	defer restMutex.Unlock()
 
-	tgt, ok := mux.Vars(r)["target"]
+	iqn, ok := mux.Vars(r)["iqn"]
 	if !ok {
 		_, _ = Errorf(http.StatusBadRequest, w, "Could not find 'target' in your request")
 		return
@@ -34,7 +34,7 @@ func ISCSIDelete(w http.ResponseWriter, r *http.Request) {
 
 	lun := targetutil.LUN{ID: uint8(lid)}
 	targetConfig := targetutil.TargetConfig{
-		IQN:  "iqn.1981-09.at.rck:" + tgt,
+		IQN:  iqn,
 		LUNs: []*targetutil.LUN{&lun},
 	}
 	target, err := targetutil.NewTarget(targetConfig)

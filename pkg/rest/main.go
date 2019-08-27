@@ -64,7 +64,7 @@ func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error 
 func ListenAndServe(addr string) {
 	router := mux.NewRouter() //.StrictSlash(true)
 	router.HandleFunc("/api/v1/iscsi", ISCSICreate).Methods("POST")
-	router.HandleFunc("/api/v1/iscsi/{target}/{lun}", ISCSIDelete).Methods("DELETE")
+	router.HandleFunc("/api/v1/iscsi/{iqn}/{lun}", ISCSIDelete).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(addr, router))
 }
 

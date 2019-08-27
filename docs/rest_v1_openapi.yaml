@@ -66,14 +66,14 @@ paths:
                 resource_group_name: mygroup
         description: iSCSI definition to add
 
-  /api/v1/iscsi/{target}/{lunid}:
+  /api/v1/iscsi/{iqn}/{lunid}:
     parameters:
-      - name: target
+      - name: iqn
         in: path
         required: true
         schema:
           type: string
-          description: Target name to delete
+          description: IQN of the target to delete
       - name: lunid
         in: path
         required: true

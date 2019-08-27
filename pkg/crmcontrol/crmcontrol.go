@@ -197,8 +197,14 @@ func didYouMean(iqn, suggest string) {
 
 func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	device string, tid int16) (string, error) {
+	targetName, err := targetutil.ExtractTargetName(target.IQN)
+	if err != nil {
+		return "", err
+	}
+
 	tmplVars := map[string]interface{}{
 		"Target":       target,
+		"TargetName":   targetName,
 		"StorageNodes": storageNodes,
 		"Device":       device,
 		"TID":          tid,
@@ -208,7 +214,7 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	iscsitmpl := template.Must(template.New("crmisci").Parse(crmtemplate.CRM_ISCSI))
 
 	var cibData bytes.Buffer
-	err := iscsitmpl.Execute(&cibData, tmplVars)
+	err = iscsitmpl.Execute(&cibData, tmplVars)
 	return cibData.String(), err
 }
 

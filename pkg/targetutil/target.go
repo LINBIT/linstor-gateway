@@ -29,7 +29,6 @@ var (
 
 // TargetConfig contains the information necessary for iSCSI targets.
 type TargetConfig struct {
-	Name      string `json:"name,omitempty"`
 	IQN       string `json:"iqn,omitempty"`
 	LUNs      []*LUN `json:"luns,omitempty"`
 	ServiceIP net.IP `json:"service_ip,omitempty"`

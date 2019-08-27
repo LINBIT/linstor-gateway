@@ -129,7 +129,6 @@ func ListResources() ([]*targetutil.Target, error) {
 	// first, "convert" all targets
 	for _, t := range config.Targets {
 		targetCfg := targetutil.TargetConfig{
-			Name:     t.ID,
 			IQN:      t.IQN,
 			LUNs:     make([]*targetutil.LUN, 0),
 			Username: t.Username,

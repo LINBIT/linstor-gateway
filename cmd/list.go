@@ -91,7 +91,7 @@ linstor-iscsi list`,
 				controller = foundIP
 			}
 		}
-		_, targets, err := iscsi.ListResources()
+		targets, err := iscsi.ListResources()
 		if err != nil {
 			log.Fatal(err)
 		}

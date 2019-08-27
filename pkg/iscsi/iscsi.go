@@ -9,8 +9,6 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
-
-	xmltree "github.com/beevik/etree"
 )
 
 // Default port for an iSCSI portal
@@ -114,16 +112,16 @@ func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 
 // ListResources lists existing iSCSI targets.
 //
-// Returns: CIB XML document tree, slice of Targets, error object
-func ListResources() (*xmltree.Document, []*targetutil.Target, error) {
+// It returns a slice of Targets and an error object
+func ListResources() ([]*targetutil.Target, error) {
 	docRoot, err := crmcontrol.ReadConfiguration()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	config, err := crmcontrol.ParseConfiguration(docRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	targets := make([]*targetutil.Target, 0)
@@ -141,7 +139,7 @@ func ListResources() (*xmltree.Document, []*targetutil.Target, error) {
 
 		target, err := targetutil.NewTarget(targetCfg)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		targets = append(targets, &target)
@@ -162,7 +160,7 @@ func ListResources() (*xmltree.Document, []*targetutil.Target, error) {
 		}
 	}
 
-	return docRoot, targets, nil
+	return targets, nil
 }
 
 // modifyResourceTargetRole modifies the role of an existing iSCSI resource.

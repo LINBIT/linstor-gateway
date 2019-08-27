@@ -121,7 +121,7 @@ linstor-iscsi list`,
 			}
 
 			for _, lu := range target.LUNs {
-				targetName, err := iscsi.ExtractTargetName(target.IQN)
+				targetName, err := targetutil.ExtractTargetName(target.IQN)
 				if err != nil {
 					log.Fatal(err)
 				}

@@ -162,6 +162,39 @@ const (
 	Stopped
 )
 
+func checkTargetExists(doc *xmltree.Document, iqn string) (bool, string, error) {
+	targetName, err := targetutil.ExtractTargetName(iqn)
+	if err != nil {
+		return false, "", err
+	}
+
+	id := crmTargetID(targetName)
+	elem := doc.FindElement("//primitive[@id='" + id + "']")
+	if elem == nil {
+		log.Debug("Not found")
+		return false, "", nil
+	}
+
+	attr, err := getNvPairValue(elem, "iqn")
+	if err != nil {
+		return false, "", errors.New("could not find iqn: " + err.Error())
+	}
+
+	if iqn == attr.Value {
+		log.Debug("Found")
+		return true, "", nil
+	}
+
+	return false, attr.Value, nil
+}
+
+func didYouMean(iqn, suggest string) {
+	log.Errorf("Unknown target %s.", aurora.Cyan(iqn))
+	if suggest != "" {
+		log.Errorf("Did you mean   %s?", aurora.Cyan(suggest))
+	}
+}
+
 func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	device string, tid int16) (string, error) {
 	tmplVars := map[string]interface{}{
@@ -242,14 +275,28 @@ func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xml
 	return doc, nil
 }
 
-func StartCrmResource(target string, luns []uint8) error {
+func StartCrmResource(iqn string, luns []uint8) error {
 	// Read the current CIB XML
 	doc, err := ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("starting target %s LUNs %v", target, luns)
+	exists, suggest, err := checkTargetExists(doc, iqn)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		didYouMean(iqn, suggest)
+		return errors.New("Unable to start resource")
+	}
+
+	log.Debugf("starting target %s LUNs %v", iqn, luns)
+
+	target, err := targetutil.ExtractTargetName(iqn)
+	if err != nil {
+		return err
+	}
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
@@ -262,9 +309,23 @@ func StartCrmResource(target string, luns []uint8) error {
 	return executeCibUpdate(doc, crmUpdateCommand)
 }
 
-func StopCrmResource(target string, luns []uint8) error {
+func StopCrmResource(iqn string, luns []uint8) error {
 	// Read the current CIB XML
 	doc, err := ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	exists, suggest, err := checkTargetExists(doc, iqn)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		didYouMean(iqn, suggest)
+		return errors.New("Unable to stop resource")
+	}
+
+	target, err := targetutil.ExtractTargetName(iqn)
 	if err != nil {
 		return err
 	}
@@ -321,15 +382,25 @@ func getIDsToDelete(target string, lun uint8, doc *xmltree.Document) ([]string, 
 }
 
 // DeleteCrmLu deletes the CRM resources for a target
-func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
+func DeleteCrmLu(iqn string, lun uint8) error {
 	// Read the current CIB XML
 	docRoot, err := ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	if !resourceInCIB(docRoot, crmTargetID(iscsiTargetName)) {
-		return fmt.Errorf("Unknown target %s", aurora.Cyan(iscsiTargetName))
+	exists, suggest, err := checkTargetExists(docRoot, iqn)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		didYouMean(iqn, suggest)
+		return errors.New("Unable to delete resource")
+	}
+
+	iscsiTargetName, err := targetutil.ExtractTargetName(iqn)
+	if err != nil {
+		return err
 	}
 
 	if !resourceInCIB(docRoot, crmLuID(iscsiTargetName, lun)) {
@@ -426,7 +497,7 @@ func crmIPID(target string) string {
 }
 
 // ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
-func ProbeResource(target string, luns []uint8) (ResourceRunState, error) {
+func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 	state := ResourceRunState{
 		TargetState: Unknown,
 		LUStates:    make(map[uint8]LrmRunState),
@@ -435,6 +506,20 @@ func ProbeResource(target string, luns []uint8) (ResourceRunState, error) {
 
 	// Read the current CIB XML
 	doc, err := ReadConfiguration()
+	if err != nil {
+		return state, err
+	}
+
+	exists, suggest, err := checkTargetExists(doc, iqn)
+	if err != nil {
+		return state, err
+	}
+	if !exists {
+		didYouMean(iqn, suggest)
+		return state, errors.New("Unable to probe resource")
+	}
+
+	target, err := targetutil.ExtractTargetName(iqn)
 	if err != nil {
 		return state, err
 	}

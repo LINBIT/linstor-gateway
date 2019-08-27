@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -26,7 +25,7 @@ type ISCSI struct {
 
 // CreateResource creates a new highly available iSCSI target
 func (i *ISCSI) CreateResource() error {
-	targetName, err := ExtractTargetName(i.Target.IQN)
+	targetName, err := targetutil.ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return err
 	}
@@ -70,14 +69,14 @@ func (i *ISCSI) CreateResource() error {
 
 // DeleteResource deletes a highly available iSCSI target
 func (i *ISCSI) DeleteResource() error {
-	targetName, err := ExtractTargetName(i.Target.IQN)
+	targetName, err := targetutil.ExtractTargetName(i.Target.IQN)
 	if err != nil {
 		return err
 	}
 
 	for _, lu := range i.Target.LUNs {
 		// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-		err = crmcontrol.DeleteCrmLu(targetName, lu.ID)
+		err = crmcontrol.DeleteCrmLu(i.Target.IQN, lu.ID)
 		if err != nil {
 			return err
 		}
@@ -105,17 +104,12 @@ func (i *ISCSI) StopResource() error {
 // ProbeResource gets information about an existing iSCSI resource.
 // It returns a resource state map and an error.
 func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
-	targetName, err := ExtractTargetName(i.Target.IQN)
-	if err != nil {
-		return crmcontrol.ResourceRunState{}, err
-	}
-
 	luns := make([]uint8, len(i.Target.LUNs))
 	for i, lu := range i.Target.LUNs {
 		luns[i] = lu.ID
 	}
 
-	return crmcontrol.ProbeResource(targetName, luns)
+	return crmcontrol.ProbeResource(i.Target.IQN, luns)
 }
 
 // ListResources lists existing iSCSI targets.
@@ -173,30 +167,13 @@ func ListResources() (*xmltree.Document, []*targetutil.Target, error) {
 
 // modifyResourceTargetRole modifies the role of an existing iSCSI resource.
 func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
-	targetName, err := ExtractTargetName(i.Target.IQN)
-	if err != nil {
-		return errors.New("Invalid IQN format: Missing ':' separator and target name")
-	}
-
 	luns := make([]uint8, len(i.Target.LUNs))
 	for i, lu := range i.Target.LUNs {
 		luns[i] = lu.ID
 	}
 	if startFlag {
-		crmcontrol.StartCrmResource(targetName, luns)
+		return crmcontrol.StartCrmResource(i.Target.IQN, luns)
 	} else {
-		crmcontrol.StopCrmResource(targetName, luns)
+		return crmcontrol.StopCrmResource(i.Target.IQN, luns)
 	}
-
-	return nil
-}
-
-// ExtractTargetName extracts the target name from an IQN string.
-// e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part.
-func ExtractTargetName(iqn string) (string, error) {
-	spl := strings.Split(iqn, ":")
-	if len(spl) != 2 {
-		return "", errors.New("Malformed argument '" + iqn + "'")
-	}
-	return spl[1], nil
 }

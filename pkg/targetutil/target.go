@@ -74,3 +74,13 @@ func CheckIQN(iqn string) error {
 
 	return nil
 }
+
+// ExtractTargetName extracts the target name from an IQN string.
+// e.g., in "iqn.2019-07.org.demo.filserver:filestorage", the "filestorage" part.
+func ExtractTargetName(iqn string) (string, error) {
+	spl := strings.Split(iqn, ":")
+	if len(spl) != 2 {
+		return "", errors.New("Malformed argument '" + iqn + "'")
+	}
+	return spl[1], nil
+}

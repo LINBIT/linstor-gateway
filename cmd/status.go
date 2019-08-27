@@ -72,6 +72,7 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			IQN:  iqn,
 			LUNs: []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun)}},
 		}
+		target := targetutil.NewTargetMust(targetCfg)
 		targetName, err := targetutil.ExtractTargetName(targetCfg.IQN)
 		if err != nil {
 			log.Fatal(err)
@@ -81,7 +82,6 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			ControllerIP: controller,
 			ResourceName: linstorcontrol.ResourceNameFromLUN(targetName, uint8(lun)),
 		}
-		target := targetutil.NewTargetMust(targetCfg)
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 
 		state, err := iscsiCfg.ProbeResource()

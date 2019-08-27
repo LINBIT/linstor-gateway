@@ -2,10 +2,11 @@ package targetutil
 
 import (
 	"errors"
-	"log"
 	"net"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (

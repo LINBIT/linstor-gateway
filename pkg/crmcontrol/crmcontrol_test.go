@@ -2,7 +2,6 @@ package crmcontrol
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net"
 	"sort"
 	"strings"
@@ -485,8 +484,6 @@ func TestGenerateCreateLuXML(t *testing.T) {
 	normActual := buf.String()
 
 	if normActual != normExpect {
-		ioutil.WriteFile("expect.xml", []byte(normExpect), 0644)
-		ioutil.WriteFile("actual.xml", []byte(normActual), 0644)
 		t.Error("XML does not match")
 		t.Errorf("Expected: %s", normExpect)
 		t.Errorf("Actual: %s", normActual)

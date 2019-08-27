@@ -29,6 +29,7 @@ import (
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/logrusorgru/aurora"
 	log "github.com/sirupsen/logrus"
 
 	xmltree "github.com/beevik/etree"
@@ -108,6 +109,10 @@ const waitStopPollCibDelay = 2500
 
 // Delay between CIB polls in milliseconds
 const cibPollRetryDelay = 2000
+
+var (
+	ErrCibFailed = errors.New("Failed to read the CRM configuration. Maybe the cluster is not started on this node?")
+)
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
@@ -305,7 +310,7 @@ func getIDsToDelete(target string, lun uint8, doc *xmltree.Document) ([]string, 
 	}
 
 	if numLuns == 0 {
-		return nil, errors.New("Logic error: there should be at least one Logical Unit for this target")
+		return []string{}, nil
 	} else if numLuns == 1 {
 		// this was the only LU -> delete everything related to this target
 		return generateCrmObjectNames(target, []uint8{lun}), nil
@@ -323,9 +328,32 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		return err
 	}
 
+	if !resourceInCIB(docRoot, crmTargetID(iscsiTargetName)) {
+		return fmt.Errorf("Unknown target %s", aurora.Cyan(iscsiTargetName))
+	}
+
+	if !resourceInCIB(docRoot, crmLuID(iscsiTargetName, lun)) {
+		return fmt.Errorf("Target %s does not have LUN %d", aurora.Cyan(iscsiTargetName), aurora.Cyan(lun))
+	}
+
 	ids, err := getIDsToDelete(iscsiTargetName, lun, docRoot)
 	if err != nil {
 		return err
+	}
+
+	allPresent := true
+	for _, id := range ids {
+		if !resourceInCIB(docRoot, id) {
+			log.WithFields(log.Fields{
+				"id": id,
+			}).Debug("ID not found, not all resources are present")
+			allPresent = false
+			ids = remove(ids, id)
+		}
+	}
+
+	if !allPresent {
+		log.Warning("Partial resource state detected. Deleting remaining CRM resources.")
 	}
 
 	log.Debug("Deleting these IDs:")
@@ -339,7 +367,7 @@ func DeleteCrmLu(iscsiTargetName string, lun uint8) error {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"resource": id,
-			}).Warning("Could not set target-role. Resource will probably fail to stop.")
+			}).Warning("Could not set target-role. Resource will probably fail to stop: ", err)
 		}
 	}
 	err = executeCibUpdate(docRoot, crmUpdateCommand)
@@ -744,7 +772,10 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 func ReadConfiguration() (*xmltree.Document, error) {
 	stdout, _, err := execute(nil, crmListCommand.executable, crmListCommand.arguments...)
 	if err != nil {
-		return nil, err
+		// TODO maybe we can benefit from error wrapping here, but for
+		// now this is good enough
+		log.Error(err)
+		return nil, ErrCibFailed
 	}
 
 	docRoot := xmltree.NewDocument()

@@ -44,15 +44,15 @@ func execute(forStdin *string, name string, arg ...string) (string, string, erro
 	stderrSlurp, _ := ioutil.ReadAll(stderr)
 
 	if len(stdoutSlurp) >= 1 {
-		log.Debug("CRM command stdout output:", string(stdoutSlurp))
+		log.Trace("CRM command stdout output:", string(stdoutSlurp))
 	} else {
-		log.Debug("No stdout output")
+		log.Trace("No stdout output")
 	}
 
 	if len(stderrSlurp) >= 1 {
-		log.Debug("CRM command stderr output:", string(stderrSlurp))
+		log.Trace("CRM command stderr output:", string(stderrSlurp))
 	} else {
-		log.Debug("No stderr output")
+		log.Trace("No stderr output")
 	}
 
 	return string(stdoutSlurp), string(stderrSlurp), cmd.Wait()

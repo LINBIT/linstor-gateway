@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -40,8 +41,19 @@ func execute(forStdin *string, name string, arg ...string) (string, string, erro
 		return "", "", err
 	}
 
-	stdoutSlurp, _ := ioutil.ReadAll(stdout)
-	stderrSlurp, _ := ioutil.ReadAll(stderr)
+	var stdoutSlurp []byte
+	var stderrSlurp []byte
+	ioWaitGroup := &sync.WaitGroup{}
+	ioWaitGroup.Add(2)
+	go func() {
+		stdoutSlurp, _ = ioutil.ReadAll(stdout)
+		ioWaitGroup.Done()
+	}()
+	go func() {
+		stderrSlurp, _ = ioutil.ReadAll(stderr)
+		ioWaitGroup.Done()
+	}()
+	ioWaitGroup.Wait()
 
 	if len(stdoutSlurp) >= 1 {
 		log.Trace("CRM command stdout output:", string(stdoutSlurp))

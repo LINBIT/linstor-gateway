@@ -28,6 +28,10 @@ var (
 	regexWWN = regexp.MustCompile(`^` + regexIQN + `:` + regexResourceName + `$`)
 )
 
+// Minimum valid LUN for a volume
+// LUN 0 is reserved for the (i)SCSI controller
+const MinVolumeLun = 1
+
 // TargetConfig contains the information necessary for iSCSI targets.
 type TargetConfig struct {
 	IQN       string `json:"iqn,omitempty"`

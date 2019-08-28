@@ -29,6 +29,13 @@ func (i *ISCSI) CreateResource() error {
 		return err
 	}
 
+	// Check for invalid LUNs
+	for _, lu := range i.Target.LUNs {
+		if lu.ID < targetutil.MinVolumeLun {
+			return fmt.Errorf("Configuration contains a volume with invalid LUN = %d", lu.ID)
+		}
+	}
+
 	for _, lu := range i.Target.LUNs {
 		// Read the current configuration from the CRM
 		docRoot, err := crmcontrol.ReadConfiguration()

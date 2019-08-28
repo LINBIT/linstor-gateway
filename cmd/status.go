@@ -12,39 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	longStatusOk       = "Ok"
-	longStatusBad      = "Stopped"
-	longStatusUnknown  = "Unknown"
-	longStatusDegraded = "Degraded"
-)
-
 func stateToLongStatus(state crmcontrol.LrmRunState) string {
-	var str string
-	switch state {
-	case crmcontrol.Running:
-		str = longStatusOk
-	case crmcontrol.Stopped:
-		str = longStatusBad
-	default:
-		str = longStatusUnknown
-	}
-
+	str := state.String()
 	return stateToColor(state)(str).String()
 }
 
 func linstorStateToLongStatus(state linstorcontrol.ResourceState) string {
-	var str string
-	switch state {
-	case linstorcontrol.OK:
-		str = longStatusOk
-	case linstorcontrol.Degraded:
-		str = longStatusDegraded
-	case linstorcontrol.Bad:
-		str = longStatusBad
-	default:
-		str = longStatusUnknown
-	}
+	str := state.String()
 	return linstorStateToColor(state)(str).String()
 }
 

@@ -2,6 +2,7 @@ package targetutil
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -69,7 +70,7 @@ func CheckIQN(iqn string) error {
 	}
 
 	if !regexWWN.MatchString(iqn) {
-		return errors.New("Given IQN does not match the regular expression: " + regexWWN.String())
+		return fmt.Errorf("Given IQN ('%s') does not match the regular expression '%s'", iqn, regexWWN.String())
 	}
 
 	return nil

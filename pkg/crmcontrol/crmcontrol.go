@@ -146,9 +146,9 @@ type crmIP struct {
 }
 
 type ResourceRunState struct {
-	TargetState LrmRunState           `json:"target,omitempty"`
-	LUStates    map[uint8]LrmRunState `json:"luns,omitempty"`
-	IPState     LrmRunState           `json:"ip,omitempty"`
+	TargetState LrmRunState           `json:"target"`
+	LUStates    map[uint8]LrmRunState `json:"luns"`
+	IPState     LrmRunState           `json:"ip"`
 }
 
 // LrmRunState represents the state of a CRM resource.

@@ -13,8 +13,8 @@ import (
 )
 
 type state struct {
-	Target  crmcontrol.ResourceRunState  `json:"pacemaker,omitempty"`
-	Linstor linstorcontrol.ResourceState `json:"linstor,omitempty"`
+	Target  crmcontrol.ResourceRunState     `json:"pacemaker,omitempty"`
+	Linstor linstorcontrol.ResourceRunState `json:"linstor,omitempty"`
 }
 
 func ISCSIStatus(w http.ResponseWriter, r *http.Request) {
@@ -67,14 +67,16 @@ func ISCSIStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lstate, err := iscsiCfg.Linstor.AggregateResourceState()
+	targetName, _ := targetutil.ExtractTargetName(target.IQN)
+	iscsiCfg.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, uint8(lid))
+	lrstate, err := iscsiCfg.Linstor.AggregateResourceState()
 	if err != nil {
-		lstate = linstorcontrol.Unknown
+		lrstate = linstorcontrol.Unknown
 	}
 
 	s := state{
 		Target:  tstate,
-		Linstor: lstate,
+		Linstor: linstorcontrol.ResourceRunState{ResourceState: lrstate},
 	}
 
 	json.NewEncoder(w).Encode(s)

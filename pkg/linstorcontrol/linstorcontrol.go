@@ -31,6 +31,10 @@ type CreateResult struct {
 	StorageNodeList []string
 }
 
+type ResourceRunState struct {
+	ResourceState ResourceState `json:"resource"`
+}
+
 type ResourceState int
 
 const (

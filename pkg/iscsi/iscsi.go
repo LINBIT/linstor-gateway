@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -73,17 +74,20 @@ func (i *ISCSI) DeleteResource() error {
 	}
 
 	for _, lu := range i.Target.LUNs {
+		var errs []string
 		// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-		err = crmcontrol.DeleteCrmLu(i.Target.IQN, lu.ID)
-		if err != nil {
-			return err
+		if err = crmcontrol.DeleteCrmLu(i.Target.IQN, lu.ID); err != nil {
+			errs = append(errs, err.Error())
 		}
 
 		// Delete the LINSTOR resource definition
 		i.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
-		err = i.Linstor.DeleteVolume()
-		if err != nil {
-			return err
+		if err = i.Linstor.DeleteVolume(); err != nil {
+			errs = append(errs, err.Error())
+		}
+
+		if len(errs) > 0 {
+			return fmt.Errorf(strings.Join(errs, "\n"))
 		}
 	}
 	return nil

@@ -4,6 +4,7 @@ package linstorcontrol
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"net/url"
@@ -34,10 +35,24 @@ type ResourceState int
 
 const (
 	Unknown ResourceState = iota
-	Ok
+	OK
 	Degraded
 	Bad
 )
+
+func (l ResourceState) String() string {
+	switch l {
+	case OK:
+		return "OK"
+	case Degraded:
+		return "Degraded"
+	case Bad:
+		return "Bad"
+	}
+	return "Unknown"
+}
+
+func (l ResourceState) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
 
 // CreateVolume creates a  LINSTOR resource based on a given resource group name.
 func (l *Linstor) CreateVolume() (CreateResult, error) {
@@ -152,7 +167,7 @@ func (l *Linstor) AggregateResourceState() (ResourceState, error) {
 	}
 
 	if uptodate == len(resources) {
-		return Ok, nil
+		return OK, nil
 	} else if uptodate > 0 {
 		return Degraded, nil
 	} else {

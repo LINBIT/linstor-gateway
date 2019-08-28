@@ -18,6 +18,7 @@ package crmcontrol
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -145,9 +146,9 @@ type crmIP struct {
 }
 
 type ResourceRunState struct {
-	TargetState LrmRunState
-	LUStates    map[uint8]LrmRunState
-	IPState     LrmRunState
+	TargetState LrmRunState           `json:"target,omitempty"`
+	LUStates    map[uint8]LrmRunState `json:"luns,omitempty"`
+	IPState     LrmRunState           `json:"ip,omitempty"`
 }
 
 // LrmRunState represents the state of a CRM resource.
@@ -161,6 +162,18 @@ const (
 	// Stopped means that the resource is verfied as stopped
 	Stopped
 )
+
+func (l LrmRunState) String() string {
+	switch l {
+	case Running:
+		return "Running"
+	case Stopped:
+		return "Stopped"
+	}
+	return "Unknown"
+}
+
+func (l LrmRunState) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
 
 func checkTargetExists(doc *xmltree.Document, iqn string) (bool, string, error) {
 	targetName, err := targetutil.ExtractTargetName(iqn)

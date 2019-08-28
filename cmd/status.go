@@ -36,7 +36,7 @@ func stateToLongStatus(state crmcontrol.LrmRunState) string {
 func linstorStateToLongStatus(state linstorcontrol.ResourceState) string {
 	var str string
 	switch state {
-	case linstorcontrol.Ok:
+	case linstorcontrol.OK:
 		str = longStatusOk
 	case linstorcontrol.Degraded:
 		str = longStatusDegraded

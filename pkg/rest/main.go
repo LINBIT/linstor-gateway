@@ -65,6 +65,7 @@ func ListenAndServe(addr string) {
 	router := mux.NewRouter() //.StrictSlash(true)
 	router.HandleFunc("/api/v1/iscsi", ISCSICreate).Methods("POST")
 	router.HandleFunc("/api/v1/iscsi/{iqn}/{lun}", ISCSIDelete).Methods("DELETE")
+	router.HandleFunc("/api/v1/iscsi/{iqn}/{lun}", ISCSIStatus).Methods("GET")
 	log.Fatal(http.ListenAndServe(addr, router))
 }
 

@@ -34,7 +34,7 @@ func stateToColor(state crmcontrol.LrmRunState) func(interface{}) aurora.Value {
 
 func linstorStateToColor(state linstorcontrol.ResourceState) func(interface{}) aurora.Value {
 	switch state {
-	case linstorcontrol.Ok:
+	case linstorcontrol.OK:
 		return aurora.Green
 	case linstorcontrol.Degraded:
 		return aurora.Yellow
@@ -62,7 +62,7 @@ func stateToStatus(state crmcontrol.LrmRunState) string {
 func linstorStateToStatus(state linstorcontrol.ResourceState) string {
 	var str string
 	switch state {
-	case linstorcontrol.Ok:
+	case linstorcontrol.OK:
 		str = statusOk
 	case linstorcontrol.Degraded:
 		str = statusDegraded

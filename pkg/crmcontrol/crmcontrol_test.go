@@ -182,7 +182,7 @@ func TestModifyCrmTargetRole(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		doc, err = modifyCrmTargetRole("p_iscsi_example", false, doc)
+		err = modifyCrmTargetRole("p_iscsi_example", false, doc)
 		if err != nil {
 			if !c.expectError {
 				t.Error("Unexpected error: ", err)

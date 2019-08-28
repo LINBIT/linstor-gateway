@@ -259,11 +259,11 @@ func CreateCrmLu(target targetutil.Target, storageNodes []string,
 // the it should stop the resource. A target role of "Started" (startFlag == true)
 // indicates that the resource is already started and that CRM should not try
 // to start it.
-func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xmltree.Document, error) {
+func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) error {
 	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
 	rscElem := doc.FindElement("/cib/configuration/resources/primitive[@id='" + id + "']")
 	if rscElem == nil {
-		return nil, errors.New("CRM resource not found in the CIB, cannot modify role.")
+		return errors.New("CRM resource not found in the CIB, cannot modify role.")
 	}
 
 	var tgtRoleEntry *xmltree.Element
@@ -291,7 +291,7 @@ func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) (*xml
 	}
 	tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
 
-	return doc, nil
+	return nil
 }
 
 func StartCrmResource(iqn string, luns []uint8) error {
@@ -319,7 +319,7 @@ func StartCrmResource(iqn string, luns []uint8) error {
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
-		doc, err = modifyCrmTargetRole(id, true, doc)
+		err = modifyCrmTargetRole(id, true, doc)
 		if err != nil {
 			return err
 		}
@@ -351,7 +351,7 @@ func StopCrmResource(iqn string, luns []uint8) error {
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
-		doc, err = modifyCrmTargetRole(id, false, doc)
+		err = modifyCrmTargetRole(id, false, doc)
 		if err != nil {
 			return err
 		}
@@ -453,7 +453,7 @@ func DeleteCrmLu(iqn string, lun uint8) error {
 
 	// notify pacemaker to delete the IDs
 	for _, id := range ids {
-		docRoot, err = modifyCrmTargetRole(id, false, docRoot)
+		err = modifyCrmTargetRole(id, false, docRoot)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"resource": id,

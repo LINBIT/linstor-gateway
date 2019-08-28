@@ -36,7 +36,7 @@ linstor-iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			IQN:  iqn,
 			LUNs: []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun)}},
 		}
-		target := targetutil.NewTargetMust(targetCfg)
+		target := cliNewTargetMust(cmd, targetCfg)
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		if err := iscsiCfg.DeleteResource(); err != nil {
 			log.Fatal(err)

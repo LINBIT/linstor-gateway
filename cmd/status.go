@@ -46,7 +46,7 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=0`,
 			IQN:  iqn,
 			LUNs: []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun)}},
 		}
-		target := targetutil.NewTargetMust(targetCfg)
+		target := cliNewTargetMust(cmd, targetCfg)
 		targetName, err := targetutil.ExtractTargetName(targetCfg.IQN)
 		if err != nil {
 			log.Fatal(err)

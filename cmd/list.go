@@ -110,7 +110,7 @@ linstor-iscsi list`,
 				IQN:  target.IQN,
 				LUNs: target.LUNs,
 			}
-			tgt := targetutil.NewTargetMust(targetCfg)
+			tgt := cliNewTargetMust(cmd, targetCfg)
 			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: tgt}
 
 			resourceState, err := iscsiCfg.ProbeResource()

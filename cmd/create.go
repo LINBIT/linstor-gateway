@@ -86,7 +86,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			Password:  password,
 			Portals:   portals,
 		}
-		target := targetutil.NewTargetMust(targetCfg)
+		target := cliNewTargetMust(cmd, targetCfg)
 		iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
 		err := iscsiCfg.CreateResource()
 		if err != nil {

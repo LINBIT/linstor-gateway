@@ -9,10 +9,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/gorilla/mux"
 )
 
@@ -78,4 +81,51 @@ func maybeSetLinstorController(iscsi *iscsi.ISCSI) {
 			iscsi.Linstor.ControllerIP = net.IPv4(127, 0, 0, 1)
 		}
 	}
+}
+
+// parseIQNAndLun does the shared parsing for methods that are .../iscsi/{iqn}/{lun}"
+func parseIQNAndLun(w http.ResponseWriter, r *http.Request) (iscsi.ISCSI, bool) {
+	iscsiCfg := iscsi.ISCSI{}
+
+	iqn, ok := mux.Vars(r)["iqn"]
+	if !ok {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not find 'target' in your request")
+		return iscsiCfg, false
+	}
+
+	l, ok := mux.Vars(r)["lun"]
+	if !ok {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not find 'lun' in your request")
+		return iscsiCfg, false
+	}
+	lid, err := strconv.Atoi(l)
+	if err != nil {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not convert LUN to number: %v", err)
+		return iscsiCfg, false
+	}
+
+	lun := targetutil.LUN{ID: uint8(lid)}
+	targetConfig := targetutil.TargetConfig{
+		IQN:  iqn,
+		LUNs: []*targetutil.LUN{&lun},
+	}
+	target, err := targetutil.NewTarget(targetConfig)
+	if err != nil {
+		_, _ = Errorf(http.StatusInternalServerError, w, "Could not create target from target config: %v", err)
+		return iscsiCfg, false
+	}
+
+	iscsiCfg.Target = target
+	iscsiCfg.Linstor = linstorcontrol.Linstor{}
+
+	maybeSetLinstorController(&iscsiCfg)
+
+	if err := targetutil.CheckIQN(iscsiCfg.Target.IQN); err != nil {
+		_, _ = Errorf(http.StatusBadRequest, w, "Could not validate IQN: %v", err)
+		return iscsiCfg, false
+	}
+	targetName, _ := targetutil.ExtractTargetName(iscsiCfg.Target.IQN)
+	iscsiCfg.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, uint8(lid))
+
+	return iscsiCfg, true
 }

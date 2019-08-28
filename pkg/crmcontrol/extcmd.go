@@ -1,10 +1,12 @@
 package crmcontrol
 
 import (
+	"errors"
 	"io"
 	"io/ioutil"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -41,19 +43,34 @@ func execute(forStdin *string, name string, arg ...string) (string, string, erro
 		return "", "", err
 	}
 
+	ioFailed := uint32(0)
 	var stdoutSlurp []byte
 	var stderrSlurp []byte
 	ioWaitGroup := &sync.WaitGroup{}
 	ioWaitGroup.Add(2)
-	go func() {
-		stdoutSlurp, _ = ioutil.ReadAll(stdout)
+	go func(ioError *uint32) {
+		var readErr error
+		stdoutSlurp, readErr = ioutil.ReadAll(stdout)
+		if readErr != nil {
+			atomic.StoreUint32(ioError, uint32(1))
+		}
 		ioWaitGroup.Done()
-	}()
-	go func() {
-		stderrSlurp, _ = ioutil.ReadAll(stderr)
+	}(&ioFailed)
+	go func(ioError *uint32) {
+		var readErr error
+		stderrSlurp, readErr = ioutil.ReadAll(stderr)
+		if readErr != nil {
+			atomic.StoreUint32(ioError, uint32(1))
+		}
 		ioWaitGroup.Done()
-	}()
+	}(&ioFailed)
 	ioWaitGroup.Wait()
+
+	// Ensure that the value change caused by the I/O threads is seen
+	// in the current thread
+	if atomic.LoadUint32(&ioFailed) != 0 {
+		return "", "", errors.New("Command execution failed: I/O error while piping data")
+	}
 
 	if len(stdoutSlurp) >= 1 {
 		log.Trace("CRM command stdout output:", string(stdoutSlurp))

@@ -81,6 +81,19 @@ paths:
           type: integer
           format: int8
           description: LUN ID within the given target
+    get:
+      tags:
+        - developers
+      summary: Lists a specific target identified by IQN and LUN
+      operationId: iscsiStatus
+      description: Returns a specific target status
+      responses:
+        '200':
+          description: Specified target
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ISCSITargetStatus'
     delete:
       tags:
         - developers
@@ -195,3 +208,67 @@ components:
           $ref: '#/components/schemas/Target'
         linstor:
           $ref: '#/components/schemas/Linstor'
+
+    PacemakerLUNStatus:
+      description: Representation of a LUN status in Pacemaker
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          enum:
+            - Running
+            - Stopped
+            - Unknown
+
+    PacemakerStatus:
+      description: Representation of a LINSTOR
+      type: object
+      required:
+        - target
+        - ip
+        - luns
+      properties:
+        target:
+          type: string
+          enum:
+            - Running
+            - Stopped
+            - Unknown
+        ip:
+          type: string
+          enum:
+            - Running
+            - Stopped
+            - Unknown
+        luns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacemakerLUNStatus'
+
+    LinstorStatus:
+      description: Representation of a iSCSI target in LINSTOR
+      type: object
+      required:
+        - resource
+      properties:
+        resource:
+          type: string
+          enum:
+            - OK
+            - Degraded
+            - Bad
+            - Unknown
+
+    ISCSITargetStatus:
+      description: Representation of an iSCSI target status
+      type: object
+      required:
+        - pacemaker
+        - linstor
+      properties:
+        pacemaker:
+          $ref: '#/components/schemas/PacemakerStatus'
+        linstor:
+          $ref: '#/components/schemas/LinstorStatus'

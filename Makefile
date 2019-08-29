@@ -16,6 +16,10 @@ api-doc: docs/rest/index.html
 md-doc: linstor-iscsi
 	./linstor-iscsi docs
 
+.PHONY: test
+test:
+	GO111MODULE=on go test ./...
+
 .PHONY: prepare-release
-prepare-release: md-doc
+prepare-release: test md-doc
 	GO111MODULE=on go mod tidy

@@ -18,8 +18,9 @@ var controller net.IP // create and delete
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "linstor-iscsi",
-	Short: "Manages Highly-Available iSCSI targets",
+	Use:     "linstor-iscsi",
+	Version: "0.1.0",
+	Short:   "Manages Highly-Available iSCSI targets",
 	Long: `linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
 and Pacemaker. Setting linstor including storage pools and resource groups
 as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,

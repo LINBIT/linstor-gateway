@@ -25,7 +25,7 @@ linstor-iscsi list [flags]
 ```
   -i, --iqn string        Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)
       --loglevel string   Set the log level (as defined by logrus) (default "info")
-  -l, --lun int           Set the LUN Number (required)
+  -l, --lun int           Set the LUN Number (required) (default 1)
 ```
 
 ### SEE ALSO

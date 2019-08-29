@@ -14,7 +14,9 @@ import (
 )
 
 var ip net.IP
-var username, password, size, portals, group string
+var username, password, portals, group string
+
+var sz *unit.Value
 var sizeKiB uint64
 var ipChanged bool
 
@@ -39,24 +41,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 
 	Args: cobra.NoArgs,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		// TODO directly use for size, unit fulfills the flag interface.
-		units := unit.DefaultUnits
-		units["KiB"] = units["K"]
-		units["MiB"] = units["M"]
-		units["GiB"] = units["G"]
-		units["TiB"] = units["T"]
-		units["PiB"] = units["P"]
-		units["EiB"] = units["E"]
-		u := unit.MustNewUnit(units)
-
-		v, err := u.ValueFromString(size)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if v.Value < 0 {
-			log.Fatal("Negative sizes are not allowed")
-		}
-		sizeKiB = uint64(v.Value / unit.DefaultUnits["K"])
+		sizeKiB = uint64(sz.Value / unit.DefaultUnits["K"])
 
 		if portals == "" {
 			portals = ip.String() + ":" + strconv.Itoa(iscsi.DFLT_ISCSI_PORTAL_PORT)
@@ -103,14 +88,23 @@ func init() {
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
 	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username (required)")
 	createCmd.Flags().StringVarP(&password, "password", "p", "", "Set the password (required)")
-	createCmd.Flags().StringVar(&size, "size", "1G", "Set the size (required)")
+
+	units := unit.DefaultUnits
+	units["KiB"] = units["K"]
+	units["MiB"] = units["M"]
+	units["GiB"] = units["G"]
+	units["TiB"] = units["T"]
+	units["PiB"] = units["P"]
+	units["EiB"] = units["E"]
+	u := unit.MustNewUnit(units)
+	sz = u.MustNewValue(1*units["G"], unit.None)
+	createCmd.Flags().Var(sz, "size", "Set a size (e.g, 1TiB)")
+
 	createCmd.Flags().StringVarP(&group, "resource-group", "g", "default", "Set the LINSTOR resource-group")
 
 	createCmd.MarkFlagRequired("ip")
 	createCmd.MarkFlagRequired("username")
 	createCmd.MarkFlagRequired("password")
-	createCmd.MarkFlagRequired("nodes")
-	createCmd.MarkFlagRequired("size")
 
 	createCmd.MarkPersistentFlagRequired("iqn")
 	createCmd.MarkPersistentFlagRequired("lun")

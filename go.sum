@@ -50,8 +50,8 @@ github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/rck/unit v0.0.1 h1:5oFfARkOGO4sabT/JJ1xsvL7Zy581BSK1FTbChogEqE=
-github.com/rck/unit v0.0.1/go.mod h1:jTOnzP4s1OjIP1vdxb4n76b23QPKS4EurYg7sYMr2DM=
+github.com/rck/unit v0.0.2 h1:aZuNr/rkVx9/d9se4I/bqTr3S7ohnD+8sXyjEc4sRA4=
+github.com/rck/unit v0.0.2/go.mod h1:jTOnzP4s1OjIP1vdxb4n76b23QPKS4EurYg7sYMr2DM=
 github.com/rsto/xmltest v0.0.0-20150625174141-1abcdaa746f0 h1:zeG3LlUV8qLlNJbvqtvOjnfg2Qdfo2caTGXJ+gk7BEw=
 github.com/rsto/xmltest v0.0.0-20150625174141-1abcdaa746f0/go.mod h1:wGokBifMcGCE7Ang45xdC4a8wRZFqlBuTqEaofZ+kiU=
 github.com/russross/blackfriday v1.5.2 h1:HyvC0ARfnZBqnXwABFeSZHpKvJHJJfPz81GNueLj0oo=

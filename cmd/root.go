@@ -33,7 +33,7 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 		}
 		log.SetLevel(level)
 
-		if lun < 0 || lun > 255 {
+		if lun < 1 || lun > 255 {
 			log.Fatal("LUN out of range [0-255]")
 		}
 	},

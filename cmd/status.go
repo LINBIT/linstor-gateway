@@ -33,7 +33,7 @@ This makes sure that Pacemakers view of the world is updated to the state
 of the world.
 
 For example:
-linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=0`,
+linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !cmd.Flags().Changed("controller") {

@@ -34,7 +34,7 @@ prefixed with p_, contain the name and a resource type postfix.
 
 For example:
 linstor-iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181 \
- -username=foo --lun=0 --password=bar --resource_group=ssd_thin_2way --size=2G
+ -username=foo --lun=1 --password=bar --resource_group=ssd_thin_2way --size=2G
 
 Creates linstor resources example_lu0 and
 pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,

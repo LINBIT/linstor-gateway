@@ -462,7 +462,6 @@ func TestGenerateCreateLuXML(t *testing.T) {
 	tid := int16(0)
 
 	target := targetutil.NewTargetMust(targetutil.TargetConfig{
-		Name:      "example",
 		IQN:       "iqn.2019-08.com.linbit:example",
 		LUNs:      []*targetutil.LUN{&targetutil.LUN{ID: 0, SizeKiB: 1000}},
 		ServiceIP: net.ParseIP("192.168.1.1"),

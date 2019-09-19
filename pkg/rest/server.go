@@ -57,8 +57,8 @@ func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error 
 		return errors.New(s)
 	}
 
-	s = "Could not unmarshal body"
 	if err := json.Unmarshal(body, i); err != nil {
+		s = "Could not unmarshal body"
 		_, _ = Errorf(http.StatusBadRequest, w, s)
 		return errors.New(s)
 	}

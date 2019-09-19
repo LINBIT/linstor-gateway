@@ -19,7 +19,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var restMutex sync.Mutex
+type server struct {
+	router *mux.Router
+	sync.Mutex
+}
 
 // Error is the type that is returned in case of an error.
 type Error struct {
@@ -65,11 +68,13 @@ func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error 
 
 // ListenAndServe is the entry point for the REST API
 func ListenAndServe(addr string) {
-	router := mux.NewRouter() //.StrictSlash(true)
-	router.HandleFunc("/api/v1/iscsi", ISCSICreate).Methods("POST")
-	router.HandleFunc("/api/v1/iscsi/{iqn}/{lun}", ISCSIDelete).Methods("DELETE")
-	router.HandleFunc("/api/v1/iscsi/{iqn}/{lun}", ISCSIStatus).Methods("GET")
-	log.Fatal(http.ListenAndServe(addr, router))
+	s := &server{
+		router: mux.NewRouter(),
+	}
+
+	s.routes()
+
+	log.Fatal(http.ListenAndServe(addr, s.router))
 }
 
 func maybeSetLinstorController(iscsi *iscsi.ISCSI) {

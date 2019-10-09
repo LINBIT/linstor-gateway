@@ -1,3 +1,5 @@
+LATESTTAG=$(shell git describe --abbrev=0 --tags | tr -d 'v')
+
 all: linstor-iscsi
 
 .PHONY: linstor-iscsi
@@ -23,3 +25,9 @@ test:
 .PHONY: prepare-release
 prepare-release: test md-doc
 	GO111MODULE=on go mod tidy
+
+linstor-iscsi-$(LATESTTAG).tar.gz: linstor-iscsi
+	dh_clean || true
+	tar --transform="s,^,linstor-iscsi-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ linstor-iscsi debian linstor-iscsi.spec
+
+debrelease: linstor-iscsi-$(LATESTTAG).tar.gz

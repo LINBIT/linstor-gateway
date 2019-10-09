@@ -1,0 +1,16 @@
+Source: linstor-iscsi
+Section: admin
+Priority: optional
+Maintainer: Roland Kammerer <roland.kammerer@linbit.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.8
+Homepage: https://linbit.github.io/drbdtop
+#Vcs-Git: https://anonscm.debian.org/collab-maint/drbdtop.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/drbdtop.git
+
+Package: linstor-iscsi
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: linstor-iscsi manages higly available iSCSI targets
+ Setting linstor including storage pools and resource groups as well as
+ Corosync and Pacemaker's properties a prerequisite to use this tool.

@@ -45,7 +45,7 @@ func Errorf(code int, w http.ResponseWriter, format string, a ...interface{}) (n
 	}
 
 	w.WriteHeader(code)
-	return fmt.Fprintf(w, string(b))
+	return fmt.Fprint(w, string(b))
 }
 
 func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error {

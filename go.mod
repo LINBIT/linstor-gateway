@@ -8,7 +8,7 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20190803045625-94edacc10f9b
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
-	github.com/rck/unit v0.0.2
+	github.com/rck/unit v0.0.3
 	github.com/rsto/xmltest v0.0.0-20150625174141-1abcdaa746f0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect

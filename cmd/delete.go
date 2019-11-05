@@ -15,7 +15,7 @@ import (
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes an iSCSI target",
-	Long: `Deletes an iSCSI target by stopping and deliting the pacemaker resource
+	Long: `Deletes an iSCSI target by stopping and deleting the pacemaker resource
 primitives and removing the linstor resources.
 
 For example:

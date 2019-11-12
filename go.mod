@@ -1,6 +1,7 @@
 module github.com/LINBIT/linstor-iscsi
 
 require (
+	github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6
 	github.com/LINBIT/golinstor v0.16.3
 	github.com/beevik/etree v1.1.0
 	github.com/google/go-cmp v0.3.1
@@ -14,3 +15,5 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
 	github.com/spf13/cobra v0.0.5
 )
+
+go 1.13

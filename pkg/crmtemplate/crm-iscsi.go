@@ -17,9 +17,9 @@ const CRM_ISCSI = `<configuration>
       <primitive id="p_pblock_{{.TargetName}}" class="ocf" provider="heartbeat" type="portblock">
         <instance_attributes id="p_pblock_{{.TargetName}}-instance_attributes">
           <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_pblock_{{.TargetName}}-instance_attributes-ip"/>
-	  <nvpair name="portno" value="3260" id="p_pblock_{{.TargetName}}-instance_attributes-portno"/>
-	  <nvpair name="protocol" value="tcp" id="p_pblock_{{.TargetName}}-instance_attributes-protocol"/>
-	  <nvpair name="action" value="block" id="p_pblock_{{.TargetName}}-instance_attributes-action"/>
+          <nvpair name="portno" value="3260" id="p_pblock_{{.TargetName}}-instance_attributes-portno"/>
+          <nvpair name="protocol" value="tcp" id="p_pblock_{{.TargetName}}-instance_attributes-protocol"/>
+          <nvpair name="action" value="block" id="p_pblock_{{.TargetName}}-instance_attributes-action"/>
         </instance_attributes>
         <operations>
           <op name="start" timeout="20" interval="0" id="p_pblock_{{.TargetName}}-start-0"/>
@@ -67,13 +67,15 @@ const CRM_ISCSI = `<configuration>
       <primitive id="p_punblock_{{.TargetName}}" class="ocf" provider="heartbeat" type="portblock">
         <instance_attributes id="p_punblock_{{.TargetName}}-instance_attributes">
           <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_punblock_{{.TargetName}}-instance_attributes-ip"/>
-	  <nvpair name="portno" value="3260" id="p_punblock_{{.TargetName}}-instance_attributes-portno"/>
-	  <nvpair name="protocol" value="tcp" id="p_punblock_{{.TargetName}}-instance_attributes-protocol"/>
-	  <nvpair name="action" value="unblock" id="p_punblock_{{.TargetName}}-instance_attributes-action"/>
+          <nvpair name="portno" value="3260" id="p_punblock_{{.TargetName}}-instance_attributes-portno"/>
+          <nvpair name="protocol" value="tcp" id="p_punblock_{{.TargetName}}-instance_attributes-protocol"/>
+          <nvpair name="action" value="unblock" id="p_punblock_{{.TargetName}}-instance_attributes-action"/>
+          <nvpair name="tickle_sync_nodes" value="{{.StorageNodesList}}" id="p_punblock_{{.TargetName}}-instance_attributes-tickle_sync_nodes"/>
         </instance_attributes>
         <operations>
           <op name="start" timeout="20" interval="0" id="p_punblock_{{.TargetName}}-start-0"/>
           <op name="stop" timeout="20" interval="0" id="p_punblock_{{.TargetName}}-stop-0"/>
+          <op name="monitor" timeout="20" interval="15" id="p_punblock_{{.TargetName}}-monitor-0"/>
         </operations>
         <meta_attributes id="p_punblock_{{.TargetName}}-meta_attributes">
           <nvpair name="target-role" value="Started" id="p_punblock_{{.TargetName}}-meta_attributes-target-role"/>

@@ -66,8 +66,7 @@ func (i *ISCSI) CreateResource() error {
 		}
 
 		// Create CRM resources and constraints for the iSCSI services
-		err = crmcontrol.CreateCrmLu(i.Target, res.StorageNodeList,
-			res.DevicePath, int16(freeTid))
+		err = crmcontrol.CreateCrmLu(i.Target, res.StorageNodeList, res.DevicePath, int16(freeTid))
 		if err != nil {
 			return err
 		}

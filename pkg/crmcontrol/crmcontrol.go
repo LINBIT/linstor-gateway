@@ -130,15 +130,16 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	}
 
 	tmplVars := map[string]interface{}{
-		"Target":       target,
-		"TargetName":   targetName,
-		"StorageNodes": storageNodes,
-		"Device":       device,
-		"TID":          tid,
+		"Target":           target,
+		"TargetName":       targetName,
+		"StorageNodes":     storageNodes,
+		"StorageNodesList": strings.Join(storageNodes, ","),
+		"Device":           device,
+		"TID":              tid,
 	}
 
 	// Replace resource creation template variables
-	iscsitmpl := template.Must(template.New("crmisci").Parse(crmtemplate.CRM_ISCSI))
+	iscsitmpl := template.Must(template.New("crmiscsi").Parse(crmtemplate.CRM_ISCSI))
 
 	var cibData bytes.Buffer
 	err = iscsitmpl.Execute(&cibData, tmplVars)

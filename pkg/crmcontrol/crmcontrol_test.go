@@ -188,10 +188,12 @@ func TestGenerateCreateLuXML(t *testing.T) {
           <nvpair id="p_punblock_example-instance_attributes-portno" name="portno" value="3260" />
           <nvpair id="p_punblock_example-instance_attributes-protocol" name="protocol" value="tcp" />
           <nvpair id="p_punblock_example-instance_attributes-action" name="action" value="unblock" />
+          <nvpair id="p_punblock_example-instance_attributes-tickle_sync_nodes" name="tickle_sync_nodes" value="node0,node1" />
         </instance_attributes>
         <operations>
           <op id="p_punblock_example-start-0" interval="0" name="start" timeout="20" />
           <op id="p_punblock_example-stop-0" interval="0" name="stop" timeout="20" />
+          <op id="p_punblock_example-monitor-0" name="monitor" timeout="20" interval="15" />
         </operations>
         <meta_attributes id="p_punblock_example-meta_attributes">
           <nvpair id="p_punblock_example-meta_attributes-target-role" name="target-role" value="Started" />

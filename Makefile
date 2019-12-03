@@ -27,6 +27,7 @@ prepare-release: test md-doc
 	GO111MODULE=on go mod tidy
 
 linstor-iscsi-$(LATESTTAG).tar.gz: linstor-iscsi
+	strip linstor-iscsi
 	dh_clean || true
 	tar --transform="s,^,linstor-iscsi-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ linstor-iscsi debian linstor-iscsi.spec
 

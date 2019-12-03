@@ -29,6 +29,7 @@ prepare-release: test md-doc
 linstor-iscsi-$(LATESTTAG).tar.gz: linstor-iscsi
 	strip linstor-iscsi
 	dh_clean || true
-	tar --transform="s,^,linstor-iscsi-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ linstor-iscsi debian linstor-iscsi.spec
+	tar --transform="s,^,linstor-iscsi-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ \
+		linstor-iscsi debian linstor-iscsi.spec linstor-iscsi.service linstor-iscsi.xml
 
 debrelease: linstor-iscsi-$(LATESTTAG).tar.gz

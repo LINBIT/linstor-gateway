@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -12,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func stateToLongStatus(state crmcontrol.LrmRunState) string {
+func stateToLongStatus(state cib.LrmRunState) string {
 	str := state.String()
 	return stateToColor(state)(str).String()
 }

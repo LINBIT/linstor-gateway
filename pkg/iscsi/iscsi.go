@@ -7,6 +7,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
@@ -37,13 +38,14 @@ func (i *ISCSI) CreateResource() error {
 	}
 
 	for _, lu := range i.Target.LUNs {
+		var c cib.CIB
 		// Read the current configuration from the CRM
-		docRoot, err := crmcontrol.ReadConfiguration()
+		err := c.ReadConfiguration()
 		if err != nil {
 			return err
 		}
 		// Find resources, allocated target IDs, etc.
-		config, err := crmcontrol.ParseConfiguration(docRoot)
+		config, err := crmcontrol.ParseConfiguration(c.Doc)
 		if err != nil {
 			return err
 		}
@@ -83,7 +85,7 @@ func (i *ISCSI) DeleteResource() error {
 	for _, lu := range i.Target.LUNs {
 		var errs []string
 		// Delete the CRM resources for iSCSI LU, target, service IP addres, etc.
-		if err = crmcontrol.DeleteCrmLu(i.Target.IQN, lu.ID); err != nil {
+		if err = crmcontrol.DeleteLogicalUnit(i.Target.IQN, lu.ID); err != nil {
 			errs = append(errs, err.Error())
 		}
 
@@ -125,12 +127,13 @@ func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 //
 // It returns a slice of Targets and an error object
 func ListResources() ([]*targetutil.Target, error) {
-	docRoot, err := crmcontrol.ReadConfiguration()
+	var c cib.CIB
+	err := c.ReadConfiguration()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := crmcontrol.ParseConfiguration(docRoot)
+	config, err := crmcontrol.ParseConfiguration(c.Doc)
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +183,8 @@ func (i *ISCSI) modifyResourceTargetRole(startFlag bool) error {
 		luns[i] = lu.ID
 	}
 	if startFlag {
-		return crmcontrol.StartCrmResource(i.Target.IQN, luns)
+		return crmcontrol.StartTarget(i.Target.IQN, luns)
 	} else {
-		return crmcontrol.StopCrmResource(i.Target.IQN, luns)
+		return crmcontrol.StopTarget(i.Target.IQN, luns)
 	}
 }

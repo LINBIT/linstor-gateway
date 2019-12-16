@@ -5,7 +5,19 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	xmltree "github.com/beevik/etree"
+)
+
+const (
+	cibTagLrm        = "lrm"
+	cibTagLrmRsclist = "lrm_resources"
+	cibTagLrmRsc     = "lrm_resource"
+	cibTagLrmRscOp   = "lrm_rsc_op"
+)
+
+const (
+	crmTypeLinstorCtrl = "linstor-controller"
 )
 
 func findLinstorControllerName(doc *xmltree.Document) (string, error) {
@@ -31,12 +43,13 @@ func findLinstorControllerName(doc *xmltree.Document) (string, error) {
 
 // FindLinstorController searches the CIB configuration for a LINSTOR controller IP.
 func FindLinstorController() (net.IP, error) {
-	doc, err := ReadConfiguration()
+	var c cib.CIB
+	err := c.ReadConfiguration()
 	if err != nil {
 		return nil, err
 	}
 
-	hostname, err := findLinstorControllerName(doc)
+	hostname, err := findLinstorControllerName(c.Doc)
 	if err != nil {
 		return nil, err
 	}

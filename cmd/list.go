@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -21,11 +22,11 @@ const (
 	statusDegraded = "!"
 )
 
-func stateToColor(state crmcontrol.LrmRunState) func(interface{}) aurora.Value {
+func stateToColor(state cib.LrmRunState) func(interface{}) aurora.Value {
 	switch state {
-	case crmcontrol.Running:
+	case cib.Running:
 		return aurora.Green
-	case crmcontrol.Stopped:
+	case cib.Stopped:
 		return aurora.Red
 	default:
 		return aurora.Yellow
@@ -45,12 +46,12 @@ func linstorStateToColor(state linstorcontrol.ResourceState) func(interface{}) a
 	}
 }
 
-func stateToStatus(state crmcontrol.LrmRunState) string {
+func stateToStatus(state cib.LrmRunState) string {
 	var str string
 	switch state {
-	case crmcontrol.Running:
+	case cib.Running:
 		str = statusOk
-	case crmcontrol.Stopped:
+	case cib.Stopped:
 		str = statusBad
 	default:
 		str = statusUnknown

@@ -3,6 +3,7 @@ module github.com/LINBIT/linstor-iscsi
 require (
 	github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6
 	github.com/LINBIT/golinstor v0.16.3
+	github.com/LINBIT/gopacemaker v0.0.0-20191217090309-99ff7a879105
 	github.com/beevik/etree v1.1.0
 	github.com/google/go-cmp v0.3.1
 	github.com/gorilla/mux v1.7.3

@@ -18,7 +18,6 @@ package crmcontrol
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -28,6 +27,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/logrusorgru/aurora"
@@ -42,77 +42,14 @@ const (
 	varTgtName = "CRM_TARGET_NAME"
 )
 
-// Pacemaker CIB XML XPaths
-const (
-	cibRscXpath        = "/cib/configuration/resources"
-	cibNodeStatusXpath = "/cib/status/node_state"
-)
-
-// Pacemaker CRM resource names, prefixes, suffixes, search patterns, etc.
-const (
-	crmIscsiRscPrefix  = "p_iscsi_"
-	crmIscsiLuName     = "lu"
-	crmIscsiPrmTid     = "tid"
-	crmTypeIscsiTarget = "iSCSITarget"
-	crmTypeIscsiLu     = "iSCSILogicalUnit"
-	crmTypeLinstorCtrl = "linstor-controller"
-)
-
-// Pacemaker CIB XML tag names
-const (
-	cibTagLocation   = "rsc_location"
-	cibTagColocation = "rsc_colocation"
-	cibTagOrder      = "rsc_order"
-	cibTagRscRef     = "resource_ref"
-	cibTagMetaAttr   = "meta_attributes"
-	cibTagInstAttr   = "instance_attributes"
-	cibTagNvPair     = "nvpair"
-	cibTagLrm        = "lrm"
-	cibTagLrmRsclist = "lrm_resources"
-	cibTagLrmRsc     = "lrm_resource"
-	cibTagLrmRscOp   = "lrm_rsc_op"
-)
-
-// Pacemaker CIB attribute names
-const (
-	cibAttrKeyID           = "id"
-	cibAttrKeyName         = "name"
-	cibAttrKeyValue        = "value"
-	cibAttrKeyOperation    = "operation"
-	cibAttrKeyRcCode       = "rc-code"
-	cibAttrValueTargetRole = "target-role"
-	cibAttrValueStarted    = "Started"
-	cibAttrValueStopped    = "Stopped"
-	cibAttrValueStop       = "stop"
-	cibAttrValueStart      = "start"
-	cibAttrValueMonitor    = "monitor"
-)
-
-// Pacemaker OCF resource agent exit codes
-const (
-	ocfSuccess          = 0
-	ocfErrGeneric       = 1
-	ocfErrArgs          = 2
-	ocfErrUnimplemented = 3
-	ocfErrPerm          = 4
-	ocfErrInstalled     = 5
-	ocfNotRunning       = 7
-	ocfRunningMaster    = 8
-	ocfFailedMaster     = 9
-)
-
-// Maximum number of CIB poll retries when waiting for CRM resources to stop
-const maxWaitStopRetries = 10
-
 // Initial delay after setting resource target-role=Stopped before starting to poll the CIB
 // to check whether resources have actually stopped
 const waitStopPollCibDelay = 2500
 
-// Delay between CIB polls in milliseconds
-const cibPollRetryDelay = 2000
-
-var (
-	ErrCibFailed = errors.New("Failed to read the CRM configuration. Maybe the cluster is not started on this node?")
+// Pacemaker CIB XML XPaths
+const (
+	cibRscXpath        = "/cib/configuration/resources"
+	cibNodeStatusXpath = "/cib/status/node_state"
 )
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
@@ -146,49 +83,25 @@ type crmIP struct {
 }
 
 type ResourceRunState struct {
-	TargetState LrmRunState           `json:"target"`
-	LUStates    map[uint8]LrmRunState `json:"luns"`
-	IPState     LrmRunState           `json:"ip"`
+	TargetState cib.LrmRunState           `json:"target"`
+	LUStates    map[uint8]cib.LrmRunState `json:"luns"`
+	IPState     cib.LrmRunState           `json:"ip"`
 }
 
-// LrmRunState represents the state of a CRM resource.
-type LrmRunState int
-
-const (
-	// Unknown means that the resource's state could not be retrieved
-	Unknown LrmRunState = iota
-	// Running means that the resource is verified as running
-	Running
-	// Stopped means that the resource is verfied as stopped
-	Stopped
-)
-
-func (l LrmRunState) String() string {
-	switch l {
-	case Running:
-		return "Running"
-	case Stopped:
-		return "Stopped"
-	}
-	return "Unknown"
-}
-
-func (l LrmRunState) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
-
-func checkTargetExists(doc *xmltree.Document, iqn string) (bool, string, error) {
+func checkTargetExists(c *cib.CIB, iqn string) (bool, string, error) {
 	targetName, err := targetutil.ExtractTargetName(iqn)
 	if err != nil {
 		return false, "", err
 	}
 
 	id := crmTargetID(targetName)
-	elem := doc.FindElement("//primitive[@id='" + id + "']")
+	elem := c.FindResource(id)
 	if elem == nil {
 		log.Debug("Not found")
 		return false, "", nil
 	}
 
-	attr, err := getNvPairValue(elem, "iqn")
+	attr, err := cib.GetNvPairValue(elem, "iqn")
 	if err != nil {
 		return false, "", errors.New("could not find iqn: " + err.Error())
 	}
@@ -238,110 +151,43 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 // with constraints that bundle them and place them on the selected nodes
 func CreateCrmLu(target targetutil.Target, storageNodes []string,
 	device string, tid int16) error {
+	var c cib.CIB
 	// Load the template for modifying the CIB
 	forStdin, err := generateCreateLuXML(target, storageNodes, device, tid)
 	if err != nil {
 		return err
 	}
 
-	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	_, _, err = execute(&forStdin, crmCreateCommand.executable, crmCreateCommand.arguments...)
-	if err != nil {
-		return err
-	}
-	return err
+	return c.CreateResource(forStdin)
 }
 
-// modifyCrmTargetRole sets the target-role of a resource in CRM.
-//
-// The id has to be a valid CRM resource identifier.
-// A target-role of "Stopped" (startFlag == false) indicates to CRM that
-// the it should stop the resource. A target role of "Started" (startFlag == true)
-// indicates that the resource is already started and that CRM should not try
-// to start it.
-func modifyCrmTargetRole(id string, startFlag bool, doc *xmltree.Document) error {
-	// Process the CIB XML document tree and insert meta attributes for target-role=Stopped
-	rscElem := doc.FindElement("/cib/configuration/resources/primitive[@id='" + id + "']")
-	if rscElem == nil {
-		return errors.New("CRM resource not found in the CIB, cannot modify role.")
-	}
-
-	var tgtRoleEntry *xmltree.Element
-	metaAttr := rscElem.FindElement(cibTagMetaAttr)
-	if metaAttr != nil {
-		// Meta attributes exist, find the entry that sets the target-role
-		tgtRoleEntry = metaAttr.FindElement(cibTagNvPair + "[@" + cibAttrKeyName + "='" + cibAttrValueTargetRole + "']")
-	} else {
-		// No meta attributes present, create XML element
-		metaAttr = rscElem.CreateElement(cibTagMetaAttr)
-		metaAttr.CreateAttr(cibAttrKeyID, id+"-meta_attributes")
-	}
-	if tgtRoleEntry == nil {
-		// No nvpair entry that sets the target-role, create entry
-		tgtRoleEntry = metaAttr.CreateElement(cibTagNvPair)
-		tgtRoleEntry.CreateAttr(cibAttrKeyID, id+"-meta_attributes-target-role")
-		tgtRoleEntry.CreateAttr(cibAttrKeyName, cibAttrValueTargetRole)
-	}
-	// Set the target-role
-	var tgtRoleValue string
-	if startFlag {
-		tgtRoleValue = cibAttrValueStarted
-	} else {
-		tgtRoleValue = cibAttrValueStopped
-	}
-	tgtRoleEntry.CreateAttr(cibAttrKeyValue, tgtRoleValue)
-
-	return nil
+func StartTarget(iqn string, luns []uint8) error {
+	return startStopTarget(iqn, luns, true)
 }
 
-func StartCrmResource(iqn string, luns []uint8) error {
+func StopTarget(iqn string, luns []uint8) error {
+	return startStopTarget(iqn, luns, false)
+}
+
+func startStopTarget(iqn string, luns []uint8, start bool) error {
+	var c cib.CIB
 	// Read the current CIB XML
-	doc, err := ReadConfiguration()
+	err := c.ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	exists, suggest, err := checkTargetExists(doc, iqn)
+	exists, suggest, err := checkTargetExists(&c, iqn)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		didYouMean(iqn, suggest)
-		return errors.New("Unable to start resource")
-	}
-
-	log.Debugf("starting target %s LUNs %v", iqn, luns)
-
-	target, err := targetutil.ExtractTargetName(iqn)
-	if err != nil {
-		return err
-	}
-
-	ids := generateCrmObjectNames(target, luns)
-	for _, id := range ids {
-		err = modifyCrmTargetRole(id, true, doc)
-		if err != nil {
-			return err
+		if start {
+			return errors.New("Unable to start resource")
+		} else {
+			return errors.New("Unable to stop resource")
 		}
-	}
-
-	return executeCibUpdate(doc, crmUpdateCommand)
-}
-
-func StopCrmResource(iqn string, luns []uint8) error {
-	// Read the current CIB XML
-	doc, err := ReadConfiguration()
-	if err != nil {
-		return err
-	}
-
-	exists, suggest, err := checkTargetExists(doc, iqn)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		didYouMean(iqn, suggest)
-		return errors.New("Unable to stop resource")
 	}
 
 	target, err := targetutil.ExtractTargetName(iqn)
@@ -351,20 +197,24 @@ func StopCrmResource(iqn string, luns []uint8) error {
 
 	ids := generateCrmObjectNames(target, luns)
 	for _, id := range ids {
-		err = modifyCrmTargetRole(id, false, doc)
+		if start {
+			err = c.StartResource(id)
+		} else {
+			err = c.StopResource(id)
+		}
 		if err != nil {
 			return err
 		}
 	}
 
-	return executeCibUpdate(doc, crmUpdateCommand)
+	return c.Update()
 }
 
 // getIDsToDelete figures out what CRM objects need to be deleted given a LUN.
-func getIDsToDelete(target string, lun uint8, doc *xmltree.Document) ([]string, error) {
+func getIDsToDelete(c *cib.CIB, target string, lun uint8) ([]string, error) {
 	// Count LUNs in the cluster which belong to this target
 	numLuns := 0
-	lunElems := doc.FindElements("cib/configuration/resources/primitive[@type='iSCSILogicalUnit']")
+	lunElems := c.Doc.FindElements("cib/configuration/resources/primitive[@type='iSCSILogicalUnit']")
 	for _, lunElem := range lunElems {
 		idAttr := lunElem.SelectAttr("id")
 		if idAttr == nil {
@@ -400,15 +250,25 @@ func getIDsToDelete(target string, lun uint8, doc *xmltree.Document) ([]string, 
 	}
 }
 
-// DeleteCrmLu deletes the CRM resources for a target
-func DeleteCrmLu(iqn string, lun uint8) error {
+func remove(s []string, r string) []string {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
+// DeleteLogicalUnit deletes the CRM resources for a target
+func DeleteLogicalUnit(iqn string, lun uint8) error {
+	var c cib.CIB
 	// Read the current CIB XML
-	docRoot, err := ReadConfiguration()
+	err := c.ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	exists, suggest, err := checkTargetExists(docRoot, iqn)
+	exists, suggest, err := checkTargetExists(&c, iqn)
 	if err != nil {
 		return err
 	}
@@ -422,18 +282,18 @@ func DeleteCrmLu(iqn string, lun uint8) error {
 		return err
 	}
 
-	if !resourceInCIB(docRoot, crmLuID(iscsiTargetName, lun)) {
+	if c.FindResource(crmLuID(iscsiTargetName, lun)) == nil {
 		return fmt.Errorf("Target %s does not have LUN %d", aurora.Cyan(iscsiTargetName), aurora.Cyan(lun))
 	}
 
-	ids, err := getIDsToDelete(iscsiTargetName, lun, docRoot)
+	ids, err := getIDsToDelete(&c, iscsiTargetName, lun)
 	if err != nil {
 		return err
 	}
 
 	allPresent := true
 	for _, id := range ids {
-		if !resourceInCIB(docRoot, id) {
+		if c.FindResource(id) == nil {
 			log.WithFields(log.Fields{
 				"id": id,
 			}).Debug("ID not found, not all resources are present")
@@ -453,20 +313,20 @@ func DeleteCrmLu(iqn string, lun uint8) error {
 
 	// notify pacemaker to delete the IDs
 	for _, id := range ids {
-		err = modifyCrmTargetRole(id, false, docRoot)
+		err = c.StopResource(id)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"resource": id,
 			}).Warning("Could not set target-role. Resource will probably fail to stop: ", err)
 		}
 	}
-	err = executeCibUpdate(docRoot, crmUpdateCommand)
+	err = c.Update()
 	if err != nil {
 		return err
 	}
 
 	time.Sleep(time.Duration(waitStopPollCibDelay * time.Millisecond))
-	isStopped, err := waitForResourcesStop(ids)
+	isStopped, err := c.WaitForResourcesStop(ids)
 	if err != nil {
 		return err
 	}
@@ -476,31 +336,31 @@ func DeleteCrmLu(iqn string, lun uint8) error {
 	}
 
 	// Read the current CIB XML
-	docRoot, err = ReadConfiguration()
+	err = c.ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
 	// Process the CIB XML document tree, removing constraints that refer to any of the objects
 	// that will be deleted
-	dissolveConstraints(docRoot, ids)
+	c.DissolveConstraints(ids)
 
 	// Process the CIB XML document tree, removing the specified CRM resources
-	for _, elemID := range ids {
-		rscElem := docRoot.FindElement("/cib/configuration/resources/primitive[@id='" + elemID + "']")
+	for _, id := range ids {
+		rscElem := c.FindResource(id)
 		if rscElem != nil {
 			rscElemParent := rscElem.Parent()
 			if rscElemParent != nil {
 				rscElemParent.RemoveChildAt(rscElem.Index())
 			} else {
-				return errors.New("Cannot modify CIB, CRM resource '" + elemID + "' has no parent object")
+				return errors.New("Cannot modify CIB, CRM resource '" + id + "' has no parent object")
 			}
 		} else {
-			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", elemID)
+			fmt.Printf("Warning: CRM resource '%s' not found in the CIB\n", id)
 		}
 	}
 
-	return executeCibUpdate(docRoot, crmUpdateCommand)
+	return c.Update()
 }
 
 func crmTargetID(target string) string {
@@ -518,18 +378,20 @@ func crmIPID(target string) string {
 // ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
 func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 	state := ResourceRunState{
-		TargetState: Unknown,
-		LUStates:    make(map[uint8]LrmRunState),
-		IPState:     Unknown,
+		TargetState: cib.Unknown,
+		LUStates:    make(map[uint8]cib.LrmRunState),
+		IPState:     cib.Unknown,
 	}
 
+	var c cib.CIB
+
 	// Read the current CIB XML
-	doc, err := ReadConfiguration()
+	err := c.ReadConfiguration()
 	if err != nil {
 		return state, err
 	}
 
-	exists, suggest, err := checkTargetExists(doc, iqn)
+	exists, suggest, err := checkTargetExists(&c, iqn)
 	if err != nil {
 		return state, err
 	}
@@ -543,112 +405,13 @@ func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 		return state, err
 	}
 
-	state.TargetState = findLrmState(crmTargetID(target), doc)
+	state.TargetState = c.FindLrmState(crmTargetID(target))
 	for _, lun := range luns {
-		state.LUStates[lun] = findLrmState(crmLuID(target, lun), doc)
+		state.LUStates[lun] = c.FindLrmState(crmLuID(target, lun))
 	}
-	state.IPState = findLrmState(crmIPID(target), doc)
+	state.IPState = c.FindLrmState(crmIPID(target))
 
 	return state, nil
-}
-
-func resourceInCIB(docRoot *xmltree.Document, id string) bool {
-	return docRoot.FindElement("//primitive[@id='"+id+"']") != nil
-}
-
-func remove(s []string, r string) []string {
-	for i, v := range s {
-		if v == r {
-			return append(s[:i], s[i+1:]...)
-		}
-	}
-	return s
-}
-
-// waitForResourcesStop waits for CRM resources to stop
-//
-// It returns a flag indicating whether resources are stopped (true) or
-// not (false), and an error.
-func waitForResourcesStop(idsToStop []string) (bool, error) {
-	// Read the current CIB XML
-	docRoot, err := ReadConfiguration()
-	if err != nil {
-		return false, err
-	}
-
-	for _, id := range idsToStop {
-		if !resourceInCIB(docRoot, id) {
-			log.WithFields(log.Fields{
-				"resource": id,
-			}).Warning("Resource not found in the CIB, will be ignored.")
-			idsToStop = remove(idsToStop, id)
-		}
-	}
-
-	log.Debug("Waiting for the following CRM resources to stop:")
-	for _, id := range idsToStop {
-		log.Debugf("    %s", id)
-	}
-
-	isStopped := false
-	retries := 0
-	for !isStopped {
-		// check if all resources are stopped
-		allStopped := true
-		for _, item := range idsToStop {
-			state := findLrmState(item, docRoot)
-			if state != Stopped {
-				allStopped = false
-				break
-			}
-		}
-
-		if allStopped {
-			// success; we stopped all resources
-			isStopped = true
-			break
-		}
-
-		if retries > maxWaitStopRetries {
-			// timeout
-			isStopped = false
-			break
-		}
-
-		time.Sleep(time.Duration(cibPollRetryDelay * time.Millisecond))
-
-		// Re-read the current CIB XML
-		docRoot, err = ReadConfiguration()
-		if err != nil {
-			return false, err
-		}
-
-		retries++
-	}
-
-	if isStopped {
-		log.Debug("The resources are stopped")
-	} else {
-		log.Warning("Could not confirm that the resources are stopped")
-	}
-
-	return isStopped, nil
-}
-
-func getNvPairValue(elem *xmltree.Element, name string) (*xmltree.Attr, error) {
-	xpath := fmt.Sprintf("./instance_attributes/nvpair[@name='%s']", name)
-
-	var nvpair *xmltree.Element
-	if nvpair = elem.FindElement(xpath); nvpair == nil {
-		return nil, errors.New("key not found")
-	}
-
-	var attr *xmltree.Attr
-	if attr = nvpair.SelectAttr("value"); attr == nil {
-		return nil, errors.New("value not found")
-	}
-
-	return attr, nil
 }
 
 func (c *CrmConfiguration) findTargetByIqn(iqn string) (*crmTarget, error) {
@@ -674,7 +437,7 @@ func findTargets(rscSection *xmltree.Element) []*crmTarget {
 		contextLog := log.WithFields(log.Fields{"id": id.Value})
 
 		// find IQN
-		iqn, err := getNvPairValue(target, "iqn")
+		iqn, err := cib.GetNvPairValue(target, "iqn")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSITarget without iqn: ", err)
 			continue
@@ -683,28 +446,28 @@ func findTargets(rscSection *xmltree.Element) []*crmTarget {
 		contextLog = log.WithFields(log.Fields{"id": id.Value, "iqn": iqn.Value})
 
 		// find username
-		username, err := getNvPairValue(target, "incoming_username")
+		username, err := cib.GetNvPairValue(target, "incoming_username")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSITarget without username: ", err)
 			continue
 		}
 
 		// find password
-		password, err := getNvPairValue(target, "incoming_password")
+		password, err := cib.GetNvPairValue(target, "incoming_password")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSITarget without password: ", err)
 			continue
 		}
 
 		// find portals
-		portals, err := getNvPairValue(target, "portals")
+		portals, err := cib.GetNvPairValue(target, "portals")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSITarget without portals: ", err)
 			continue
 		}
 
 		// find tid
-		tidAttr, err := getNvPairValue(target, "tid")
+		tidAttr, err := cib.GetNvPairValue(target, "tid")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSITarget without TID: ", err)
 			continue
@@ -743,7 +506,7 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
 		contextLog := log.WithFields(log.Fields{"id": id.Value})
 
 		// find LUN
-		lunAttr, err := getNvPairValue(lu, "lun")
+		lunAttr, err := cib.GetNvPairValue(lu, "lun")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSILogicalUnit without LUN: ", err)
 			continue
@@ -760,7 +523,7 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
 		contextLog = log.WithFields(log.Fields{"id": id.Value, "lun": lun})
 
 		// find target IQN
-		targetIqn, err := getNvPairValue(lu, "target_iqn")
+		targetIqn, err := cib.GetNvPairValue(lu, "target_iqn")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSILogicalUnit without target iqn: ", err)
 			continue
@@ -780,7 +543,7 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
 		}
 
 		// find path
-		path, err := getNvPairValue(lu, "path")
+		path, err := cib.GetNvPairValue(lu, "path")
 		if err != nil {
 			contextLog.Debug("Skipping invalid iSCSILogicalUnit without path: ", err)
 			continue
@@ -812,14 +575,14 @@ func findIPs(rscSection *xmltree.Element) []*crmIP {
 		contextLog := log.WithFields(log.Fields{"id": id.Value})
 
 		// find ip
-		ipAddr, err := getNvPairValue(ipElem, "ip")
+		ipAddr, err := cib.GetNvPairValue(ipElem, "ip")
 		if err != nil {
 			contextLog.Debug("Skipping invalid IPaddr2 without ip: ", err)
 			continue
 		}
 
 		// find netmask
-		netmaskAttr, err := getNvPairValue(ipElem, "cidr_netmask")
+		netmaskAttr, err := cib.GetNvPairValue(ipElem, "cidr_netmask")
 		if err != nil {
 			contextLog.Debug("Skipping invalid IPaddr2 without netmask: ", err)
 			continue
@@ -872,25 +635,6 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	return &config, nil
 }
 
-// ReadConfiguration calls the crm list command and parses the XML data it returns.
-func ReadConfiguration() (*xmltree.Document, error) {
-	stdout, _, err := execute(nil, crmListCommand.executable, crmListCommand.arguments...)
-	if err != nil {
-		// TODO maybe we can benefit from error wrapping here, but for
-		// now this is good enough
-		log.Error(err)
-		return nil, ErrCibFailed
-	}
-
-	docRoot := xmltree.NewDocument()
-	err = docRoot.ReadFromString(stdout)
-	if err != nil {
-		return nil, err
-	}
-
-	return docRoot, nil
-}
-
 // generateCrmObjectNames generates a list of all CRM object names for a target
 func generateCrmObjectNames(iscsiTargetName string, luns []uint8) []string {
 	objects := make([]string, 0)
@@ -914,161 +658,4 @@ func generateCrmObjectNames(iscsiTargetName string, luns []uint8) []string {
 		objects = append(objects, name)
 	}
 	return objects
-}
-
-func findLrmState(id string, doc *xmltree.Document) LrmRunState {
-	state := Unknown
-	xpath := "cib/status/node_state/lrm/lrm_resources/lrm_resource[@id='" + id + "']"
-	elems := doc.FindElements(xpath)
-	for _, elem := range elems {
-		state = updateRunState(id, elem, state)
-	}
-
-	return state
-}
-
-func executeCibUpdate(docRoot *xmltree.Document, crmCmd crmCommand) error {
-	// Serialize the modified XML document tree into a string containing the XML document (CIB update data)
-	cibData, err := docRoot.WriteToString()
-	if err != nil {
-		return err
-	}
-
-	// Call cibadmin and pipe the CIB update data to the cluster resource manager
-	_, _, err = execute(&cibData, crmCmd.executable, crmCmd.arguments...)
-	if err != nil {
-		log.Warn("CRM command execution returned an error")
-		log.Trace("The updated CIB data sent to the command was:")
-		log.Trace(cibData)
-	}
-
-	return err
-}
-
-// Creates and returns a copy of a map[string]string
-func copyMap(srcMap map[string]string) map[string]string {
-	resultMap := make(map[string]string, len(srcMap))
-	for key, value := range srcMap {
-		resultMap[key] = value
-	}
-	return resultMap
-}
-
-// Removes CRM constraints that refer to the specified delItems names from the CIB XML document tree
-func dissolveConstraints(doc *xmltree.Document, delItems []string) {
-	// TODO: I think it's possible to to "XPath injection" here. Since
-	// delItems is user controlled, inserting a ' or something could
-	// potentially make the program panic. But let's worry about this
-	// another day...
-
-	xpaths := []string{
-		// colocation references (if we had a better xpath library we could do this at once...)
-		`configuration/constraints/rsc_colocation[@rsc='%s']`,
-		`configuration/constraints/rsc_colocation[@with-rsc='%s']`,
-		// order references
-		`configuration/constraints/rsc_order[@first='%s']`,
-		`configuration/constraints/rsc_order[@then='%s']`,
-		// rsc_location -> resource_ref references
-		`configuration/constraints/rsc_location/resource_set/resource_ref[@id='%s']/../..`,
-		// rsc_location with direct rsc
-		`configuration/constraints/rsc_location[@rsc='%s']`,
-		// lrm status references
-		`status/node_state/lrm/lrm_resources/lrm_resource[@id='%s']`,
-	}
-
-	for _, resourceName := range delItems {
-		for _, xpathFormat := range xpaths {
-			xpath := fmt.Sprintf(xpathFormat, resourceName)
-			elems := doc.Root().FindElements(xpath)
-			for _, elem := range elems {
-				parent := elem.Parent()
-				if parent == nil {
-					continue
-				}
-				parent.RemoveChild(elem)
-
-				idAttr := elem.SelectAttr("id")
-				if idAttr != nil {
-					log.WithFields(log.Fields{
-						"type": elem.Tag,
-						"id":   idAttr.Value,
-					}).Debug("Deleting dependency")
-				}
-			}
-		}
-	}
-}
-
-// updateRunState updates the run state information of a single resource
-//
-// For a resource to be considered stopped, this function must find
-// - either a successful stop action
-// - or a monitor action with rc-code ocfNotRunning and no stop action
-//
-// If a stop action is present, the monitor action can still show "running"
-// (rc-code ocfSuccess == 0) although the resource is actually stopped. The
-// monitor action's rc-code is only interesting if there is no stop action present.
-func updateRunState(rscName string, lrmRsc *xmltree.Element, runState LrmRunState) LrmRunState {
-	contextLog := log.WithFields(log.Fields{"resource": rscName})
-	newRunState := runState
-	stopEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStop + "']")
-	if stopEntry != nil {
-		rc, err := getLrmRcCode(stopEntry)
-		if err != nil {
-			contextLog.Warning(err)
-		} else if rc == ocfSuccess {
-			if newRunState == Unknown {
-				newRunState = Stopped
-			}
-		} else {
-			newRunState = Running
-		}
-
-		return newRunState
-	}
-
-	monEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueMonitor + "']")
-	if monEntry != nil {
-		rc, err := getLrmRcCode(monEntry)
-		if err != nil {
-			contextLog.Warning(err)
-		} else if rc == ocfNotRunning {
-			if newRunState == Unknown {
-				newRunState = Stopped
-			}
-		} else {
-			newRunState = Running
-		}
-
-		return newRunState
-	}
-
-	startEntry := lrmRsc.FindElement(cibTagLrmRscOp + "[@" + cibAttrKeyOperation + "='" + cibAttrValueStart + "']")
-	if startEntry != nil {
-		rc, err := getLrmRcCode(startEntry)
-		if err != nil {
-			contextLog.Warning(err)
-		} else if rc == ocfRunningMaster || rc == ocfSuccess {
-			if newRunState == Unknown {
-				newRunState = Running
-			}
-		} else {
-			newRunState = Stopped
-		}
-
-		return newRunState
-	}
-
-	return newRunState
-}
-
-// getLrmRcCode extracts the rc-code value from an LRM operation entry
-func getLrmRcCode(entry *xmltree.Element) (int, error) {
-	rcAttr := entry.SelectAttr(cibAttrKeyRcCode)
-	if rcAttr == nil {
-		return 0, errors.New("Found LRM resource operation data without a status code")
-	}
-
-	rc, err := strconv.ParseInt(rcAttr.Value, 10, 16)
-	return int(rc), err
 }

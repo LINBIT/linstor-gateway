@@ -4,6 +4,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -53,7 +54,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			foundIP, err := crmcontrol.FindLinstorController()
 			if err == nil { // it might be ok to not find it...
 				controller = foundIP
-			} else if err == crmcontrol.ErrCibFailed {
+			} else if err == cib.ErrCibFailed {
 				log.Fatal(err)
 			}
 		}

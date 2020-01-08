@@ -28,3 +28,9 @@ func cliNewTargetMust(cmd *cobra.Command, targetCfg targetutil.TargetConfig) tar
 
 	return targetutil.NewTargetMust(targetCfg)
 }
+
+func lunMust(lun int) {
+	if lun < 1 || lun > 255 {
+		log.Fatal("LUN out of range [0-255]")
+	}
+}

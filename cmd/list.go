@@ -93,8 +93,12 @@ linstor-iscsi list`,
 				foundIP, err := crmcontrol.FindLinstorController()
 				if err == nil { // it might be ok to not find it...
 					controller = foundIP
+					log.Debugf("Found LINSTOR controller at %s", foundIP)
+				} else {
+					log.Debugf("Could not find LINSTOR controller in CIB")
 				}
 			}
+			log.Debugf("Using LINSTOR controller at %s", controller)
 			targets, err := iscsi.ListResources()
 			if err != nil {
 				log.Fatal(err)

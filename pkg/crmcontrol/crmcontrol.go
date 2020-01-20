@@ -54,13 +54,13 @@ const (
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
-	Targets []*crmTarget
-	LUs     []*crmLu
-	IPs     []*crmIP
+	Targets []*Target
+	LUs     []*Lu
+	IPs     []*IP
 	TIDs    *IntSet
 }
 
-type crmTarget struct {
+type Target struct {
 	ID       string
 	IQN      string
 	Username string
@@ -69,14 +69,14 @@ type crmTarget struct {
 	Tid      int
 }
 
-type crmLu struct {
+type Lu struct {
 	ID     string
 	LUN    uint8
-	Target *crmTarget
+	Target *Target
 	Path   string
 }
 
-type crmIP struct {
+type IP struct {
 	ID      string
 	IP      net.IP
 	Netmask uint8
@@ -94,7 +94,7 @@ func checkTargetExists(c *cib.CIB, iqn string) (bool, string, error) {
 		return false, "", err
 	}
 
-	id := crmTargetID(targetName)
+	id := TargetID(targetName)
 	elem := c.FindResource(id)
 	if elem == nil {
 		log.Debug("Not found")
@@ -224,7 +224,7 @@ func getIDsToDelete(c *cib.CIB, target string, lun uint8) ([]string, error) {
 			continue
 		}
 
-		regexBelongs := `^` + crmTargetID(target) + `_lu\d+$`
+		regexBelongs := `^` + TargetID(target) + `_lu\d+$`
 		matched, err := regexp.MatchString(regexBelongs, idAttr.Value)
 		if err != nil {
 			return nil, err
@@ -246,7 +246,7 @@ func getIDsToDelete(c *cib.CIB, target string, lun uint8) ([]string, error) {
 		return generateCrmObjectNames(target, []uint8{lun}), nil
 	} else {
 		// there are still more LUs -> only delete this one
-		return []string{crmLuID(target, lun)}, nil
+		return []string{LuID(target, lun)}, nil
 	}
 }
 
@@ -282,7 +282,7 @@ func DeleteLogicalUnit(iqn string, lun uint8) error {
 		return err
 	}
 
-	if c.FindResource(crmLuID(iscsiTargetName, lun)) == nil {
+	if c.FindResource(LuID(iscsiTargetName, lun)) == nil {
 		return fmt.Errorf("Target %s does not have LUN %d", aurora.Cyan(iscsiTargetName), aurora.Cyan(lun))
 	}
 
@@ -363,15 +363,15 @@ func DeleteLogicalUnit(iqn string, lun uint8) error {
 	return c.Update()
 }
 
-func crmTargetID(target string) string {
+func TargetID(target string) string {
 	return "p_iscsi_" + target
 }
 
-func crmLuID(target string, lun uint8) string {
+func LuID(target string, lun uint8) string {
 	return "p_iscsi_" + target + "_lu" + strconv.Itoa(int(lun))
 }
 
-func crmIPID(target string) string {
+func IPID(target string) string {
 	return "p_iscsi_" + target + "_ip"
 }
 
@@ -405,16 +405,16 @@ func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 		return state, err
 	}
 
-	state.TargetState = c.FindLrmState(crmTargetID(target))
+	state.TargetState = c.FindLrmState(TargetID(target))
 	for _, lun := range luns {
-		state.LUStates[lun] = c.FindLrmState(crmLuID(target, lun))
+		state.LUStates[lun] = c.FindLrmState(LuID(target, lun))
 	}
-	state.IPState = c.FindLrmState(crmIPID(target))
+	state.IPState = c.FindLrmState(IPID(target))
 
 	return state, nil
 }
 
-func (c *CrmConfiguration) findTargetByIqn(iqn string) (*crmTarget, error) {
+func (c *CrmConfiguration) findTargetByIqn(iqn string) (*Target, error) {
 	for _, t := range c.Targets {
 		if t.IQN == iqn {
 			return t, nil
@@ -424,8 +424,8 @@ func (c *CrmConfiguration) findTargetByIqn(iqn string) (*crmTarget, error) {
 	return nil, errors.New("no target with IQN found")
 }
 
-func findTargets(rscSection *xmltree.Element) []*crmTarget {
-	targets := make([]*crmTarget, 0)
+func findTargets(rscSection *xmltree.Element) []*Target {
+	targets := make([]*Target, 0)
 	for _, target := range rscSection.FindElements("./primitive[@type='iSCSITarget']") {
 		// find ID
 		id := target.SelectAttr("id")
@@ -479,7 +479,7 @@ func findTargets(rscSection *xmltree.Element) []*crmTarget {
 			continue
 		}
 
-		crmTarget := &crmTarget{
+		newTarget := &Target{
 			ID:       id.Value,
 			IQN:      iqn.Value,
 			Username: username.Value,
@@ -488,13 +488,13 @@ func findTargets(rscSection *xmltree.Element) []*crmTarget {
 			Tid:      tid,
 		}
 
-		targets = append(targets, crmTarget)
+		targets = append(targets, newTarget)
 	}
 	return targets
 }
 
-func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
-	lus := make([]*crmLu, 0)
+func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*Lu {
+	lus := make([]*Lu, 0)
 	for _, lu := range rscSection.FindElements("./primitive[@type='iSCSILogicalUnit']") {
 		// find ID
 		id := lu.SelectAttr("id")
@@ -549,21 +549,21 @@ func findLus(rscSection *xmltree.Element, config *CrmConfiguration) []*crmLu {
 			continue
 		}
 
-		crmLu := &crmLu{
+		Lu := &Lu{
 			ID:     id.Value,
 			LUN:    uint8(lun),
 			Target: target,
 			Path:   path.Value,
 		}
 
-		lus = append(lus, crmLu)
+		lus = append(lus, Lu)
 	}
 
 	return lus
 }
 
-func findIPs(rscSection *xmltree.Element) []*crmIP {
-	ips := make([]*crmIP, 0)
+func findIPs(rscSection *xmltree.Element) []*IP {
+	ips := make([]*IP, 0)
 	for _, ipElem := range rscSection.FindElements("./primitive[@type='IPaddr2']") {
 		// find ID
 		id := ipElem.SelectAttr("id")
@@ -594,7 +594,7 @@ func findIPs(rscSection *xmltree.Element) []*crmIP {
 			continue
 		}
 
-		ip := &crmIP{
+		ip := &IP{
 			ID:      id.Value,
 			IP:      net.ParseIP(ipAddr.Value),
 			Netmask: uint8(netmask),

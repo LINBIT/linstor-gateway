@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"strings"
 
 	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	log "github.com/sirupsen/logrus"
 )
 
 // Default port for an iSCSI portal
@@ -123,6 +125,21 @@ func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 	return crmcontrol.ProbeResource(i.Target.IQN, luns)
 }
 
+func findServiceIP(target *crmcontrol.Target, ips []*crmcontrol.IP) net.IP {
+	targetName, err := targetutil.ExtractTargetName(target.IQN)
+	if err != nil {
+		log.Debugf("could not extract target name: %w", err)
+		return nil
+	}
+	wantedID := crmcontrol.IPID(targetName)
+	for _, ip := range ips {
+		if ip.ID == wantedID {
+			return ip.IP
+		}
+	}
+	return nil
+}
+
 // ListResources lists existing iSCSI targets.
 //
 // It returns a slice of Targets and an error object
@@ -143,11 +160,12 @@ func ListResources() ([]*targetutil.Target, error) {
 	// first, "convert" all targets
 	for _, t := range config.Targets {
 		targetCfg := targetutil.TargetConfig{
-			IQN:      t.IQN,
-			LUNs:     make([]*targetutil.LUN, 0),
-			Username: t.Username,
-			Password: t.Password,
-			Portals:  t.Portals,
+			IQN:       t.IQN,
+			LUNs:      make([]*targetutil.LUN, 0),
+			Username:  t.Username,
+			Password:  t.Password,
+			ServiceIP: findServiceIP(t, config.IPs),
+			Portals:   t.Portals,
 		}
 
 		target, err := targetutil.NewTarget(targetCfg)

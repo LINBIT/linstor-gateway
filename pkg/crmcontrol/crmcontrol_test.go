@@ -130,7 +130,7 @@ func TestGenerateCreateLuXML(t *testing.T) {
       <primitive id="p_iscsi_example_ip" class="ocf" provider="heartbeat" type="IPaddr2">
         <instance_attributes id="p_iscsi_example_ip-instance_attributes">
           <nvpair name="ip" value="192.168.1.1" id="p_iscsi_example_ip-instance_attributes-ip"/>
-          <nvpair name="cidr_netmask" value="24" id="p_iscsi_example_ip-instance_attributes-cidr_netmask"/>
+          <nvpair name="cidr_netmask" value="16" id="p_iscsi_example_ip-instance_attributes-cidr_netmask"/>
         </instance_attributes>
         <operations>
           <op name="monitor" interval="15" timeout="40" id="p_iscsi_example_ip-monitor-15"/>
@@ -242,12 +242,13 @@ func TestGenerateCreateLuXML(t *testing.T) {
 	tid := int16(0)
 
 	target := targetutil.NewTargetMust(targetutil.TargetConfig{
-		IQN:       "iqn.2019-08.com.linbit:example",
-		LUNs:      []*targetutil.LUN{&targetutil.LUN{ID: 0, SizeKiB: 1000}},
-		ServiceIP: net.ParseIP("192.168.1.1"),
-		Username:  "user",
-		Password:  "password",
-		Portals:   "192.168.1.1:3260",
+		IQN:              "iqn.2019-08.com.linbit:example",
+		LUNs:             []*targetutil.LUN{&targetutil.LUN{ID: 0, SizeKiB: 1000}},
+		ServiceIP:        net.ParseIP("192.168.1.1"),
+		ServiceIPNetmask: []byte{255, 255, 0, 0},
+		Username:         "user",
+		Password:         "password",
+		Portals:          "192.168.1.1:3260",
 	})
 
 	actual, err := generateCreateLuXML(target, storageNodes, device, tid)

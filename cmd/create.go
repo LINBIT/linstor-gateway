@@ -16,7 +16,7 @@ import (
 
 // createCommand represents the create command
 func createCommand() *cobra.Command {
-	var ip net.IP
+	var ipCIDR string
 	var controller net.IP
 	var username, password, portals, group string
 	var iqn string
@@ -24,6 +24,8 @@ func createCommand() *cobra.Command {
 
 	var sz *unit.Value
 	var sizeKiB uint64
+	var ip net.IP
+	var ipnet *net.IPNet
 
 	var createCmd = &cobra.Command{
 		Use:   "create",
@@ -37,7 +39,7 @@ all necessary order and location constraints. The Pacemaker primites are
 prefixed with p_, contain the name and a resource type postfix.
 
 For example:
-linstor-iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181 \
+linstor-iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 \
  -username=foo --lun=1 --password=bar --resource_group=ssd_thin_2way --size=2G
 
 Creates linstor resources example_lu0 and
@@ -46,6 +48,12 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 		Args: cobra.NoArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			sizeKiB = uint64(sz.Value / unit.DefaultUnits["K"])
+
+			var err error
+			ip, ipnet, err = net.ParseCIDR(ipCIDR)
+			if err != nil {
+				log.Fatalf("Invalid service IP: %s", err.Error())
+			}
 
 			if portals == "" {
 				portals = ip.String() + ":" + strconv.Itoa(iscsi.DFLT_ISCSI_PORTAL_PORT)
@@ -68,12 +76,13 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 			}
 
 			targetCfg := targetutil.TargetConfig{
-				LUNs:      []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
-				IQN:       iqn,
-				ServiceIP: ip,
-				Username:  username,
-				Password:  password,
-				Portals:   portals,
+				LUNs:             []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
+				IQN:              iqn,
+				ServiceIP:        ip,
+				ServiceIPNetmask: ipnet.Mask,
+				Username:         username,
+				Password:         password,
+				Portals:          portals,
 			}
 			target := cliNewTargetMust(cmd, targetCfg)
 			iscsiCfg := &iscsi.ISCSI{Linstor: linstorCfg, Target: target}
@@ -86,7 +95,7 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 
 	createCmd.Flags().StringVarP(&iqn, "iqn", "i", "", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)")
 	createCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN Number (required)")
-	createCmd.Flags().IPVar(&ip, "ip", net.IPv4(127, 0, 0, 1), "Set the service IP of the target (required)")
+	createCmd.Flags().StringVar(&ipCIDR, "ip", "127.0.0.1/8", "Set the service IP and netmask of the target (required)")
 	createCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
 	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username (required)")

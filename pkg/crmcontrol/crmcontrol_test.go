@@ -58,8 +58,8 @@ func TestParseConfiguration(t *testing.T) {
 		return
 	}
 
-	expectedTargets := []*crmTarget{
-		&crmTarget{
+	expectedTargets := []*Target{
+		&Target{
 			ID:       "p_iscsi_example",
 			IQN:      "iqn.2019-08.com.libit:example",
 			Username: "rck",
@@ -75,8 +75,8 @@ func TestParseConfiguration(t *testing.T) {
 		t.Errorf("Actual: %+v", config.Targets)
 	}
 
-	expectedLus := []*crmLu{
-		&crmLu{
+	expectedLus := []*Lu{
+		&Lu{
 			ID:     "p_iscsi_example_lu1",
 			LUN:    1,
 			Target: expectedTargets[0],
@@ -90,8 +90,8 @@ func TestParseConfiguration(t *testing.T) {
 		t.Errorf("Actual: %+v", config.LUs)
 	}
 
-	expectedIPs := []*crmIP{
-		&crmIP{
+	expectedIPs := []*IP{
+		&IP{
 			ID:      "p_iscsi_example_ip",
 			IP:      net.ParseIP("192.168.122.181"),
 			Netmask: 24,

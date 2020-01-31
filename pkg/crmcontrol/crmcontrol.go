@@ -86,6 +86,7 @@ type ResourceRunState struct {
 	TargetState cib.LrmRunState           `json:"target"`
 	LUStates    map[uint8]cib.LrmRunState `json:"luns"`
 	IPState     cib.LrmRunState           `json:"ip"`
+	OnNode      string                    `json:"on_node"`
 }
 
 func checkTargetExists(c *cib.CIB, iqn string) (bool, string, error) {
@@ -388,6 +389,7 @@ func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 		TargetState: cib.Unknown,
 		LUStates:    make(map[uint8]cib.LrmRunState),
 		IPState:     cib.Unknown,
+		OnNode:      "",
 	}
 
 	var c cib.CIB
@@ -417,6 +419,8 @@ func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 		state.LUStates[lun] = c.FindLrmState(LuID(target, lun))
 	}
 	state.IPState = c.FindLrmState(IPID(target))
+
+	state.OnNode = c.GetNodeOfResource(TargetID(target))
 
 	return state, nil
 }

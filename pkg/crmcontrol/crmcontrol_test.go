@@ -245,7 +245,7 @@ func TestGenerateCreateLuXML(t *testing.T) {
 		IQN:              "iqn.2019-08.com.linbit:example",
 		LUNs:             []*targetutil.LUN{&targetutil.LUN{ID: 0, SizeKiB: 1000}},
 		ServiceIP:        net.ParseIP("192.168.1.1"),
-		ServiceIPNetmask: []byte{255, 255, 0, 0},
+		ServiceIPNetmask: 16,
 		Username:         "user",
 		Password:         "password",
 		Portals:          "192.168.1.1:3260",

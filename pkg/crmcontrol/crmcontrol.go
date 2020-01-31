@@ -129,13 +129,6 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 		return "", err
 	}
 
-	funcs := template.FuncMap{
-		"netmask": func(x net.IPMask) int {
-			ones, _ := x.Size()
-			return ones
-		},
-	}
-
 	tmplVars := map[string]interface{}{
 		"Target":       target,
 		"TargetName":   targetName,
@@ -145,7 +138,7 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	}
 
 	// Replace resource creation template variables
-	iscsitmpl := template.Must(template.New("crmisci").Funcs(funcs).Parse(crmtemplate.CRM_ISCSI))
+	iscsitmpl := template.Must(template.New("crmisci").Parse(crmtemplate.CRM_ISCSI))
 
 	var cibData bytes.Buffer
 	err = iscsitmpl.Execute(&cibData, tmplVars)

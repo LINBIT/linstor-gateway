@@ -34,13 +34,13 @@ const MinVolumeLun = 1
 
 // TargetConfig contains the information necessary for iSCSI targets.
 type TargetConfig struct {
-	IQN              string     `json:"iqn,omitempty"`
-	LUNs             []*LUN     `json:"luns,omitempty"`
-	ServiceIP        net.IP     `json:"service_ip,omitempty"`
-	ServiceIPNetmask net.IPMask `json:"service_ip_netmask,omitempty"`
-	Username         string     `json:"username,omitempty"`
-	Password         string     `json:"password,omitempty"`
-	Portals          string     `json:"portals,omitempty"`
+	IQN              string `json:"iqn,omitempty"`
+	LUNs             []*LUN `json:"luns,omitempty"`
+	ServiceIP        net.IP `json:"service_ip,omitempty"`
+	ServiceIPNetmask int    `json:"service_ip_mask,omitempty"`
+	Username         string `json:"username,omitempty"`
+	Password         string `json:"password,omitempty"`
+	Portals          string `json:"portals,omitempty"`
 }
 
 func NewTarget(cfg TargetConfig) (Target, error) {

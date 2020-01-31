@@ -140,6 +140,21 @@ func findServiceIP(target *crmcontrol.Target, ips []*crmcontrol.IP) net.IP {
 	return nil
 }
 
+func findServiceIPNetmask(target *crmcontrol.Target, ips []*crmcontrol.IP) int {
+	targetName, err := targetutil.ExtractTargetName(target.IQN)
+	if err != nil {
+		log.Debugf("could not extract target name: %w", err)
+		return 0
+	}
+	wantedID := crmcontrol.IPID(targetName)
+	for _, ip := range ips {
+		if ip.ID == wantedID {
+			return int(ip.Netmask)
+		}
+	}
+	return 0
+}
+
 // ListResources lists existing iSCSI targets.
 //
 // It returns a slice of Targets and an error object
@@ -160,12 +175,13 @@ func ListResources() ([]*targetutil.Target, error) {
 	// first, "convert" all targets
 	for _, t := range config.Targets {
 		targetCfg := targetutil.TargetConfig{
-			IQN:       t.IQN,
-			LUNs:      make([]*targetutil.LUN, 0),
-			Username:  t.Username,
-			Password:  t.Password,
-			ServiceIP: findServiceIP(t, config.IPs),
-			Portals:   t.Portals,
+			IQN:              t.IQN,
+			LUNs:             make([]*targetutil.LUN, 0),
+			Username:         t.Username,
+			Password:         t.Password,
+			ServiceIP:        findServiceIP(t, config.IPs),
+			ServiceIPNetmask: findServiceIPNetmask(t, config.IPs),
+			Portals:          t.Portals,
 		}
 
 		target, err := targetutil.NewTarget(targetCfg)

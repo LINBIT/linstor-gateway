@@ -5,7 +5,7 @@ const CRM_ISCSI = `<configuration>
       <primitive id="p_iscsi_{{.TargetName}}_ip" class="ocf" provider="heartbeat" type="IPaddr2">
         <instance_attributes id="p_iscsi_{{.TargetName}}_ip-instance_attributes">
           <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-ip"/>
-          <nvpair name="cidr_netmask" value="{{netmask .Target.ServiceIPNetmask}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-cidr_netmask"/>
+          <nvpair name="cidr_netmask" value="{{.Target.ServiceIPNetmask}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-cidr_netmask"/>
         </instance_attributes>
         <operations>
           <op name="monitor" interval="15" timeout="40" id="p_iscsi_{{.TargetName}}_ip-monitor-15"/>

@@ -75,11 +75,13 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 				ResourceGroupName: group,
 			}
 
+			ones, _ := ipnet.Mask.Size()
+
 			targetCfg := targetutil.TargetConfig{
 				LUNs:             []*targetutil.LUN{&targetutil.LUN{ID: uint8(lun), SizeKiB: sizeKiB}},
 				IQN:              iqn,
 				ServiceIP:        ip,
-				ServiceIPNetmask: ipnet.Mask,
+				ServiceIPNetmask: ones,
 				Username:         username,
 				Password:         password,
 				Portals:          portals,

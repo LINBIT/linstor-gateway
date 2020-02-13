@@ -8,12 +8,11 @@ import (
 
 func TestFindLinstorControllerName(t *testing.T) {
 	cases := []struct {
-		descr       string
-		input       string
-		expect      string
-		expectError bool
+		descr  string
+		input  string
+		expect string
 	}{{
-		descr: "good",
+		descr: "start action present",
 		input: `<cib><status><node_state><lrm>
 			<lrm_resources>
 				<lrm_resource type="linstor-controller" class="systemd">
@@ -21,16 +20,34 @@ func TestFindLinstorControllerName(t *testing.T) {
 				</lrm_resource>
 			</lrm_resources>
 		</lrm></node_state></status></cib>`,
-		expect:      "node1",
-		expectError: false,
+		expect: "node1",
+	}, {
+		descr: "successful monitor action present",
+		input: `<cib><status><node_state><lrm>
+			<lrm_resources>
+				<lrm_resource type="linstor-controller" class="systemd">
+					<lrm_rsc_op on_node="node1" operation="monitor" rc-code="0"/>
+				</lrm_resource>
+			</lrm_resources>
+		</lrm></node_state></status></cib>`,
+		expect: "node1",
+	}, {
+		descr: "failed monitor action present",
+		input: `<cib><status><node_state><lrm>
+			<lrm_resources>
+				<lrm_resource type="linstor-controller" class="systemd">
+					<lrm_rsc_op on_node="node1" operation="monitor" rc-code="7"/>
+				</lrm_resource>
+			</lrm_resources>
+		</lrm></node_state></status></cib>`,
+		expect: "",
 	}, {
 		descr: "no lrm_resource",
 		input: `<cib><status><node_state><lrm>
 			<lrm_resources>
 			</lrm_resources>
 		</lrm></node_state></status></cib>`,
-		expect:      "",
-		expectError: true,
+		expect: "",
 	}}
 
 	for _, c := range cases {
@@ -40,10 +57,7 @@ func TestFindLinstorControllerName(t *testing.T) {
 			t.Fatalf("Invalid XML in test data: %v", err)
 		}
 
-		name, err := findLinstorControllerName(doc)
-		if c.expectError != (err != nil) {
-			t.Errorf("Unexpected error state: %v", err)
-		}
+		name := findLinstorControllerName(doc)
 
 		if name != c.expect {
 			t.Error("Name did not match")

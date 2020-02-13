@@ -21,7 +21,14 @@ const (
 	crmTypeLinstorCtrl = "linstor-controller"
 )
 
-func findLinstorControllerName(doc *xmltree.Document) (string, error) {
+// isRunning returns whether or not a resource is running or not based on the
+// contents of an lrm_resource_op. If it is either a start action or a successful
+// monitor action, the resource is considered running.
+func isRunning(on_node, operation, rcCode string) bool {
+	return on_node != "" && (operation == "start" || (operation == "monitor" && rcCode == "0"))
+}
+
+func findLinstorControllerName(doc *xmltree.Document) string {
 	xpath := fmt.Sprintf("%s/%s/%s", cibNodeStatusXpath, cibTagLrm, cibTagLrmRsclist)
 	log.Tracef("Looking for linstor controller in %s", xpath)
 	for _, lrm_resources := range doc.FindElements(xpath) {
@@ -34,17 +41,18 @@ func findLinstorControllerName(doc *xmltree.Document) (string, error) {
 				if lrm_rsc_op := lrm_resource.SelectElement(cibTagLrmRscOp); lrm_rsc_op != nil {
 					on_node := lrm_rsc_op.SelectAttrValue("on_node", "")
 					operation := lrm_rsc_op.SelectAttrValue("operation", "")
+					rcCode := lrm_rsc_op.SelectAttrValue("rc-code", "")
 					log.Tracef("Looking at rsc_op with operation %s on node %s", operation, on_node)
-					if on_node != "" && operation == "start" {
+					if isRunning(on_node, operation, rcCode) {
 						log.Tracef("Found LINSTOR controller on node %s", on_node)
-						return on_node, nil
+						return on_node
 					}
 				}
 			}
 		}
 	}
 
-	return "", errors.New("Could not find the 'linstor-controller' in the CIB")
+	return ""
 }
 
 // FindLinstorController searches the CIB configuration for a LINSTOR controller IP.
@@ -55,9 +63,9 @@ func FindLinstorController() (net.IP, error) {
 		return nil, err
 	}
 
-	hostname, err := findLinstorControllerName(c.Doc)
-	if err != nil {
-		return nil, err
+	hostname := findLinstorControllerName(c.Doc)
+	if hostname == "" {
+		return nil, errors.New("Could not find the 'linstor-controller' in the CIB")
 	}
 
 	ips, err := net.LookupIP(hostname)

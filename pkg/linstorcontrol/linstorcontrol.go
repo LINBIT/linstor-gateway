@@ -165,7 +165,7 @@ func (l *Linstor) AggregateResourceState() (ResourceState, error) {
 	uptodate := 0
 	for _, r := range resources {
 		state := r.Volumes[0].State.DiskState
-		if state == "UpToDate" {
+		if state == "UpToDate" || state == "Diskless" {
 			uptodate += 1
 		}
 	}

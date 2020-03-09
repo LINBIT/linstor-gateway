@@ -1,6 +1,6 @@
 %define name linstor-iscsi
 %define release 1
-%define version 0.4.1
+%define version 0.4.2
 #%define buildroot %{_topdir}/BUILD/%{name}-%{version}
 
 %define _firewalldir /usr/lib/firewalld

@@ -1,0 +1,613 @@
+#!/bin/sh
+#
+# portblock: iptables temporary portblocking control
+#
+# Author:	Sun Jiang Dong (initial version)
+#               Philipp Reisner (per-IP filtering)
+#
+# License:	GNU General Public License (GPL)
+#
+# Copyright:	(C) 2005 International Business Machines
+#
+#	  OCF parameters are as below:
+#		OCF_RESKEY_protocol
+#		OCF_RESKEY_portno
+#		OCF_RESKEY_action
+#		OCF_RESKEY_ip
+#		OCF_RESKEY_tickle_dir
+#		OCF_RESKEY_sync_script
+#######################################################################
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+OCF_RESKEY_protocol_default=""
+OCF_RESKEY_portno_default=""
+OCF_RESKEY_action_default=""
+OCF_RESKEY_ip_default="0.0.0.0/0"
+OCF_RESKEY_reset_local_on_unblock_stop_default="false"
+OCF_RESKEY_tickle_dir_default=""
+OCF_RESKEY_sync_script_default=""
+OCF_RESKEY_tickle_sync_nodes_default=""
+
+: ${OCF_RESKEY_protocol=${OCF_RESKEY_protocol_default}}
+: ${OCF_RESKEY_portno=${OCF_RESKEY_portno_default}}
+: ${OCF_RESKEY_action=${OCF_RESKEY_action_default}}
+: ${OCF_RESKEY_ip=${OCF_RESKEY_ip_default}}
+: ${OCF_RESKEY_reset_local_on_unblock_stop=${OCF_RESKEY_reset_local_on_unblock_stop_default}}
+: ${OCF_RESKEY_tickle_dir=${OCF_RESKEY_tickle_dir_default}}
+: ${OCF_RESKEY_sync_script=${OCF_RESKEY_sync_script_default}}
+: ${OCF_RESKEY_tickle_sync_nodes=${OCF_RESKEY_tickle_sync_nodes_default}}
+#######################################################################
+CMD=`basename $0`
+TICKLETCP=$HA_BIN/tickle_tcp
+CONNFILTER=${OCF_FUNCTIONS_DIR}/connection_filter.py
+TOKENIZER=${OCF_FUNCTIONS_DIR}/tokenizer.py
+
+usage()
+{
+	cat <<END >&2
+	usage: $CMD {start|stop|status|monitor|meta-data|validate-all}
+
+	$CMD is used to temporarily block ports using iptables.
+
+	It can be used to blackhole a port before bringing
+	up an IP address, and enable it after a service is started.
+	To do that for samba, the following can be used:
+
+	crm configure <<EOF
+	primitive portblock-samba ocf:heartbeat:portblock \\
+	  params protocol=tcp portno=137,138 action=block
+	primitive portunblock-samba ocf:heartbeat:portblock \\
+	  params protocol=tcp portno=137,138 action=unblock
+	primitive samba-vip ocf:heartbeat:IPaddr2 \\
+	  params ip=10.10.10.20
+	group g-samba \\
+	  portblock-samba samba-vip nmbd smbd portunblock-samba
+	EOF
+
+	This will do the following things:
+
+	  - DROP all incoming packets for TCP ports 137 and 138
+	  - Bring up the IP alias 10.10.10.20
+	  - start the nmbd and smbd services
+	  - Re-enable TCP ports 137 and 138
+	        (enable normal firewall rules on those ports)
+
+	This prevents clients from getting TCP RST if they try to reconnect
+	to the service after the alias is enabled but before nmbd and smbd
+	are running.  These packets will cause some clients to give up
+	attempting to reconnect to the server.
+
+	Attempts to connect to UDP and other non-TCP ports which have nothing
+	listening can result in ICMP port unreachable responses, which can
+	have the same undesirable affect on some clients.
+
+	NOTE: iptables is Linux-specific.
+
+	An additional feature in the portblock RA is the tickle ACK function
+	enabled by specifying the tickle_dir parameter. The tickle ACK
+	triggers the clients to faster reconnect their TCP connections to the
+	fail-overed server.
+
+	Please note that this feature is often used for the floating IP fail-
+	over scenario where the long-lived TCP connections need to be tickled.
+	It doesn't support the cluster alias IP scenario.
+
+	When using the tickle ACK function, in addition to the normal usage
+	of portblock RA, the parameter tickle_dir must be specified in the
+	action=unblock instance of the portblock resources.
+	For example, you may stack resources like below:
+		portblock action=block
+		services
+		portblock action=unblock tickle_dir=/tickle/state/dir
+
+	If you want to tickle all the TCP connections which connected to _one_
+	floating IP but different ports, no matter how many portblock resources
+	you have defined, you should enable tickles for _one_ portblock
+	resource(action=unblock) only.
+
+	The tickle_dir is a location which stores the established TCP
+	connections. It can be a shared directory(which is cluster-visible to
+	all nodes) or a local directory.
+	If you use the shared directory, you needn't do any other things.
+	If you use the local directory, you must also specify the sync_script
+	paramater. We recommend you to use csync2 as the sync_script.
+	For example, if you use the local directory /tmp/tickle as tickle_dir,
+	you could setup the csync2 as the csync2 documentation says and
+	configure your /etc/csync2/csync2.cfg like:
+		group ticklegroup {
+		  host node1;
+		  host node2;
+		  key  /etc/csync2/ticklegroup.key;
+		  include /etc/csync2/csync2.cfg;
+		  include /tmp/tickle;
+		  auto younger;
+		}
+	Then specify the parameter sync_script as "csync2 -xv".
+
+END
+}
+
+meta_data() {
+	cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="portblock">
+<version>1.0</version>
+
+<longdesc lang="en">
+Resource script for portblock. It is used to temporarily block ports
+using iptables. In addition, it may allow for faster TCP reconnects
+for clients on failover. Use that if there are long lived TCP
+connections to an HA service. This feature is enabled by setting the
+tickle_dir parameter and only in concert with action set to unblock.
+Note that the tickle ACK function is new as of version 3.0.2 and
+hasn't yet seen widespread use.
+</longdesc>
+<shortdesc lang="en">Block and unblocks access to TCP and UDP ports</shortdesc>
+
+<parameters>
+<parameter name="protocol" unique="0" required="1">
+<longdesc lang="en">
+The protocol used to be blocked/unblocked.
+</longdesc>
+<shortdesc lang="en">protocol</shortdesc>
+<content type="string" default="${OCF_RESKEY_protocol_default}" />
+</parameter>
+
+<parameter name="portno" unique="0" required="1">
+<longdesc lang="en">
+The port number used to be blocked/unblocked.
+</longdesc>
+<shortdesc lang="en">portno</shortdesc>
+<content type="string" default="${OCF_RESKEY_portno_default}" />
+</parameter>
+
+<parameter name="action" unique="0" required="1">
+<longdesc lang="en">
+The action (block/unblock) to be done on the protocol::portno.
+</longdesc>
+<shortdesc lang="en">action</shortdesc>
+<content type="string" default="${OCF_RESKEY_action_default}" />
+</parameter>
+
+<parameter name="reset_local_on_unblock_stop" unique="0" required="0">
+<longdesc lang="en">
+If for some reason the long lived server side TCP sessions won't be cleaned up
+by a reconfiguration/flush/stop of whatever services this portblock protects,
+they would linger in the connection table, even after the IP is gone
+and services have been switched over to another node.
+
+An example would be the default NFS kernel server.
+
+These "known" connections may seriously confuse and delay a later switchback.
+
+Enabling this option will cause this agent to try to get rid of these connections
+by injecting a temporary iptables rule to TCP-reset outgoing packets from the
+blocked ports, and additionally tickle them locally,
+just before it starts to DROP incoming packets on "unblock stop".
+</longdesc>
+<shortdesc lang="en">(try to) reset server TCP sessions when unblock stops</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_reset_local_on_unblock_stop_default}" />
+</parameter>
+
+<parameter name="ip" unique="0" required="0">
+<longdesc lang="en">
+The IP address used to be blocked/unblocked.
+</longdesc>
+<shortdesc lang="en">ip</shortdesc>
+<content type="string" default="${OCF_RESKEY_ip_default}" />
+</parameter>
+
+<parameter name="tickle_dir" unique="0" required="0">
+<longdesc lang="en">
+The shared or local directory (_must_ be absolute path) which
+stores the established TCP connections.
+</longdesc>
+<shortdesc lang="en">Tickle directory</shortdesc>
+<content type="string" default="${OCF_RESKEY_tickle_dir_default}" />
+</parameter>
+
+<parameter name="sync_script" unique="0" required="0">
+<longdesc lang="en">
+If the tickle_dir is a local directory, then the TCP connection state
+file has to be replicated to other nodes in the cluster. It can be
+csync2 (default), some wrapper of rsync, or whatever. It takes the
+file name as a single argument. For csync2, set it to "csync2 -xv".
+</longdesc>
+<shortdesc lang="en">Connection state file synchronization script</shortdesc>
+<content type="string" default="${OCF_RESKEY_sync_script_default}" />
+</parameter>
+
+<parameter name="tickle_sync_nodes" unique="0" required="0">
+<longdesc lang="en">
+List of cluster node names for the synchronization of the
+connection status for tickle ACK using Pacemaker's attrd
+</longdesc>
+<shortdesc lang="en">Node list for connection status sync</shortdesc>
+<content type="string" default="${OCF_RESKEY_tickle_sync_nodes_default}" />
+</parameter>
+</parameters>
+
+<actions>
+<action name="start" timeout="20s" />
+<action name="stop" timeout="20s" />
+<action name="status" depth="0" timeout="10s" interval="10s" />
+<action name="monitor" depth="0" timeout="10s" interval="10s" />
+<action name="meta-data" timeout="5s" />
+<action name="validate-all" timeout="5s" />
+</actions>
+</resource-agent>
+END
+}
+
+
+#
+#	Because this is the normal usage, we consider "block"
+#	resources to be pseudo-resources -- that is, their status can't
+#	be reliably determined through external means.
+#	This is because we expect an "unblock" resource to come along
+#	and disable us -- but we're still in some sense active...
+#
+
+#active_grep_pat {udp|tcp} portno,portno
+active_grep_pat()
+{
+  w="[ 	][ 	]*"
+  any="0\\.0\\.0\\.0/0"
+  echo "^DROP${w}${1}${w}--${w}${any}${w}${3}${w}multiport${w}dports${w}${2}\>"
+}
+
+#chain_isactive  {udp|tcp} portno,portno ip
+chain_isactive()
+{
+  PAT=`active_grep_pat "$1" "$2" "$3"`
+  $IPTABLES $wait -n -L INPUT | grep "$PAT" >/dev/null
+}
+
+save_tcp_connections()
+{
+	if [[ ! -z "$OCF_RESKEY_tickle_sync_nodes" ]]; then
+		conn_list=`netstat -n -t -W | tail -n +2 | ${CONNFILTER} save`
+		node_list=${OCF_RESKEY_tickle_sync_nodes}
+		while [[ ${node_list} != "" ]]
+		do
+			node=${node_list%%,*}
+			node_list=${node_list#${node}}
+			node_list=${node_list#,}
+			attrd_updater --node=${node} --name=${OCF_RESKEY_ip}":"${OCF_RESKEY_portno} --update=${conn_list}
+		done
+	elif [[ ! -z "$OCF_RESKEY_tickle_dir" ]]; then
+		statefile=$OCF_RESKEY_tickle_dir/$OCF_RESKEY_ip
+		if [ -z "$OCF_RESKEY_sync_script" ]; then
+			netstat -tn | awk -F '[:[:space:]]+' '
+				$8 == "ESTABLISHED" && $4 == "'$OCF_RESKEY_ip'" \
+				{printf "%s:%s\t%s:%s\n", $4,$5, $6,$7}' |
+				dd of="$statefile".new conv=fsync status=none &&
+				mv "$statefile".new "$statefile"
+		else
+			netstat -tn | awk -F '[:[:space:]]+' '
+				$8 == "ESTABLISHED" && $4 == "'$OCF_RESKEY_ip'" \
+				{printf "%s:%s\t%s:%s\n", $4,$5, $6,$7}' \
+				> $statefile
+			$OCF_RESKEY_sync_script $statefile > /dev/null 2>&1 &
+		fi
+	fi
+}
+
+tickle_remote()
+{
+	if [[ ! -z "$OCF_RESKEY_tickle_sync_nodes" ]]; then
+		echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle
+		attrd_updater --query --name=${OCF_RESKEY_ip}":"${OCF_RESKEY_portno} | ${CONNFILTER} query | ${TICKLETCP} -n 3
+	elif [[ ! -z "$OCF_RESKEY_tickle_dir" ]]; then
+		echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle
+		f=$OCF_RESKEY_tickle_dir/$OCF_RESKEY_ip
+		[ -r $f ] || return
+		$TICKLETCP -n 3 < $f
+	fi
+}
+
+tickle_local()
+{
+	if [[ ! -z "$OCF_RESKEY_tickle_sync_nodes" ]]; then
+		attrd_updater --query --name=${OCF_RESKEY_ip}":"${OCF_RESKEY_portno} | ${CONNFILTER} query | awk '{print $2 " " $1}' | ${TICKLETCP} -n 3
+	elif [[ ! -z "$OCF_RESKEY_tickle_dir" ]]; then
+		f=$OCF_RESKEY_tickle_dir/$OCF_RESKEY_ip
+		[ -r $f ] || return
+
+		checkcmd="netstat -tn"
+		if ! have_binary "netstat"; then
+			checkcmd="ss -Htn"
+		fi
+
+		# swap "local" and "remote" address,
+		# so we tickle ourselves.
+		# We set up a REJECT with tcp-reset before we do so, so we get rid of
+		# the no longer wanted potentially long lived "ESTABLISHED" connection
+		# entries on the IP we are going to delete in a sec.  These would get in
+		# the way if we switch-over and then switch-back in quick succession.
+		local i
+		awk '{ print $2, $1; }' $f | $TICKLETCP
+		$checkcmd | grep -Fw $OCF_RESKEY_ip || return
+		for i in 0.1 0.5 1 2 4 ; do
+			sleep $i
+			awk '{ print $2, $1; }' $f | $TICKLETCP
+			$checkcmd | grep -Fw $OCF_RESKEY_ip || break
+		done
+	fi
+}
+
+SayActive()
+{
+  echo "$CMD DROP rule for INPUT chain [$*]  is running (OK)"
+}
+
+SayConsideredActive()
+{
+  echo "$CMD DROP rule for INPUT chain [$*] considered to be running (OK)"
+}
+
+SayInactive()
+{
+  echo "$CMD DROP rule for INPUT chain [$*] is inactive"
+}
+
+#IptablesStatus  {udp|tcp} portno,portno ip {block|unblock}
+IptablesStatus() {
+    local rc
+    rc=$OCF_ERR_GENERIC
+    activewords="$CMD $1 $2 is running (OK)"
+    if chain_isactive "$1" "$2" "$3"; then
+	case $4 in
+	    block)
+		SayActive $*
+		rc=$OCF_SUCCESS
+		;;
+	    *)
+ 		SayInactive $*
+		rc=$OCF_NOT_RUNNING
+		;;
+	esac
+    else
+	case $4 in
+	    block)
+		if ha_pseudo_resource "${OCF_RESOURCE_INSTANCE}" status; then
+		    SayConsideredActive $*
+		    rc=$OCF_SUCCESS
+		else
+		    SayInactive $*
+		    rc=$OCF_NOT_RUNNING
+		fi
+		;;
+
+	    *)
+		if ha_pseudo_resource "${OCF_RESOURCE_INSTANCE}" status; then
+			SayActive $*
+			#This is only run on real monitor events.
+			save_tcp_connections
+			rc=$OCF_SUCCESS
+		else
+			SayInactive $*
+			rc=$OCF_NOT_RUNNING
+		fi
+		;;
+	esac
+    fi
+
+    return $rc
+}
+
+#IptablesBLOCK  {udp|tcp} portno,portno ip
+IptablesBLOCK()
+{
+  local rc=0
+  local try_reset=false
+  if	[ "$1/$4/$__OCF_ACTION" = tcp/unblock/stop ] &&
+	ocf_is_true $reset_local_on_unblock_stop
+  then
+	try_reset=true
+  fi
+  if
+    chain_isactive "$1" "$2" "$3"
+  then
+    : OK -- chain already active
+  else
+    if $try_reset ; then
+      $IPTABLES $wait -I OUTPUT -p "$1" -s "$3" -m multiport --sports "$2" -j REJECT --reject-with tcp-reset
+      tickle_local
+    fi
+    $IPTABLES $wait -I INPUT -p "$1" -d "$3" -m multiport --dports "$2" -j DROP
+    rc=$?
+    if $try_reset ; then
+      $IPTABLES $wait -D OUTPUT -p "$1" -s "$3" -m multiport --sports "$2" -j REJECT --reject-with tcp-reset
+    fi
+  fi
+
+  return $rc
+}
+
+#IptablesUNBLOCK  {udp|tcp} portno,portno ip
+IptablesUNBLOCK()
+{
+  if
+    chain_isactive "$1" "$2" "$3"
+  then
+    $IPTABLES $wait -D INPUT -p "$1" -d "$3" -m multiport --dports "$2" -j DROP
+  else
+    : Chain Not active
+  fi
+
+  return $?
+}
+
+#IptablesStart  {udp|tcp} portno,portno ip {block|unblock}
+IptablesStart()
+{
+  ha_pseudo_resource "${OCF_RESOURCE_INSTANCE}" start
+  case $4 in
+    block)	IptablesBLOCK "$@";;
+    unblock)
+		IptablesUNBLOCK "$@"
+		rc=$?
+		tickle_remote
+		#ignore run_tickle_tcp exit code!
+		return $rc
+		;;
+    *)		usage; return 1;
+  esac
+
+  return $?
+}
+
+#IptablesStop  {udp|tcp} portno,portno ip {block|unblock}
+IptablesStop()
+{
+  ha_pseudo_resource "${OCF_RESOURCE_INSTANCE}" stop
+  case $4 in
+    block)	IptablesUNBLOCK "$@";;
+    unblock)
+		save_tcp_connections
+		IptablesBLOCK "$@"
+		;;
+    *)		usage; return 1;;
+  esac
+
+  return $?
+}
+
+#
+#	Check if the port is valid, this function code is not decent, but works
+#
+CheckPort() {
+#	Examples of valid port: "1080", "1", "0080"
+#	Examples of invalid port: "1080bad", "0", "0000", ""
+  echo $1 |egrep -qx '[0-9]+(:[0-9]+)?(,[0-9]+(:[0-9]+)?)*'
+}
+
+IptablesValidateAll()
+{
+  check_binary $IPTABLES
+  case $protocol in
+    tcp|udp)
+	;;
+    *)
+	ocf_log err "Invalid protocol $protocol!"
+	exit $OCF_ERR_CONFIGURED
+	;;
+  esac
+
+  if CheckPort "$portno"; then
+	:
+  else
+	ocf_log err "Invalid port number $portno!"
+	exit $OCF_ERR_CONFIGURED
+  fi
+
+  if [ -n "$OCF_RESKEY_tickle_dir" ]; then
+	if [ x"$action" != x"unblock" ]; then
+		ocf_log err "Tickles are only useful with action=unblock!"
+		exit $OCF_ERR_CONFIGURED
+	fi
+	if [ ! -d "$OCF_RESKEY_tickle_dir" ]; then
+		ocf_log err "The tickle dir doesn't exist!"
+		exit $OCF_ERR_INSTALLED
+	fi
+  fi
+
+  case $action in
+    block|unblock)
+	;;
+    *)
+	ocf_log err "Invalid action $action!"
+	exit $OCF_ERR_CONFIGURED
+	;;
+  esac
+
+  if ocf_is_true $reset_local_on_unblock_stop; then
+	if [ $action != unblock ] ; then
+		ocf_log err "reset_local_on_unblock_stop is only relevant with action=unblock"
+		exit $OCF_ERR_CONFIGURED
+	fi
+	if [ -z $OCF_RESKEY_tickle_dir ] ; then
+		ocf_log warn "reset_local_on_unblock_stop works best with tickle_dir enabled as well"
+	fi
+  fi
+
+  return $OCF_SUCCESS
+}
+
+if
+  ( [ $# -ne 1 ] )
+then
+  usage
+  exit $OCF_ERR_ARGS
+fi
+
+case $1 in
+  meta-data)		meta_data
+			exit $OCF_SUCCESS
+			;;
+
+  usage)		usage
+			exit $OCF_SUCCESS
+			;;
+  *)			;;
+esac
+
+if [ -z "$OCF_RESKEY_protocol" ]; then
+  ocf_log err "Please set OCF_RESKEY_protocol"
+  exit $OCF_ERR_CONFIGURED
+fi
+
+if [ -z "$OCF_RESKEY_portno" ]; then
+  ocf_log err "Please set OCF_RESKEY_portno"
+  exit $OCF_ERR_CONFIGURED
+fi
+
+if [ -z "$OCF_RESKEY_action" ]; then
+  ocf_log err "Please set OCF_RESKEY_action"
+  exit $OCF_ERR_CONFIGURED
+fi
+
+# iptables v1.4.20+ is required to use -w (wait)
+version=$(iptables -V | awk -F ' v' '{print $NF}')
+ocf_version_cmp "$version" "1.4.19.1"
+if [ "$?" -eq "2" ]; then
+    wait="-w"
+else
+    wait=""
+fi
+
+protocol=$OCF_RESKEY_protocol
+portno=$OCF_RESKEY_portno
+action=$OCF_RESKEY_action
+ip=$OCF_RESKEY_ip
+reset_local_on_unblock_stop=$OCF_RESKEY_reset_local_on_unblock_stop
+
+case $1 in
+  start)
+			IptablesStart $protocol $portno $ip $action
+			;;
+
+  stop)
+			IptablesStop $protocol $portno $ip $action
+			;;
+
+  status|monitor)
+			IptablesStatus $protocol $portno $ip $action
+			;;
+
+  validate-all)
+			IptablesValidateAll
+			;;
+
+  *)			usage
+			exit $OCF_ERR_UNIMPLEMENTED
+			;;
+esac
+
+exit $?

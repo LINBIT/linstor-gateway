@@ -12,13 +12,13 @@ import (
 )
 
 // deleteCommand represents the delete command
-func deleteCommand() *cobra.Command {
+func deleteIscsiCommand() *cobra.Command {
 	var controller net.IP
 	var iqn string
 	var lun int
 
 	var deleteCmd = &cobra.Command{
-		Use:   "delete",
+		Use:   "delete-iscsi",
 		Short: "Deletes an iSCSI target",
 		Long: `Deletes an iSCSI target by stopping and deleting the pacemaker resource
 primitives and removing the linstor resources.

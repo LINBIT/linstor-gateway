@@ -29,7 +29,9 @@ import (
 
 	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
+	"github.com/LINBIT/linstor-iscsi/pkg/nfsbase"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	log "github.com/sirupsen/logrus"
 
@@ -146,6 +148,44 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	return cibData.String(), err
 }
 
+func generateCreateNfsXML(nfsCfg nfsbase.NfsConfig, storageNodes []string,
+	device string, directory string) (string, error) {
+	log.Debug("crmcontrol.go generateCreateNfsXML: Genearting fsid UUID")
+	FSID, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+
+	log.Debug("crmcontrol.go generateCreateNfsXML: Setting template variables")
+	allowedIPs := nfsCfg.AllowedIPs.String() + "/" + strconv.Itoa(nfsCfg.AllowedIPsNetBits)
+	if strings.IndexByte(allowedIPs, ':') != -1 {
+		allowedIPs = "[" + allowedIPs + "]"
+	}
+	tmplVars := map[string]interface{}{
+		"ResourceName":     nfsCfg.ResourceName,
+		"ServiceIP":        nfsCfg.ServiceIP.String(),
+		"ServiceIPNetBits": strconv.Itoa(nfsCfg.ServiceIPNetBits),
+		"AllowedIPs":       allowedIPs,
+		"Directory":        directory,
+		"FsId":             FSID.String(),
+		"StorageNodes":     storageNodes,
+		"StorageNodesList": strings.Join(storageNodes, ","),
+		"Device":           device,
+	}
+
+	for key, value := range tmplVars {
+		log.Debugf("%-24s = %s\n", key, value)
+	}
+
+	log.Debug("crmcontrol.go generateCreateNfsXML: Loading template")
+	nfsTmpl := template.Must(template.New("crmnfs").Parse(crmtemplate.CRM_NFS))
+
+	log.Debug("crmcontrol.go generateCreateNfsXML: Building template")
+	var cibData bytes.Buffer
+	err = nfsTmpl.Execute(&cibData, tmplVars)
+	return cibData.String(), err
+}
+
 // CreateCrmLu creates a CRM resource for a logical unit.
 //
 // The resources created depend on the contents of the template for resource creation.
@@ -161,6 +201,29 @@ func CreateCrmLu(target targetutil.Target, storageNodes []string,
 	}
 
 	return c.CreateResource(forStdin)
+}
+
+// CreateNfs creates CRM resource for an NFS export
+//
+// The resources created depend on the contents of the template for resource creation.
+// Typically, it's a Filesystem mount, an NFS export and a service IP address, along
+// with constraints that bundle them and place them on the selected nodes
+func CreateNfs(nfsCfg nfsbase.NfsConfig, storageNodes []string,
+	device string, directory string) error {
+	log.Debug("crmcontrol.go CreateNfs: Generating XML template")
+	var cibObj cib.CIB
+	// Load the template for modifying the CIB
+	cibDiffData, err := generateCreateNfsXML(nfsCfg, storageNodes, device, directory)
+	if err != nil {
+		return err
+	}
+	log.Debug("crmcontrol.go CreateNfs: Updating CIB")
+	return cibObj.CreateResource(cibDiffData)
+}
+
+func DeleteNfs(nfsCfg nfsbase.NfsConfig) error {
+	// TODO: Implement delete
+	return nil
 }
 
 func StartTarget(iqn string, luns []uint8) error {

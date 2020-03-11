@@ -15,7 +15,7 @@ import (
 )
 
 // createCommand represents the create command
-func createCommand() *cobra.Command {
+func createIscsiCommand() *cobra.Command {
 	var ipCIDR string
 	var controller net.IP
 	var username, password, portals, group string
@@ -28,7 +28,7 @@ func createCommand() *cobra.Command {
 	var ipnet *net.IPNet
 
 	var createCmd = &cobra.Command{
-		Use:   "create",
+		Use:   "create-iscsi",
 		Short: "Creates an iSCSI target",
 		Long: `Creates a highly available iSCSI target based on LINSTOR and Pacemaker.
 At first it creates a new resouce within the linstor system, using the

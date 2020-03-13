@@ -33,6 +33,7 @@ linstor-iscsi delete-nfs --resource=example`,
 				}
 			}
 			linstorCfg := linstorcontrol.Linstor{
+				ResourceName: resourceName,
 				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}

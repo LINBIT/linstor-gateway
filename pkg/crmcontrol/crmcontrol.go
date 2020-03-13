@@ -222,8 +222,69 @@ func CreateNfs(nfsCfg nfsbase.NfsConfig, storageNodes []string,
 }
 
 func DeleteNfs(nfsCfg nfsbase.NfsConfig) error {
-	// TODO: Implement delete
-	return nil
+	var cibObj cib.CIB
+	// Read the current CIB XML
+	err := cibObj.ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	// TODO: Maybe replace those magic values with constants
+	var idList []string
+	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_fs")
+	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_exp")
+	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_ip")
+
+	// Stop resources
+	for _, id := range idList {
+		err = cibObj.StopResource(id)
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"resource": id,
+				},
+			).Warning("Could not set target-role. Resource will probably fail to stop: ", err)
+		}
+	}
+	err = cibObj.Update()
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(time.Duration(waitStopPollCibDelay * time.Millisecond))
+	isStopped, err := cibObj.WaitForResourcesStop(idList)
+	if err != nil {
+		return err
+	}
+
+	if !isStopped {
+		return errors.New("Resource stop was not confirmed for all resources, cannot continue delete action")
+	}
+
+	// Read the current CIB XML again
+	err = cibObj.ReadConfiguration()
+	if err != nil {
+		return err
+	}
+
+	// Remove contraints
+	cibObj.DissolveConstraints(idList)
+
+	for _, id := range idList {
+		rscElem := cibObj.FindResource(id)
+		if rscElem != nil {
+			rscElemParent := rscElem.Parent()
+			if rscElemParent != nil {
+				rscElemParent.RemoveChildAt(rscElem.Index())
+			} else {
+				return errors.New("Cannot modify CIB, CRM resource '" + id + "' has no parent object")
+			}
+		} else {
+			fmt.Printf("Warning: CIB resource '%s' not found in the CIB\nb", id)
+		}
+	}
+
+	return cibObj.Update()
 }
 
 func StartTarget(iqn string, luns []uint8) error {

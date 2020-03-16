@@ -15,8 +15,7 @@ import (
 )
 
 func stateToLongStatus(state cib.LrmRunState) string {
-	str := state.String()
-	return stateToColor(state)(str).String()
+	return stateToColor(state)(state).String()
 }
 
 func linstorStateToLongStatus(state linstorcontrol.ResourceState) string {

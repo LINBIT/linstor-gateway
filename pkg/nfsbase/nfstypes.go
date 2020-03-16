@@ -10,3 +10,4 @@ type NfsConfig struct {
 	AllowedIPsNetBits int    `json:"allowed_ips_mask,omitempty"`
 	SizeKiB           uint64 `json:"size_kib,omitempty"`
 }
+

@@ -22,6 +22,14 @@ type NfsResource struct {
 	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
 }
 
+type NfsListItem struct {
+	ResourceName	string
+	LinstorRsc      linstorcontrol.Linstor
+	Mountpoint      crmcontrol.FSMount
+	NfsExport       crmcontrol.ExportFS
+	ServiceIP       crmcontrol.IP
+}
+
 func (nfsRsc *NfsResource) CreateResource() error {
 	log.Debug("nfs.go CreateResource: Reading CIB")
 	var cibObj cib.CIB
@@ -89,6 +97,50 @@ func (nfsRsc *NfsResource) DeleteResource() error {
 	return nil
 }
 
+func ListResources() ([]NfsListItem, error) {
+	items := make([]NfsListItem, 0)
+
+	var cibObj cib.CIB
+	err := cibObj.ReadConfiguration()
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := crmcontrol.ParseConfiguration(cibObj.Doc)
+	if err != nil {
+		return nil, err
+	}
+
+	mountpointMap := make(map[string]*crmcontrol.FSMount)
+	for _, item := range config.Mountpoints {
+		mountpointMap[item.ID] = item
+	}
+	svcIPMap := make(map[string]*crmcontrol.IP)
+	for _, item := range config.IPs {
+		svcIPMap[item.ID] = item
+	}
+
+	for _, nfsExport := range config.NfsExports {
+		rscName, isExport := getRscNameFromNfsExport(nfsExport)
+		if isExport {
+			mountpoint, haveMountpoint := mountpointMap["p_nfs_" + rscName + "_fs"]
+			svcIP, haveSvcIP := svcIPMap["p_nfs_" + rscName + "_ip"]
+
+			if haveMountpoint && haveSvcIP {
+				entry := NfsListItem{
+					ResourceName: rscName,
+					Mountpoint:   *mountpoint,
+					NfsExport:    *nfsExport,
+					ServiceIP:    *svcIP,
+				}
+				items = append(items, entry)
+			}
+		}
+	}
+
+	return items, nil
+}
+
 func (nfsRsc *NfsResource) StartResource() error {
 	return nfsRsc.modifyResourceTargetRole(true)
 }
@@ -97,11 +149,22 @@ func (nfsRsc *NfsResource) StopResource() error {
 	return nfsRsc.modifyResourceTargetRole(false)
 }
 
-func (nfsRsc *NfsResource) ProbeResource() error {
-	return nfsRsc.ProbeResource()
+func (nfsRsc *NfsResource) ProbeResource() (crmcontrol.NfsRunState, error) {
+	return crmcontrol.ProbeNfsResource(nfsRsc.Nfs.ResourceName)
 }
 
 func (nfsRsc *NfsResource) modifyResourceTargetRole(flag bool) error {
 	// TODO: Implement NFS CRM resource start/stop
 	return nil
+}
+
+func getRscNameFromNfsExport(nfsExport *crmcontrol.ExportFS) (string, bool) {
+	var rscName string
+	var isExport bool = false
+	id := nfsExport.ID
+	if strings.HasPrefix(id, "p_nfs_") && strings.HasSuffix(id, "_exp") {
+		rscName = id[6:len(id) - 4]
+		isExport = true
+	}
+	return rscName, isExport
 }

@@ -50,6 +50,7 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.AddCommand(deleteNfsCommand())
 	rootCmd.AddCommand(docsCommand(rootCmd))
 	rootCmd.AddCommand(listCommand())
+	rootCmd.AddCommand(listNfsCommand())
 	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(startCommand())
 	rootCmd.AddCommand(statusCommand())

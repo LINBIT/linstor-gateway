@@ -60,6 +60,8 @@ type CrmConfiguration struct {
 	LUs     []*Lu
 	IPs     []*IP
 	TIDs    *IntSet
+	Mountpoints []*FSMount
+	NfsExports  []*ExportFS
 }
 
 type Target struct {
@@ -84,11 +86,45 @@ type IP struct {
 	Netmask uint8
 }
 
+type FSMount struct {
+	ID         string
+	Device     string
+	Directory  string
+	Filesystem string
+}
+
+type ExportFS struct {
+	ID              string
+        Directory       string
+        AllowedIPs      net.IP
+        AllowedIPsMask  uint8
+	FSID            string
+}
+
 type ResourceRunState struct {
 	TargetState cib.LrmRunState           `json:"target"`
 	LUStates    map[uint8]cib.LrmRunState `json:"luns"`
 	IPState     cib.LrmRunState           `json:"ip"`
 	OnNode      string                    `json:"on_node"`
+}
+
+type NfsRunState struct {
+	MountpointState cib.LrmRunState `json:"mountpoint"`
+	ExportFSState   cib.LrmRunState `json:"exportfs"`
+	ServiceIPState  cib.LrmRunState `json:"serviceip"`
+	OnNode          string          `json:"on_node"`
+}
+
+func checkNfsExists(cibObj *cib.CIB, resourceName string) bool {
+	// TODO: Maybe replace the magic values with constants
+	resourceId := "p_nfs_" + resourceName + "_exp"
+
+	elem := cibObj.FindResource(resourceId)
+	if elem == nil {
+		log.Debug(fmt.Sprintf("Resource \"%s\" not found", resourceId))
+	}
+
+	return elem != nil
 }
 
 func checkTargetExists(c *cib.CIB, iqn string) (bool, string, error) {
@@ -501,6 +537,36 @@ func IPID(target string) string {
 	return "p_iscsi_" + target + "_ip"
 }
 
+func ProbeNfsResource(resourceName string) (NfsRunState, error) {
+	state := NfsRunState{
+		MountpointState: cib.Unknown,
+		ExportFSState:   cib.Unknown,
+		ServiceIPState:  cib.Unknown,
+		OnNode:      "",
+	}
+
+	var cibObj cib.CIB
+
+	// Read the current CIB XML
+	err := cibObj.ReadConfiguration()
+	if err != nil {
+		return state, err
+	}
+
+	exists := checkNfsExists(&cibObj, resourceName)
+	if !exists {
+		return state, errors.New("Resource \"" + resourceName + "\" not found")
+	}
+
+	state.MountpointState = cibObj.FindLrmState("p_nfs_" + resourceName + "_fs")
+	state.ExportFSState = cibObj.FindLrmState("p_nfs_" + resourceName + "_exp")
+	state.ServiceIPState = cibObj.FindLrmState("p_nfs_" + resourceName + "_ip")
+
+	state.OnNode = cibObj.GetNodeOfResource("p_nfs_" + resourceName + "_exp")
+
+	return state, nil
+}
+
 // ProbeResource probes the LRM run state of the CRM resources associated with the specified iSCSI resource
 func ProbeResource(iqn string, luns []uint8) (ResourceRunState, error) {
 	state := ResourceRunState{
@@ -735,6 +801,115 @@ func findIPs(rscSection *xmltree.Element) []*IP {
 	return ips
 }
 
+func findMountpoints(rscSection *xmltree.Element) []*FSMount {
+	mountpoints := make([]*FSMount, 0)
+	for _, mntElem := range rscSection.FindElements("./primitive[@type='Filesystem']") {
+		// Get ID
+		id := mntElem.SelectAttr("id")
+
+		if id != nil {
+			contextLog := log.WithFields(log.Fields{"id": id.Value})
+
+			// Get Device, Directory, FSType
+			device, deviceErr := cib.GetNvPairValue(mntElem, "device")
+			directory, directoryErr := cib.GetNvPairValue(mntElem, "directory")
+			fsType, fsTypeErr := cib.GetNvPairValue(mntElem, "fstype")
+
+			if device != nil && directory != nil && fsType != nil {
+				mntEntry := &FSMount{
+					ID:         id.Value,
+					Device:     device.Value,
+					Directory:  directory.Value,
+					Filesystem: fsType.Value,
+				}
+				mountpoints = append(mountpoints, mntEntry)
+			} else {
+				if deviceErr != nil {
+					contextLog.Debug("\"Filesystem\" primitive has no \"device\" parameter: ", deviceErr)
+				}
+				if directoryErr != nil {
+					contextLog.Debug("\"Filesystem\" primitive has no \"directory\" parameter: ", directoryErr)
+				}
+				if fsTypeErr != nil {
+					contextLog.Debug("\"Filesystem\" primitive has no \"fstype\" parameter: ", fsTypeErr)
+				}
+			}
+		} else {
+			log.Debug("CIB contains a \"Filesystem\" primitive without an ID")
+		}
+	}
+	return mountpoints
+}
+
+func findNfsExports(rscSection *xmltree.Element) []*ExportFS {
+	nfsExports := make([]*ExportFS, 0)
+	for _, expElem := range rscSection.FindElements("./primitive[@type='exportfs']") {
+		// Get ID
+		id := expElem.SelectAttr("id")
+
+		if id != nil {
+			contextLog := log.WithFields(log.Fields{"id": id.Value})
+
+			// Get directory, FS id & clientSpec client IP addresses
+			directory, directoryErr := cib.GetNvPairValue(expElem, "directory")
+			FSID, FSIDErr := cib.GetNvPairValue(expElem, "fsid")
+			clientSpecPrm, clientSpecErr := cib.GetNvPairValue(expElem, "clientspec")
+
+			if directory != nil && clientSpecPrm != nil && FSID != nil {
+				// FIXME: Needs IPv6 handling
+				net, netMask, err := parseIPv4Net(clientSpecPrm.Value)
+				if err == nil {
+					expEntry := &ExportFS{
+						ID: id.Value,
+						Directory: directory.Value,
+						AllowedIPs: net,
+						AllowedIPsMask: netMask,
+						FSID: FSID.Value,
+					}
+					nfsExports = append(nfsExports, expEntry)
+				} else {
+					contextLog.Debug("\"exportfs\" primitive has an invalid \"clientspec\" parameter: ", err)
+				}
+			} else {
+				if directoryErr != nil {
+					contextLog.Debug("\"exportfs\" primitive has no \"device\" parameter: ", directoryErr)
+				}
+				if clientSpecErr != nil {
+					contextLog.Debug("\"exportfs\" primitive has no \"clientSpec\" parameter: ", clientSpecErr)
+				}
+				if FSIDErr != nil {
+					contextLog.Debug("\"exportfs\" primitive has no \"fsid\" parameter: ", FSIDErr)
+				}
+			}
+		}
+	}
+	return nfsExports
+}
+
+func parseIPv4Net(clientSpecPrm string) (net.IP, uint8, error) {
+	prmParts := strings.Split(clientSpecPrm, "/")
+	if len(prmParts) != 2 {
+		return nil, 0, errors.New("Invalid IP/Net parameter")
+	}
+
+	network := net.ParseIP(prmParts[0])
+	if network == nil {
+		return nil, 0, errors.New("Unparsable IP address")
+	}
+	maskData:= net.ParseIP(prmParts[1])
+	if maskData == nil {
+		return nil, 0, errors.New("Unparsable subnet mask")
+	}
+	maskDataV4 := maskData.To4()
+	if maskDataV4 == nil {
+		return nil, 0, errors.New("Netmask is not in IPv4 format")
+	}
+	netmask := net.IPv4Mask(maskDataV4[0], maskDataV4[1], maskDataV4[2], maskDataV4[3])
+	cidr, _ := netmask.Size()
+
+	return network, uint8(cidr), nil
+}
+
 // ParseConfiguration parses the CIB XML document and returns information about
 // existing resources.
 //
@@ -760,6 +935,8 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config.Targets = findTargets(rscSection)
 	config.LUs = findLus(rscSection, &config)
 	config.IPs = findIPs(rscSection)
+	config.Mountpoints = findMountpoints(rscSection)
+	config.NfsExports = findNfsExports(rscSection)
 
 	return &config, nil
 }

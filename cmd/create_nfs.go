@@ -14,7 +14,7 @@ import (
 )
 
 // createCommand represents the create command
-func createNfsCommand() *cobra.Command {
+func createNFSCommand() *cobra.Command {
 	var controller net.IP
 	var resourceGroupName string
 	var resourceName string

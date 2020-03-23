@@ -15,7 +15,7 @@ import (
 )
 
 // createCommand represents the create command
-func createIscsiCommand() *cobra.Command {
+func createISCSICommand() *cobra.Command {
 	var ipCIDR string
 	var controller net.IP
 	var username, password, portals, group string

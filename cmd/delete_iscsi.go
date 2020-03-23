@@ -12,7 +12,7 @@ import (
 )
 
 // deleteCommand represents the delete command
-func deleteIscsiCommand() *cobra.Command {
+func deleteISCSICommand() *cobra.Command {
 	var controller net.IP
 	var iqn string
 	var lun int

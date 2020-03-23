@@ -14,7 +14,7 @@ import (
 )
 
 // listCommand represents the list command
-func listNfsCommand() *cobra.Command {
+func listNFSCommand() *cobra.Command {
 	var controller net.IP
 	var listCmd = &cobra.Command{
 		Use:   "list-nfs",

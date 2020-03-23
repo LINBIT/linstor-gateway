@@ -12,7 +12,7 @@ import (
 )
 
 // deleteCommand represents the delete command
-func deleteNfsCommand() *cobra.Command {
+func deleteNFSCommand() *cobra.Command {
 	var controller net.IP
 	var resourceName string
 

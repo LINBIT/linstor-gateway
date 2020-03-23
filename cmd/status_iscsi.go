@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
@@ -14,23 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func stateToLongStatus(state cib.LrmRunState) string {
-	return stateToColor(state)(state).String()
-}
-
-func linstorStateToLongStatus(state linstorcontrol.ResourceState) string {
-	str := state.String()
-	return linstorStateToColor(state)(str).String()
-}
-
 // statusCommand represents the status command
-func statusCommand() *cobra.Command {
+func statusISCSICommand() *cobra.Command {
 	var controller net.IP
 	var iqn string
 	var lun int
 
 	var statusCmd = &cobra.Command{
-		Use:   "status",
+		Use:   "status-iscsi",
 		Short: "Displays the status of an iSCSI target or logical unit",
 		Long: `Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
 That means Pacemaker will run the status operation on the nodes where the
@@ -85,9 +75,8 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 	}
 
 	statusCmd.Flags().StringVarP(&iqn, "iqn", "i", "", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)")
-	statusCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN Number (required)")
+	statusCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the iSCSI LU number (LUN)")
 	statusCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
-
 	statusCmd.MarkFlagRequired("iqn")
 	statusCmd.MarkFlagRequired("lun")
 

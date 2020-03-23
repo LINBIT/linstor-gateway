@@ -14,7 +14,7 @@ import (
 )
 
 // statusCommand represents the status command
-func statusNfsCommand() *cobra.Command {
+func statusNFSCommand() *cobra.Command {
 	var controller net.IP
 	var resourceName string
 

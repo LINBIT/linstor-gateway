@@ -194,19 +194,21 @@ func generateCreateNfsXML(nfsCfg nfsbase.NfsConfig, storageNodes []string,
 
 	log.Debug("crmcontrol.go generateCreateNfsXML: Setting template variables")
 	allowedIPs := nfsCfg.AllowedIPs.String() + "/" + strconv.Itoa(nfsCfg.AllowedIPsNetBits)
+	bracketedAllowedIPs := allowedIPs
 	if strings.IndexByte(allowedIPs, ':') != -1 {
-		allowedIPs = "[" + allowedIPs + "]"
+		bracketedAllowedIPs = "[" + allowedIPs + "]"
 	}
 	tmplVars := map[string]interface{}{
-		"ResourceName":     nfsCfg.ResourceName,
-		"ServiceIP":        nfsCfg.ServiceIP.String(),
-		"ServiceIPNetBits": strconv.Itoa(nfsCfg.ServiceIPNetBits),
-		"AllowedIPs":       allowedIPs,
-		"Directory":        directory,
-		"FsId":             FSID.String(),
-		"StorageNodes":     storageNodes,
-		"StorageNodesList": strings.Join(storageNodes, ","),
-		"Device":           device,
+		"ResourceName":        nfsCfg.ResourceName,
+		"ServiceIP":           nfsCfg.ServiceIP.String(),
+		"ServiceIPNetBits":    strconv.Itoa(nfsCfg.ServiceIPNetBits),
+		"AllowedIPs":          allowedIPs,
+		"BracketedAllowedIPs": bracketedAllowedIPs,
+		"Directory":           directory,
+		"FsId":                FSID.String(),
+		"StorageNodes":        storageNodes,
+		"StorageNodesList":    strings.Join(storageNodes, ","),
+		"Device":              device,
 	}
 
 	for key, value := range tmplVars {

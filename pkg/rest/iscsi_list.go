@@ -14,7 +14,7 @@ func (s *server) ISCSIList() http.HandlerFunc {
 
 		targets, err := iscsi.ListResources()
 		if err != nil {
-			_, _ = Errorf(http.StatusInternalServerError, w, "Could not list targets: %w", err)
+			_, _ = Errorf(http.StatusInternalServerError, w, "Could not list targets: %v", err)
 			return
 		}
 

@@ -128,7 +128,7 @@ func (i *ISCSI) ProbeResource() (crmcontrol.ResourceRunState, error) {
 func findServiceIP(target *crmcontrol.Target, ips []*crmcontrol.IP) net.IP {
 	targetName, err := targetutil.ExtractTargetName(target.IQN)
 	if err != nil {
-		log.Debugf("could not extract target name: %w", err)
+		log.Debugf("could not extract target name: %v", err)
 		return nil
 	}
 	wantedID := crmcontrol.IPID(targetName)
@@ -143,7 +143,7 @@ func findServiceIP(target *crmcontrol.Target, ips []*crmcontrol.IP) net.IP {
 func findServiceIPNetmask(target *crmcontrol.Target, ips []*crmcontrol.IP) int {
 	targetName, err := targetutil.ExtractTargetName(target.IQN)
 	if err != nil {
-		log.Debugf("could not extract target name: %w", err)
+		log.Debugf("could not extract target name: %v", err)
 		return 0
 	}
 	wantedID := crmcontrol.IPID(targetName)

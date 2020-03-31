@@ -17,13 +17,13 @@ import (
 func listNFSCommand() *cobra.Command {
 	var controller net.IP
 	var listCmd = &cobra.Command{
-		Use:   "list-nfs",
+		Use:   "list",
 		Short: "Lists NFS resources",
 		Long: `Lists the NFS resources created with this tool and provides an overview
 about the existing Pacemaker and linstor parts
 
 For example:
-linstor-iscsi list-nfs`,
+linstor-nfs list`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			if !cmd.Flags().Changed("controller") {

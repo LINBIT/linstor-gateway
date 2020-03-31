@@ -28,7 +28,7 @@ func createISCSICommand() *cobra.Command {
 	var ipnet *net.IPNet
 
 	var createCmd = &cobra.Command{
-		Use:   "create-iscsi",
+		Use:   "create",
 		Short: "Creates an iSCSI target",
 		Long: `Creates a highly available iSCSI target based on LINSTOR and Pacemaker.
 At first it creates a new resouce within the linstor system, using the

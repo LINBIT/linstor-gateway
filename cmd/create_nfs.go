@@ -29,7 +29,7 @@ func createNFSCommand() *cobra.Command {
 	var allowedIPsNet *net.IPNet
 
 	var createCmd = &cobra.Command{
-		Use:   "create-nfs",
+		Use:   "create",
 		Short: "Creates an NFS export",
 		Long: `Creates a highly available NFS export based on LINSTOR and Pacemaker.
 At first it creates a new resource within the linstor system under the
@@ -39,7 +39,7 @@ all necessary order and location constraints. The Pacemaker primites are
 prefixed with p_, contain the resource name and a resource type postfix.
 
 For example:
-linstor-iscsi create-nfs --resource=example --service_ip=192.168.211.122  \
+linstor-nfs create --resource=example --service_ip=192.168.211.122  \
  --allowed_ips=192.168.0.0/255.255.255.0 --resource_group=ssd_thin_2way --size=2G
 
 Creates linstor resource example, volume 0 and

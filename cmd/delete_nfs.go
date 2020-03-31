@@ -17,13 +17,13 @@ func deleteNFSCommand() *cobra.Command {
 	var resourceName string
 
 	var deleteCmd = &cobra.Command{
-		Use:   "delete-nfs",
+		Use:   "delete",
 		Short: "Deletes an NFS export",
 		Long: `Deletes an NFS export by stopping and deleting the pacemaker resource
 primitives and removing the linstor resources.
 
 For example:
-linstor-iscsi delete-nfs --resource=example`,
+linstor-nfs delete --resource=example`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			if !cmd.Flags().Changed("controller") {

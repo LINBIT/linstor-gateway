@@ -18,7 +18,7 @@ import (
 func listISCSICommand() *cobra.Command {
 	var controller net.IP
 	var listCmd = &cobra.Command{
-		Use:   "list-iscsi",
+		Use:   "list",
 		Short: "Lists iSCSI targets",
 		Long: `Lists the iSCSI targets created with this tool and provides an overview
 about the existing Pacemaker and linstor parts

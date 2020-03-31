@@ -20,7 +20,7 @@ func statusISCSICommand() *cobra.Command {
 	var lun int
 
 	var statusCmd = &cobra.Command{
-		Use:   "status-iscsi",
+		Use:   "status",
 		Short: "Displays the status of an iSCSI target or logical unit",
 		Long: `Triggers Pacemaker to probe the resoruce primitives of this iSCSI target.
 That means Pacemaker will run the status operation on the nodes where the

@@ -18,7 +18,7 @@ func deleteISCSICommand() *cobra.Command {
 	var lun int
 
 	var deleteCmd = &cobra.Command{
-		Use:   "delete-iscsi",
+		Use:   "delete",
 		Short: "Deletes an iSCSI target",
 		Long: `Deletes an iSCSI target by stopping and deleting the pacemaker resource
 primitives and removing the linstor resources.

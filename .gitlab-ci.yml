@@ -1,0 +1,10 @@
+image: golang:buster
+
+test:
+  stage: test
+  cache:
+    paths:
+      - .mygo/pkg/mod
+  script:
+    - GOPATH=$(pwd)/.mygo go test -coverprofile .testCoverage.txt ./...
+    - GOPATH=$(pwd)/.mygo go tool cover -func=.testCoverage.txt

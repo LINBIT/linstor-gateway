@@ -65,8 +65,7 @@ type Target struct {
 }
 
 type LUN struct {
-	ID      uint8  `json:"id,omitempty"`
-	SizeKiB uint64 `json:"size_kib,omitempty"`
+	ID uint8 `json:"id,omitempty"`
 }
 
 func CheckIQN(iqn string) error {

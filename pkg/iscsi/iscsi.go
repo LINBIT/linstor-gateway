@@ -60,7 +60,6 @@ func (i *ISCSI) CreateResource() error {
 
 		// Create a LINSTOR resource definition, volume definition and associated resources
 		i.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, lu.ID)
-		i.Linstor.SizeKiB = lu.SizeKiB
 		res, err := i.Linstor.CreateVolume()
 		if err != nil {
 			return fmt.Errorf("LINSTOR volume operation failed, error: %v", err)

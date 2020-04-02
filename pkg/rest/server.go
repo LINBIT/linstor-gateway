@@ -14,6 +14,7 @@ import (
 
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-iscsi/pkg/nfs"
 	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
 	"github.com/gorilla/mux"
@@ -77,13 +78,22 @@ func ListenAndServe(addr string) {
 	log.Fatal(http.ListenAndServe(addr, s.router))
 }
 
-func maybeSetLinstorController(iscsi *iscsi.ISCSI) {
-	if iscsi.Linstor.ControllerIP == nil {
+func maybeSetLinstorController(container interface{}) {
+	var linstorRsc *linstorcontrol.Linstor
+	switch container.(type) {
+		case *iscsi.ISCSI:
+			linstorRsc = &(container.(*iscsi.ISCSI).Linstor)
+		case *nfs.NfsResource:
+			linstorRsc = &(container.(*nfs.NfsResource).Linstor)
+		default:
+			panic("Logic error: unexpected data type")
+	}
+	if linstorRsc.ControllerIP == nil {
 		foundIP, err := crmcontrol.FindLinstorController()
 		if err == nil {
-			iscsi.Linstor.ControllerIP = foundIP
+			linstorRsc.ControllerIP = foundIP
 		} else {
-			iscsi.Linstor.ControllerIP = net.IPv4(127, 0, 0, 1)
+			linstorRsc.ControllerIP = net.IPv4(127, 0, 0, 1)
 		}
 	}
 }
@@ -133,4 +143,22 @@ func parseIQNAndLun(w http.ResponseWriter, r *http.Request) (iscsi.ISCSI, bool) 
 	iscsiCfg.Linstor.ResourceName = linstorcontrol.ResourceNameFromLUN(targetName, uint8(lid))
 
 	return iscsiCfg, true
+}
+
+// parseNFSRsc does the shared parsing for methods that are .../nfs/{resource}"
+func parseNFSResource(response http.ResponseWriter, request *http.Request) (nfs.NfsResource, bool) {
+	nfsRsc := nfs.NfsResource{}
+
+	resourceName, ok := mux.Vars(request)["resource"]
+	if !ok {
+		_, _ = Errorf(http.StatusBadRequest, response, "The 'resource' field is absent from the URL")
+		return nfsRsc, false
+	}
+
+	nfsRsc.Nfs.ResourceName = resourceName
+	nfsRsc.Linstor.ResourceName = resourceName
+
+	maybeSetLinstorController(&nfsRsc)
+
+	return nfsRsc, true
 }

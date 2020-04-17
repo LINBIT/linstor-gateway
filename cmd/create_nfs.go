@@ -78,7 +78,7 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 			serviceIPNetBits, _ := serviceIPNet.Mask.Size()
 			allowedIPsNetBits, _ := allowedIPsNet.Mask.Size()
 
-			nfsCfg := nfsbase.NfsConfig{
+			nfsCfg := nfsbase.NFSConfig{
 				ResourceName:      resourceName,
 				ServiceIP:         serviceIP,
 				ServiceIPNetBits:  serviceIPNetBits,
@@ -86,8 +86,8 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 				AllowedIPsNetBits: allowedIPsNetBits,
 				SizeKiB:           sizeKiB,
 			}
-			nfsRsc := nfs.NfsResource{
-				Nfs:     nfsCfg,
+			nfsRsc := nfs.NFSResource{
+				NFS:     nfsCfg,
 				Linstor: linstorCfg,
 			}
 			err := nfsRsc.CreateResource()

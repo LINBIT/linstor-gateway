@@ -37,11 +37,11 @@ linstor-nfs delete --resource=example`,
 				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}
-			nfsCfg := nfsbase.NfsConfig{
+			nfsCfg := nfsbase.NFSConfig{
 				ResourceName: resourceName,
 			}
-			nfsRsc := nfs.NfsResource{
-				Nfs:     nfsCfg,
+			nfsRsc := nfs.NFSResource{
+				NFS:     nfsCfg,
 				Linstor: linstorCfg,
 			}
 			err := nfsRsc.DeleteResource()

@@ -15,22 +15,22 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/nfsbase"
 )
 
-// Top-level object comprising an NFS export configuration (NfsConfig) with
+// Top-level object comprising an NFS export configuration (NFSConfig) with
 // its associated Linstor resource/volume configuration (Linstor)
-type NfsResource struct {
-	Nfs     nfsbase.NfsConfig      `json:"nfsexport,omitempty"`
+type NFSResource struct {
+	NFS     nfsbase.NFSConfig      `json:"nfsexport,omitempty"`
 	Linstor linstorcontrol.Linstor `json:"linstor,omitempty"`
 }
 
-type NfsListItem struct {
+type NFSListItem struct {
 	ResourceName	string
 	LinstorRsc      linstorcontrol.Linstor
 	Mountpoint      crmcontrol.FSMount
-	NfsExport       crmcontrol.ExportFS
+	NFSExport       crmcontrol.ExportFS
 	ServiceIP       crmcontrol.IP
 }
 
-func (nfsRsc *NfsResource) CreateResource() error {
+func (nfsRsc *NFSResource) CreateResource() error {
 	log.Debug("nfs.go CreateResource: Reading CIB")
 	var cibObj cib.CIB
 	// Read the current configuration from the CRM
@@ -47,8 +47,8 @@ func (nfsRsc *NfsResource) CreateResource() error {
 
 	log.Debug("nfs.go CreateResource: Creating LINSTOR resource")
 	// Create a LINSTOR resource definition, volume definition and associated resources
-	nfsRsc.Linstor.ResourceName = nfsRsc.Nfs.ResourceName
-	nfsRsc.Linstor.SizeKiB = nfsRsc.Nfs.SizeKiB
+	nfsRsc.Linstor.ResourceName = nfsRsc.NFS.ResourceName
+	nfsRsc.Linstor.SizeKiB = nfsRsc.NFS.SizeKiB
 	rsc, err := nfsRsc.Linstor.CreateVolume()
 	if err != nil {
 		return fmt.Errorf("LINSTOR volume operations failed, error: %v", err)
@@ -56,7 +56,7 @@ func (nfsRsc *NfsResource) CreateResource() error {
 
 	// Create the NFS export directory
 	log.Debug("nfs.go CreateResource: Creating export directory")
-	directory := nfsbase.NfsBasePath + "/" + nfsRsc.Nfs.ResourceName
+	directory := nfsbase.NFSBasePath + "/" + nfsRsc.NFS.ResourceName
 	err = os.Mkdir(directory, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -64,7 +64,7 @@ func (nfsRsc *NfsResource) CreateResource() error {
 
 	log.Debug("nfs.go CreateResource: Creating CRM resources and constraints")
 	// Create CRM resources and constraints for the NFS export
-	err = crmcontrol.CreateNfs(nfsRsc.Nfs, rsc.StorageNodeList, rsc.DevicePath, directory)
+	err = crmcontrol.CreateNFS(nfsRsc.NFS, rsc.StorageNodeList, rsc.DevicePath, directory)
 	if err != nil {
 		return err
 	}
@@ -73,11 +73,11 @@ func (nfsRsc *NfsResource) CreateResource() error {
 	return nil
 }
 
-func (nfsRsc *NfsResource) DeleteResource() error {
+func (nfsRsc *NFSResource) DeleteResource() error {
 	var errors []string
 
 	// Delete the CRM resources
-	if err := crmcontrol.DeleteNfs(nfsRsc.Nfs); err != nil {
+	if err := crmcontrol.DeleteNFS(nfsRsc.NFS); err != nil {
 		errors = append(errors, err.Error())
 	}
 
@@ -97,8 +97,8 @@ func (nfsRsc *NfsResource) DeleteResource() error {
 	return nil
 }
 
-func ListResources() ([]NfsListItem, error) {
-	items := make([]NfsListItem, 0)
+func ListResources() ([]NFSListItem, error) {
+	items := make([]NFSListItem, 0)
 
 	var cibObj cib.CIB
 	err := cibObj.ReadConfiguration()
@@ -120,17 +120,17 @@ func ListResources() ([]NfsListItem, error) {
 		svcIPMap[item.ID] = item
 	}
 
-	for _, nfsExport := range config.NfsExports {
-		rscName, isExport := getRscNameFromNfsExport(nfsExport)
+	for _, nfsExport := range config.NFSExports {
+		rscName, isExport := getRscNameFromNFSExport(nfsExport)
 		if isExport {
 			mountpoint, haveMountpoint := mountpointMap["p_nfs_" + rscName + "_fs"]
 			svcIP, haveSvcIP := svcIPMap["p_nfs_" + rscName + "_ip"]
 
 			if haveMountpoint && haveSvcIP {
-				entry := NfsListItem{
+				entry := NFSListItem{
 					ResourceName: rscName,
 					Mountpoint:   *mountpoint,
-					NfsExport:    *nfsExport,
+					NFSExport:    *nfsExport,
 					ServiceIP:    *svcIP,
 				}
 				items = append(items, entry)
@@ -141,24 +141,24 @@ func ListResources() ([]NfsListItem, error) {
 	return items, nil
 }
 
-func (nfsRsc *NfsResource) StartResource() error {
+func (nfsRsc *NFSResource) StartResource() error {
 	return nfsRsc.modifyResourceTargetRole(true)
 }
 
-func (nfsRsc *NfsResource) StopResource() error {
+func (nfsRsc *NFSResource) StopResource() error {
 	return nfsRsc.modifyResourceTargetRole(false)
 }
 
-func (nfsRsc *NfsResource) ProbeResource() (crmcontrol.NfsRunState, error) {
-	return crmcontrol.ProbeNfsResource(nfsRsc.Nfs.ResourceName)
+func (nfsRsc *NFSResource) ProbeResource() (crmcontrol.NFSRunState, error) {
+	return crmcontrol.ProbeNFSResource(nfsRsc.NFS.ResourceName)
 }
 
-func (nfsRsc *NfsResource) modifyResourceTargetRole(flag bool) error {
+func (nfsRsc *NFSResource) modifyResourceTargetRole(flag bool) error {
 	// TODO: Implement NFS CRM resource start/stop
 	return nil
 }
 
-func getRscNameFromNfsExport(nfsExport *crmcontrol.ExportFS) (string, bool) {
+func getRscNameFromNFSExport(nfsExport *crmcontrol.ExportFS) (string, bool) {
 	var rscName string
 	var isExport bool = false
 	id := nfsExport.ID

@@ -46,11 +46,11 @@ linstor-nfs status --resource=example`,
 				ControllerIP: controller,
 				ResourceName: resourceName,
 			}
-			nfsCfg := nfsbase.NfsConfig{
+			nfsCfg := nfsbase.NFSConfig{
 				ResourceName: resourceName,
 			}
-			nfsRsc := nfs.NfsResource{
-				Nfs:     nfsCfg,
+			nfsRsc := nfs.NFSResource{
+				NFS:     nfsCfg,
 				Linstor: linstorCfg,
 			}
 

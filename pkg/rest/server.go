@@ -83,8 +83,8 @@ func maybeSetLinstorController(container interface{}) {
 	switch container.(type) {
 		case *iscsi.ISCSI:
 			linstorRsc = &(container.(*iscsi.ISCSI).Linstor)
-		case *nfs.NfsResource:
-			linstorRsc = &(container.(*nfs.NfsResource).Linstor)
+		case *nfs.NFSResource:
+			linstorRsc = &(container.(*nfs.NFSResource).Linstor)
 		default:
 			panic("Logic error: unexpected data type")
 	}
@@ -146,8 +146,8 @@ func parseIQNAndLun(w http.ResponseWriter, r *http.Request) (iscsi.ISCSI, bool) 
 }
 
 // parseNFSRsc does the shared parsing for methods that are .../nfs/{resource}"
-func parseNFSResource(response http.ResponseWriter, request *http.Request) (nfs.NfsResource, bool) {
-	nfsRsc := nfs.NfsResource{}
+func parseNFSResource(response http.ResponseWriter, request *http.Request) (nfs.NFSResource, bool) {
+	nfsRsc := nfs.NFSResource{}
 
 	resourceName, ok := mux.Vars(request)["resource"]
 	if !ok {
@@ -155,7 +155,7 @@ func parseNFSResource(response http.ResponseWriter, request *http.Request) (nfs.
 		return nfsRsc, false
 	}
 
-	nfsRsc.Nfs.ResourceName = resourceName
+	nfsRsc.NFS.ResourceName = resourceName
 	nfsRsc.Linstor.ResourceName = resourceName
 
 	maybeSetLinstorController(&nfsRsc)

@@ -10,7 +10,7 @@ func (srv *server) NFSDelete() http.HandlerFunc {
 		srv.Lock()
 		defer srv.Unlock()
 
-		var nfsRsc nfs.NfsResource
+		var nfsRsc nfs.NFSResource
 		// TODO: Parse resource name from JSON
 		//       See parseIQNAndLUN
 

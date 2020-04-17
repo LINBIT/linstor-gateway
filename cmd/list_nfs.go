@@ -48,7 +48,7 @@ linstor-nfs list`,
 			table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
 
 			for _, nfsItem := range nfsList {
-				nfsCfg := nfsbase.NfsConfig{
+				nfsCfg := nfsbase.NFSConfig{
 					ResourceName: nfsItem.ResourceName,
 				}
 				linstorCfg := linstorcontrol.Linstor{
@@ -56,8 +56,8 @@ linstor-nfs list`,
 					Loglevel:     log.GetLevel().String(),
 					ControllerIP: controller,
 				}
-				nfsRsc := nfs.NfsResource{
-					Nfs:     nfsCfg,
+				nfsRsc := nfs.NFSResource{
+					NFS:     nfsCfg,
 					Linstor: linstorCfg,
 				}
 				rscState, err := nfsRsc.ProbeResource()

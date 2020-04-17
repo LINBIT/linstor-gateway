@@ -61,7 +61,7 @@ type CrmConfiguration struct {
 	IPs     []*IP
 	TIDs    *IntSet
 	Mountpoints []*FSMount
-	NfsExports  []*ExportFS
+	NFSExports  []*ExportFS
 }
 
 type Target struct {
@@ -108,14 +108,14 @@ type ResourceRunState struct {
 	OnNode      string                    `json:"on_node"`
 }
 
-type NfsRunState struct {
+type NFSRunState struct {
 	MountpointState cib.LrmRunState `json:"mountpoint"`
 	ExportFSState   cib.LrmRunState `json:"exportfs"`
 	ServiceIPState  cib.LrmRunState `json:"serviceip"`
 	OnNode          string          `json:"on_node"`
 }
 
-func checkNfsExists(cibObj *cib.CIB, resourceName string) bool {
+func checkNFSExists(cibObj *cib.CIB, resourceName string) bool {
 	// TODO: Maybe replace the magic values with constants
 	resourceId := "p_nfs_" + resourceName + "_exp"
 
@@ -184,15 +184,15 @@ func generateCreateLuXML(target targetutil.Target, storageNodes []string,
 	return cibData.String(), err
 }
 
-func generateCreateNfsXML(nfsCfg nfsbase.NfsConfig, storageNodes []string,
+func generateCreateNFSXML(nfsCfg nfsbase.NFSConfig, storageNodes []string,
 	device string, directory string) (string, error) {
-	log.Debug("crmcontrol.go generateCreateNfsXML: Genearting fsid UUID")
+	log.Debug("crmcontrol.go generateCreateNFSXML: Genearting fsid UUID")
 	FSID, err := uuid.NewRandom()
 	if err != nil {
 		return "", err
 	}
 
-	log.Debug("crmcontrol.go generateCreateNfsXML: Setting template variables")
+	log.Debug("crmcontrol.go generateCreateNFSXML: Setting template variables")
 	allowedIPs := nfsCfg.AllowedIPs.String() + "/" + strconv.Itoa(nfsCfg.AllowedIPsNetBits)
 	bracketedAllowedIPs := allowedIPs
 	if strings.IndexByte(allowedIPs, ':') != -1 {
@@ -215,10 +215,10 @@ func generateCreateNfsXML(nfsCfg nfsbase.NfsConfig, storageNodes []string,
 		log.Debugf("%-24s = %s\n", key, value)
 	}
 
-	log.Debug("crmcontrol.go generateCreateNfsXML: Loading template")
+	log.Debug("crmcontrol.go generateCreateNFSXML: Loading template")
 	nfsTmpl := template.Must(template.New("crmnfs").Parse(crmtemplate.CRM_NFS))
 
-	log.Debug("crmcontrol.go generateCreateNfsXML: Building template")
+	log.Debug("crmcontrol.go generateCreateNFSXML: Building template")
 	var cibData bytes.Buffer
 	err = nfsTmpl.Execute(&cibData, tmplVars)
 	return cibData.String(), err
@@ -241,25 +241,25 @@ func CreateCrmLu(target targetutil.Target, storageNodes []string,
 	return c.CreateResource(forStdin)
 }
 
-// CreateNfs creates CRM resource for an NFS export
+// CreateNFS creates CRM resource for an NFS export
 //
 // The resources created depend on the contents of the template for resource creation.
 // Typically, it's a Filesystem mount, an NFS export and a service IP address, along
 // with constraints that bundle them and place them on the selected nodes
-func CreateNfs(nfsCfg nfsbase.NfsConfig, storageNodes []string,
+func CreateNFS(nfsCfg nfsbase.NFSConfig, storageNodes []string,
 	device string, directory string) error {
-	log.Debug("crmcontrol.go CreateNfs: Generating XML template")
+	log.Debug("crmcontrol.go CreateNFS: Generating XML template")
 	var cibObj cib.CIB
 	// Load the template for modifying the CIB
-	cibDiffData, err := generateCreateNfsXML(nfsCfg, storageNodes, device, directory)
+	cibDiffData, err := generateCreateNFSXML(nfsCfg, storageNodes, device, directory)
 	if err != nil {
 		return err
 	}
-	log.Debug("crmcontrol.go CreateNfs: Updating CIB")
+	log.Debug("crmcontrol.go CreateNFS: Updating CIB")
 	return cibObj.CreateResource(cibDiffData)
 }
 
-func DeleteNfs(nfsCfg nfsbase.NfsConfig) error {
+func DeleteNFS(nfsCfg nfsbase.NFSConfig) error {
 	var cibObj cib.CIB
 	// Read the current CIB XML
 	err := cibObj.ReadConfiguration()
@@ -539,8 +539,8 @@ func IPID(target string) string {
 	return "p_iscsi_" + target + "_ip"
 }
 
-func ProbeNfsResource(resourceName string) (NfsRunState, error) {
-	state := NfsRunState{
+func ProbeNFSResource(resourceName string) (NFSRunState, error) {
+	state := NFSRunState{
 		MountpointState: cib.Unknown,
 		ExportFSState:   cib.Unknown,
 		ServiceIPState:  cib.Unknown,
@@ -555,7 +555,7 @@ func ProbeNfsResource(resourceName string) (NfsRunState, error) {
 		return state, err
 	}
 
-	exists := checkNfsExists(&cibObj, resourceName)
+	exists := checkNFSExists(&cibObj, resourceName)
 	if !exists {
 		return state, errors.New("Resource \"" + resourceName + "\" not found")
 	}
@@ -843,7 +843,7 @@ func findMountpoints(rscSection *xmltree.Element) []*FSMount {
 	return mountpoints
 }
 
-func findNfsExports(rscSection *xmltree.Element) []*ExportFS {
+func findNFSExports(rscSection *xmltree.Element) []*ExportFS {
 	nfsExports := make([]*ExportFS, 0)
 	for _, expElem := range rscSection.FindElements("./primitive[@type='exportfs']") {
 		// Get ID
@@ -938,7 +938,7 @@ func ParseConfiguration(docRoot *xmltree.Document) (*CrmConfiguration, error) {
 	config.LUs = findLus(rscSection, &config)
 	config.IPs = findIPs(rscSection)
 	config.Mountpoints = findMountpoints(rscSection)
-	config.NfsExports = findNfsExports(rscSection)
+	config.NFSExports = findNFSExports(rscSection)
 
 	return &config, nil
 }

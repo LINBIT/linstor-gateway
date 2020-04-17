@@ -11,7 +11,7 @@ func (srv *server) NFSCreate() http.HandlerFunc {
 		srv.Lock()
 		defer srv.Unlock()
 
-		var nfsRsc nfs.NfsResource
+		var nfsRsc nfs.NFSResource
 		if err := unmarshalBody(response, request, &nfsRsc); err != nil {
 			_, _ = Errorf(http.StatusBadRequest, response, "Cannot unmarshal JSON data: %v", err)
 			return

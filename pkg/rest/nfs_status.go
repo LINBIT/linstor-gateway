@@ -8,8 +8,8 @@ import (
 	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
 )
 
-type NfsState struct {
-	CrmState     crmcontrol.NfsRunState       `json:"crm_state,omitempty"`
+type NFSState struct {
+	CrmState     crmcontrol.NFSRunState       `json:"crm_state,omitempty"`
 	LinstorState linstorcontrol.ResourceState `json:"linstor_state,omitempty"`
 }
 
@@ -35,7 +35,7 @@ func (srv *server) NFSStatus() http.HandlerFunc {
 			linstorState = linstorcontrol.Unknown
 		}
 
-		state := NfsState{crmState, linstorState}
+		state := NFSState{crmState, linstorState}
 
 		json.NewEncoder(response).Encode(state)
 	}

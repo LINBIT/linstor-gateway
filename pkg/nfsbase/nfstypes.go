@@ -2,7 +2,7 @@ package nfsbase
 
 import "net"
 
-type NfsConfig struct {
+type NFSConfig struct {
 	ResourceName      string `json:"resource,omitempty"`
 	ServiceIP         net.IP `json:"service_ip,omitempty"`
 	ServiceIPNetBits  int    `json:"service_ip_mask,omitempty"`

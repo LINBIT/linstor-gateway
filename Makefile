@@ -1,10 +1,14 @@
 LATESTTAG=$(shell git describe --abbrev=0 --tags | tr -d 'v')
+GITHASH=$(shell git describe --abbrev=0 --always)
 
 all: linstor-iscsi
 
 .PHONY: linstor-iscsi
 linstor-iscsi:
-	GO111MODULE=on go build
+	GO111MODULE=on go build \
+		-ldflags "-X github.com/LINBIT/linstor-iscsi/cmd.version=$(LATESTTAG) \
+		-X 'github.com/LINBIT/linstor-iscsi/cmd.builddate=$(shell LC_ALL=C date --utc)' \
+		-X github.com/LINBIT/linstor-iscsi/cmd.githash=$(GITHASH)"
 
 # internal, public doc on swagger
 docs/rest/index.html: docs/rest_v1_openapi.yaml

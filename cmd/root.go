@@ -8,13 +8,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// (potentially) injected by makefile
+var (
+	version   string
+	builddate string
+	githash   string
+)
+
 // rootCommand represents the base command when called without any subcommands
 func rootCommand() *cobra.Command {
 	var loglevel string
 
 	var rootCmd = &cobra.Command{
 		Use:     "linstor-iscsi",
-		Version: "0.1.0",
+		Version: version,
 		Short:   "Manages Highly-Available iSCSI targets",
 		Long: `linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
 and Pacemaker. Setting linstor including storage pools and resource groups
@@ -34,6 +41,7 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	rootCmd.DisableAutoGenTag = true
 
+	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(completionCommand(rootCmd))
 	rootCmd.AddCommand(corosyncCommand())
 	rootCmd.AddCommand(createCommand())

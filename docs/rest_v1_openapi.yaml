@@ -18,7 +18,8 @@ info:
 
 
     Changelog:
-
+    * 1.1.0
+      - Add endpoint for listing all iSCSI targets
     * 1.0.0
       - Initial REST API v1
   version: 1.0.0
@@ -33,6 +34,24 @@ tags:
     description: Operations available to regular developers
 paths:
   /api/v1/iscsi:
+    get:
+      tags:
+        - developers
+      summary: List all iSCSI targets
+      operationId: iscsiList
+      description: |
+        Lists all iSCSI targets in the system, whether they are running or not.
+      responses:
+        '200':
+          description: Specified target
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ISCSITargetStatus'
+        '500':
+          $ref: '#/components/responses/OperationFailed'
     post:
       tags:
         - developers

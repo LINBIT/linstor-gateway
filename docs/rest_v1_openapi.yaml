@@ -20,6 +20,7 @@ info:
     Changelog:
     * 1.1.0
       - Add endpoint for listing all iSCSI targets
+      - Add endpoints for starting and stopping iSCSI targets
     * 1.0.0
       - Initial REST API v1
   version: 1.0.0
@@ -127,6 +128,65 @@ paths:
         '500':
           $ref: '#/components/responses/OperationFailed'
 
+  /api/v1/iscsi/{iqn}/{lunid}/start:
+    parameters:
+      - name: iqn
+        in: path
+        required: true
+        schema:
+          type: string
+          description: IQN of the target to start
+      - name: lunid
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int8
+          description: LUN ID within the given target
+    post:
+      tags:
+        - developers
+      summary: Start an iSCSI target
+      operationId: iscsiStart
+      description: |
+        Starts the pacemaker resource for an iSCSI target. If the resource is already started, this is a no-op.
+      responses:
+        '200':
+          description: iSCSI target started
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '500':
+          $ref: '#/components/responses/OperationFailed'
+
+  /api/v1/iscsi/{iqn}/{lunid}/stop:
+    parameters:
+      - name: iqn
+        in: path
+        required: true
+        schema:
+          type: string
+          description: IQN of the target to stop
+      - name: lunid
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int8
+          description: LUN ID within the given target
+    post:
+      tags:
+        - developers
+      summary: Stop an iSCSI target
+      operationId: iscsiStop
+      description: |
+        Stops the pacemaker resource for an iSCSI target. If the resource is already stopped, this is a no-op.
+      responses:
+        '200':
+          description: iSCSI target stopped
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '500':
+          $ref: '#/components/responses/OperationFailed'
 components:
   parameters:
     Resource:

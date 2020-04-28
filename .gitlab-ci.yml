@@ -1,5 +1,18 @@
 image: golang:buster
 
+stages:
+    - build
+    - test
+
+build:
+  stage: build
+  script:
+    - GOPATH=$(pwd)/.mygo make
+  artifacts:
+    paths:
+      - linstor-iscsi
+    expire_in: 3 months
+
 test:
   stage: test
   cache:

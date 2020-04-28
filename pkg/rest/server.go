@@ -52,13 +52,13 @@ func unmarshalBody(w http.ResponseWriter, r *http.Request, i interface{}) error 
 	var s string
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		s = "Could not read body"
+		s = "Could not read body: " + err.Error()
 		_, _ = Errorf(http.StatusBadRequest, w, s)
 		return errors.New(s)
 	}
 
 	if err := json.Unmarshal(body, i); err != nil {
-		s = "Could not unmarshal body"
+		s = "Could not unmarshal body: " + err.Error()
 		_, _ = Errorf(http.StatusBadRequest, w, s)
 		return errors.New(s)
 	}

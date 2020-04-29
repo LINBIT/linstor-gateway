@@ -42,6 +42,9 @@ linstor-iscsi start --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 		},
 	}
 
+	stopCmd.Flags().StringVarP(&iqn, "iqn", "i", "", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)")
+	stopCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN Number (required)")
+
 	stopCmd.MarkFlagRequired("iqn")
 	stopCmd.MarkFlagRequired("lun")
 

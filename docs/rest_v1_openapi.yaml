@@ -23,7 +23,7 @@ info:
       - Add endpoints for starting and stopping iSCSI targets
     * 1.0.0
       - Initial REST API v1
-  version: 1.0.0
+  version: 1.1.0
   title: Linstor iSCSI REST API
   contact:
     email: roland.kammerer@linbit.com

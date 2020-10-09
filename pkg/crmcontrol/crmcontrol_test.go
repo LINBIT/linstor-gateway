@@ -127,109 +127,100 @@ func TestGenerateCrmObjectNames(t *testing.T) {
 func TestGenerateCreateLuXML(t *testing.T) {
 	expect := `<configuration>
     <resources>
-      <primitive id="p_iscsi_example_ip" class="ocf" provider="heartbeat" type="IPaddr2">
+      <primitive class="ocf" id="p_iscsi_example_ip" provider="heartbeat" type="IPaddr2">
         <instance_attributes id="p_iscsi_example_ip-instance_attributes">
-          <nvpair name="ip" value="192.168.1.1" id="p_iscsi_example_ip-instance_attributes-ip"/>
-          <nvpair name="cidr_netmask" value="16" id="p_iscsi_example_ip-instance_attributes-cidr_netmask"/>
+          <nvpair id="p_iscsi_example_ip-instance_attributes-ip" name="ip" value="192.168.1.1" />
+          <nvpair id="p_iscsi_example_ip-instance_attributes-cidr_netmask" name="cidr_netmask" value="16" />
         </instance_attributes>
         <operations>
-          <op name="monitor" interval="15" timeout="40" id="p_iscsi_example_ip-monitor-15"/>
-          <op name="start" timeout="40" interval="0" id="p_iscsi_example_ip-start-0"/>
-          <op name="stop" timeout="40" interval="0" id="p_iscsi_example_ip-stop-0"/>
+          <op id="p_iscsi_example_ip-monitor-15" interval="15" name="monitor" timeout="40" />
+          <op id="p_iscsi_example_ip-start-0" interval="0" name="start" timeout="40" />
+          <op id="p_iscsi_example_ip-stop-0" interval="0" name="stop" timeout="40" />
         </operations>
       </primitive>
-
-      <primitive id="p_pblock_example" class="ocf" provider="heartbeat" type="portblock">
+      <primitive class="ocf" id="p_pblock_example" provider="heartbeat" type="portblock">
         <instance_attributes id="p_pblock_example-instance_attributes">
-          <nvpair name="ip" value="192.168.1.1" id="p_pblock_example-instance_attributes-ip"/>
-          <nvpair name="portno" value="3260" id="p_pblock_example-instance_attributes-portno"/>
-          <nvpair name="protocol" value="tcp" id="p_pblock_example-instance_attributes-protocol"/>
-          <nvpair name="action" value="block" id="p_pblock_example-instance_attributes-action"/>
+          <nvpair id="p_pblock_example-instance_attributes-ip" name="ip" value="192.168.1.1" />
+          <nvpair id="p_pblock_example-instance_attributes-portno" name="portno" value="3260" />
+          <nvpair id="p_pblock_example-instance_attributes-protocol" name="protocol" value="tcp" />
+          <nvpair id="p_pblock_example-instance_attributes-action" name="action" value="block" />
         </instance_attributes>
         <operations>
-          <op name="start" timeout="20" interval="0" id="p_pblock_example-start-0"/>
-          <op name="stop" timeout="20" interval="0" id="p_pblock_example-stop-0"/>
+          <op id="p_pblock_example-start-0" interval="0" name="start" timeout="20" />
+          <op id="p_pblock_example-stop-0" interval="0" name="stop" timeout="20" />
         </operations>
         <meta_attributes id="p_pblock_example-meta_attributes">
-          <nvpair name="target-role" value="Started" id="p_pblock_example-meta_attributes-target-role"/>
+          <nvpair id="p_pblock_example-meta_attributes-target-role" name="target-role" value="Started" />
         </meta_attributes>
       </primitive>
-
-      <primitive id="p_iscsi_example" class="ocf" provider="heartbeat" type="iSCSITarget">
+      <primitive class="ocf" id="p_iscsi_example" provider="heartbeat" type="iSCSITarget">
         <instance_attributes id="p_iscsi_example-instance_attributes">
-          <nvpair name="iqn" value="iqn.2019-08.com.linbit:example" id="p_iscsi_example-instance_attributes-iqn"/>
-          <nvpair name="incoming_username" value="user" id="p_iscsi_example-instance_attributes-incoming_username"/>
-          <nvpair name="incoming_password" value="password" id="p_iscsi_example-instance_attributes-incoming_password"/>
-          <nvpair name="portals" value="192.168.1.1:3260" id="p_iscsi_example-instance_attributes-portals"/>
-          <nvpair name="tid" value="0" id="p_iscsi_example-instance_attributes-tid"/>
+          <nvpair id="p_iscsi_example-instance_attributes-iqn" name="iqn" value="iqn.2019-08.com.linbit:example" />
+          <nvpair id="p_iscsi_example-instance_attributes-incoming_username" name="incoming_username" value="user" />
+          <nvpair id="p_iscsi_example-instance_attributes-incoming_password" name="incoming_password" value="password" />
+          <nvpair id="p_iscsi_example-instance_attributes-portals" name="portals" value="192.168.1.1:3260" />
+          <nvpair id="p_iscsi_example-instance_attributes-tid" name="tid" value="0" />
         </instance_attributes>
         <operations>
-          <op name="start" timeout="40" interval="0" id="p_iscsi_example-start-0"/>
-          <op name="stop" timeout="40" interval="0" id="p_iscsi_example-stop-0"/>
-          <op name="monitor" interval="15" timeout="40" id="p_iscsi_example-monitor-15"/>
+          <op id="p_iscsi_example-start-0" interval="0" name="start" timeout="40" />
+          <op id="p_iscsi_example-stop-0" interval="0" name="stop" timeout="40" />
+          <op id="p_iscsi_example-monitor-15" interval="15" name="monitor" timeout="40" />
         </operations>
         <meta_attributes id="p_iscsi_example-meta_attributes">
-          <nvpair name="target-role" value="Started" id="p_iscsi_example-meta_attributes-target-role"/>
+          <nvpair id="p_iscsi_example-meta_attributes-target-role" name="target-role" value="Started" />
         </meta_attributes>
       </primitive>
-
-      <primitive id="p_iscsi_example_lu0" class="ocf" provider="heartbeat" type="iSCSILogicalUnit">
+      <primitive class="ocf" id="p_iscsi_example_lu0" provider="heartbeat" type="iSCSILogicalUnit">
         <instance_attributes id="p_iscsi_example_lu0-instance_attributes">
-          <nvpair name="lun" value="0" id="p_iscsi_example_lu0-instance_attributes-lun"/>
-          <nvpair name="target_iqn" value="iqn.2019-08.com.linbit:example" id="p_iscsi_example_lu0-instance_attributes-target_iqn"/>
-          <nvpair name="path" value="/dev/drbd1000" id="p_iscsi_example_lu0-instance_attributes-path"/>
+          <nvpair id="p_iscsi_example_lu0-instance_attributes-lun" name="lun" value="0" />
+          <nvpair id="p_iscsi_example_lu0-instance_attributes-target_iqn" name="target_iqn" value="iqn.2019-08.com.linbit:example" />
+          <nvpair id="p_iscsi_example_lu0-instance_attributes-path" name="path" value="/dev/drbd1000" />
         </instance_attributes>
         <operations>
-          <op name="start" timeout="40" interval="0" id="p_iscsi_example_lu0-start-0"/>
-          <op name="stop" timeout="40" interval="0" id="p_iscsi_example_lu0-stop-0"/>
-          <op name="monitor" timeout="40" interval="15" id="p_iscsi_example_lu0-monitor-15"/>
+          <op id="p_iscsi_example_lu0-start-0" interval="0" name="start" timeout="40" />
+          <op id="p_iscsi_example_lu0-stop-0" interval="0" name="stop" timeout="40" />
+          <op id="p_iscsi_example_lu0-monitor-15" interval="15" name="monitor" timeout="40" />
         </operations>
       </primitive>
-
-      <primitive id="p_punblock_example" class="ocf" provider="heartbeat" type="portblock">
+      <primitive class="ocf" id="p_punblock_example" provider="heartbeat" type="portblock">
         <instance_attributes id="p_punblock_example-instance_attributes">
-          <nvpair name="ip" value="192.168.1.1" id="p_punblock_example-instance_attributes-ip"/>
-          <nvpair name="portno" value="3260" id="p_punblock_example-instance_attributes-portno"/>
-          <nvpair name="protocol" value="tcp" id="p_punblock_example-instance_attributes-protocol"/>
-          <nvpair name="action" value="unblock" id="p_punblock_example-instance_attributes-action"/>
+          <nvpair id="p_punblock_example-instance_attributes-ip" name="ip" value="192.168.1.1" />
+          <nvpair id="p_punblock_example-instance_attributes-portno" name="portno" value="3260" />
+          <nvpair id="p_punblock_example-instance_attributes-protocol" name="protocol" value="tcp" />
+          <nvpair id="p_punblock_example-instance_attributes-action" name="action" value="unblock" />
         </instance_attributes>
         <operations>
-          <op name="start" timeout="20" interval="0" id="p_punblock_example-start-0"/>
-          <op name="stop" timeout="20" interval="0" id="p_punblock_example-stop-0"/>
+          <op id="p_punblock_example-start-0" interval="0" name="start" timeout="20" />
+          <op id="p_punblock_example-stop-0" interval="0" name="stop" timeout="20" />
         </operations>
         <meta_attributes id="p_punblock_example-meta_attributes">
-          <nvpair name="target-role" value="Started" id="p_punblock_example-meta_attributes-target-role"/>
+          <nvpair id="p_punblock_example-meta_attributes-target-role" name="target-role" value="Started" />
         </meta_attributes>
       </primitive>
+      <clone id="drbd-attr-clone">
+        <primitive class="ocf" id="drbd-attr" provider="linbit" type="drbd-attr" />
+      </clone>
     </resources>
-
     <constraints>
-      <rsc_location id="lo_iscsi_example" resource-discovery="never">
-        <resource_set id="lo_iscsi_example-0">
-          <resource_ref id="p_iscsi_example_lu0"/>
-          <resource_ref id="p_iscsi_example"/>
-        </resource_set>
-        <rule score="-INFINITY" id="lo_iscsi_example-rule">
-<expression attribute="#uname" operation="ne" value="node0" id="lo_iscsi_example-rule-expression-0"/><expression attribute="#uname" operation="ne" value="node1" id="lo_iscsi_example-rule-expression-1"/>
+      <rsc_location id="lo_iscsi_example_lu0" rsc="p_iscsi_example_lu0">
+        <rule id="lo_iscsi_example_lu0-rule" score="-INFINITY">
+          <expression attribute="drbd-promotion-score-example_lu0" id="lo_iscsi_example_lu0-rule-expression" operation="not_defined" />
+        </rule>
+        <rule id="lo_iscsi_example_lu0-rule-0" score-attribute="drbd-promotion-score-example_lu0">
+          <expression attribute="drbd-promotion-score-example_lu0" id="lo_iscsi_example_lu0-rule-0-expression" operation="defined" />
         </rule>
       </rsc_location>
-      <rsc_colocation id="co_pblock_example" score="INFINITY" rsc="p_pblock_example" with-rsc="p_iscsi_example_ip"/>
-      <rsc_colocation id="co_iscsi_example" score="INFINITY" rsc="p_iscsi_example" with-rsc="p_pblock_example"/>
-      <rsc_colocation id="co_iscsi_example_lu0" score="INFINITY" rsc="p_iscsi_example_lu0" with-rsc="p_iscsi_example"/>
-      <rsc_colocation id="co_punblock_example" score="INFINITY" rsc="p_punblock_example" with-rsc="p_iscsi_example_ip"/>
-
-      <rsc_location id="lo_iscsi_example_lu0" rsc="p_iscsi_example_lu0" resource-discovery="never">
-        <rule score="0" id="lo_iscsi_example_lu0-rule">
-<expression attribute="#uname" operation="ne" value="node0" id="lo_iscsi_example_lu0-rule-expression-0"/><expression attribute="#uname" operation="ne" value="node1" id="lo_iscsi_example_lu0-rule-expression-1"/>
-        </rule>
-      </rsc_location>
-
-      <rsc_order id="o_pblock_example" score="INFINITY" first="p_iscsi_example_ip" then="p_pblock_example"/>
-      <rsc_order id="o_iscsi_example" score="INFINITY" first="p_pblock_example" then="p_iscsi_example"/>
-      <rsc_order id="o_iscsi_example_lu0" score="INFINITY" first="p_iscsi_example" then="p_iscsi_example_lu0"/>
-      <rsc_order id="o_punblock_example" score="INFINITY" first="p_iscsi_example_lu0" then="p_punblock_example"/>
+      <rsc_colocation id="co_pblock_example" rsc="p_pblock_example" score="INFINITY" with-rsc="p_iscsi_example_ip" />
+      <rsc_colocation id="co_iscsi_example" rsc="p_iscsi_example" score="INFINITY" with-rsc="p_pblock_example" />
+      <rsc_colocation id="co_iscsi_example_lu0" rsc="p_iscsi_example_lu0" score="INFINITY" with-rsc="p_iscsi_example" />
+      <rsc_colocation id="co_punblock_example" rsc="p_punblock_example" score="INFINITY" with-rsc="p_iscsi_example_ip" />
+      <rsc_order first="p_iscsi_example_ip" id="o_pblock_example" score="INFINITY" then="p_pblock_example" />
+      <rsc_order first="p_pblock_example" id="o_iscsi_example" score="INFINITY" then="p_iscsi_example" />
+      <rsc_order first="p_iscsi_example" id="o_iscsi_example_lu0" score="INFINITY" then="p_iscsi_example_lu0" />
+      <rsc_order first="p_iscsi_example_lu0" id="o_punblock_example" score="INFINITY" then="p_punblock_example" />
     </constraints>
-</configuration>`
+  </configuration>
+	`
 	n := xmltest.Normalizer{OmitWhitespace: true}
 	var buf bytes.Buffer
 	if err := n.Normalize(&buf, strings.NewReader(expect)); err != nil {

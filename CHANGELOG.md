@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+* Pacemaker now uses the drbd-attr resource agent to access drbd promotion scores
 
 ## 0.6.0 - 2020-04-29
 * REST API version 1.1.0

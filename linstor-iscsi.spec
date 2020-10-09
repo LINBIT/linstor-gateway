@@ -12,7 +12,7 @@
 %endif
 
 BuildRoot: %{buildroot}
-# Requires: drbd-utils >= 9.0.0
+Requires: drbd-pacemaker >= 9.15.0
 BuildRequires: %{firewall_macros_package}
 Summary: linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
 License: GPLv3+

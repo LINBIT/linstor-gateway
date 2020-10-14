@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+* Remove drbd-pacemaker depencency to fix packaging
 
 ## 0.6.1 - 2020-10-09
 * Pacemaker now uses the drbd-attr resource agent to access drbd promotion scores

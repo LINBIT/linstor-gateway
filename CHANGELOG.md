@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.6.2 - 2020-10-14
 * Remove drbd-pacemaker depencency to fix packaging
 
 ## 0.6.1 - 2020-10-09

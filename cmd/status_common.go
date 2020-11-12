@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/LINBIT/gopacemaker/cib"
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/logrusorgru/aurora"
 )
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

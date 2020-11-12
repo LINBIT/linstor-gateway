@@ -28,9 +28,9 @@ import (
 	"time"
 
 	"github.com/LINBIT/gopacemaker/cib"
-	"github.com/LINBIT/linstor-iscsi/pkg/crmtemplate"
-	"github.com/LINBIT/linstor-iscsi/pkg/nfsbase"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/crmtemplate"
+	"github.com/LINBIT/linstor-gateway/pkg/nfsbase"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	log "github.com/sirupsen/logrus"

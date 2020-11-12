@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/LINBIT/gopacemaker/cib"
-	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 )
 

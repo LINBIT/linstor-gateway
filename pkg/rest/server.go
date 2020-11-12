@@ -12,11 +12,11 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
-	"github.com/LINBIT/linstor-iscsi/pkg/nfs"
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/nfs"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	"github.com/gorilla/mux"
 )
 

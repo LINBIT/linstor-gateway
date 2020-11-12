@@ -1,4 +1,4 @@
-%define name linstor-iscsi
+%define name linstor-gateway
 %define release 1
 %define version 0.6.2
 #%define buildroot %{_topdir}/BUILD/%{name}-%{version}
@@ -13,7 +13,7 @@
 
 BuildRoot: %{buildroot}
 BuildRequires: %{firewall_macros_package}
-Summary: linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
+Summary: linstor-gateway manages higly available iSCSI targets and NFS shares using LINSTOR and Pacemaker
 License: GPLv3+
 ExclusiveOS: linux
 Name: %{name}
@@ -22,7 +22,7 @@ Release: %{release}
 Source: %{name}-%{version}.tar.gz
 
 %description
-linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
+linstor-gateway manages higly available iSCSI targets and NFS shares using LINSTOR and Pacemaker
 
 %prep
 %setup -q
@@ -32,15 +32,15 @@ linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
 %install
 mkdir -p %{buildroot}/%{_sbindir}/
 cp %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/%{_sbindir}/
-install -D -m 644 linstor-iscsi.service %{buildroot}%{_unitdir}/linstor-iscsi.service
-install -D -m 644 linstor-iscsi.xml %{buildroot}%{_firewalldir}/services/linstor-iscsi.xml
+install -D -m 644 linstor-gateway.service %{buildroot}%{_unitdir}/linstor-gateway.service
+install -D -m 644 linstor-gateway.xml %{buildroot}%{_firewalldir}/services/linstor-gateway.xml
 
 %post
-%systemd_post linstor-iscsi.service
+%systemd_post linstor-gateway.service
 %firewalld_reload
 
 %preun
-%systemd_preun linstor-iscsi.service
+%systemd_preun linstor-gateway.service
 
 %postun
 %systemd_postun
@@ -48,7 +48,7 @@ install -D -m 644 linstor-iscsi.xml %{buildroot}%{_firewalldir}/services/linstor
 %files
 %defattr(-,root,root)
 	%{_sbindir}/%{name}
-	%{_unitdir}/linstor-iscsi.service
+	%{_unitdir}/linstor-gateway.service
 	%dir %{_firewalldir}
 	%dir %{_firewalldir}/services
-	%{_firewalldir}/services/linstor-iscsi.xml
+	%{_firewalldir}/services/linstor-gateway.xml

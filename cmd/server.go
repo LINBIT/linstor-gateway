@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/LINBIT/linstor-iscsi/pkg/rest"
+	"github.com/LINBIT/linstor-gateway/pkg/rest"
 	"github.com/spf13/cobra"
 )
 

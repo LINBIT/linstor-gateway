@@ -3,8 +3,8 @@ package rest
 import (
 	"net/http"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -2,7 +2,7 @@ package rest
 
 import (
 	"net/http"
-	"github.com/LINBIT/linstor-iscsi/pkg/nfs"
+	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 )
 
 func (srv *server) NFSDelete() http.HandlerFunc {

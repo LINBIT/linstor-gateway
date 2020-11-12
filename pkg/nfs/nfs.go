@@ -10,9 +10,9 @@ import (
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/LINBIT/gopacemaker/cib"
-	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/nfsbase"
+	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/nfsbase"
 )
 
 // Top-level object comprising an NFS export configuration (NFSConfig) with

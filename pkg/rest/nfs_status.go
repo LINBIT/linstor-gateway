@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
 )
 
 type NFSState struct {

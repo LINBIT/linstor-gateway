@@ -1,14 +1,14 @@
 LATESTTAG=$(shell git describe --abbrev=0 --tags | tr -d 'v')
 GITHASH=$(shell git describe --abbrev=0 --always)
 
-all: linstor-iscsi
+all: linstor-gateway
 
-.PHONY: linstor-iscsi
-linstor-iscsi:
+.PHONY: linstor-gateway
+linstor-gateway:
 	GO111MODULE=on go build \
-		-ldflags "-X github.com/LINBIT/linstor-iscsi/cmd.version=$(LATESTTAG) \
-		-X 'github.com/LINBIT/linstor-iscsi/cmd.builddate=$(shell LC_ALL=C date --utc)' \
-		-X github.com/LINBIT/linstor-iscsi/cmd.githash=$(GITHASH)"
+		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(LATESTTAG) \
+		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
+		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"
 
 # internal, public doc on swagger
 docs/rest/index.html: docs/rest_v1_openapi.yaml
@@ -19,8 +19,8 @@ docs/rest/index.html: docs/rest_v1_openapi.yaml
 api-doc: docs/rest/index.html
 
 .PHONY: md-doc
-md-doc: linstor-iscsi
-	./linstor-iscsi docs
+md-doc: linstor-gateway
+	./linstor-gateway docs
 
 .PHONY: test
 test:
@@ -30,10 +30,10 @@ test:
 prepare-release: test md-doc
 	GO111MODULE=on go mod tidy
 
-linstor-iscsi-$(LATESTTAG).tar.gz: linstor-iscsi
-	strip linstor-iscsi
+linstor-gateway-$(LATESTTAG).tar.gz: linstor-gateway
+	strip linstor-gateway
 	dh_clean || true
-	tar --transform="s,^,linstor-iscsi-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ \
-		linstor-iscsi debian linstor-iscsi.spec linstor-iscsi.service linstor-iscsi.xml
+	tar --transform="s,^,linstor-gateway-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ \
+		linstor-gateway debian linstor-gateway.spec linstor-gateway.service linstor-gateway.xml
 
-debrelease: linstor-iscsi-$(LATESTTAG).tar.gz
+debrelease: linstor-gateway-$(LATESTTAG).tar.gz

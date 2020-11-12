@@ -3,10 +3,10 @@ package cmd
 import (
 	"net"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/crmcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
-	"github.com/LINBIT/linstor-iscsi/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

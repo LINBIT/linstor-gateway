@@ -1,6 +1,6 @@
 package main
 
-import "github.com/LINBIT/linstor-iscsi/cmd"
+import "github.com/LINBIT/linstor-gateway/cmd"
 
 func main() {
 	cmd.Execute()

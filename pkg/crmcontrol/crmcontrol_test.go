@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/LINBIT/gopacemaker/cib"
-	"github.com/LINBIT/linstor-iscsi/pkg/targetutil"
+	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
 	"github.com/google/go-cmp/cmp"
 	"github.com/rsto/xmltest"
 

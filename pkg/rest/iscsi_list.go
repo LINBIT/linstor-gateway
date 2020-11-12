@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/LINBIT/linstor-iscsi/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 )
 
 func (s *server) ISCSIList() http.HandlerFunc {

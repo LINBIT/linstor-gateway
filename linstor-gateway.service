@@ -1,0 +1,9 @@
+[Unit]
+Description=Linstor iSCSI/NFS gateway
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/linstor-gateway server --addr ":8080"
+
+[Install]
+WantedBy=multi-user.target

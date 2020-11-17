@@ -85,6 +85,10 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 		},
 	}
 
+	statusCmd.Flags().StringVarP(&iqn, "iqn", "i", "", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)")
+	statusCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN Number (required)")
+	statusCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
+
 	statusCmd.MarkFlagRequired("iqn")
 	statusCmd.MarkFlagRequired("lun")
 

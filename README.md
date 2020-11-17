@@ -5,11 +5,9 @@ and Pacemaker. Setting up LINSTOR - including storage pools and resource groups 
 as well as Corosync and Pacemaker's properties are a prerequisite to use this tool.
 
 # Building
-Use a version of go that supports modules. Then you can `go get` the code as usual. As of now, you probably
-want to set module support to `on`.
+Use a version of go that supports modules (>1.11). Then you can `go get` the code as usual.
 
 ```
-export GO111MODULE=on
 go get github.com/LINBIT/linstor-iscsi
 ```
 

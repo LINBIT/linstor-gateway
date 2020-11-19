@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// statusCommand represents the status command
 func statusNFSCommand() *cobra.Command {
 	var controller net.IP
 	var resourceName string

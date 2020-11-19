@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-// docsCommand represents the docs command
 func docsCommand(dst *cobra.Command) *cobra.Command {
 	var format []string
 

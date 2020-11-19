@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createCommand represents the create command
 func createNFSCommand() *cobra.Command {
 	var controller net.IP
 	var resourceGroupName string

@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// statusCommand represents the status command
 func statusISCSICommand() *cobra.Command {
 	var controller net.IP
 	var iqn string

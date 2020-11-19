@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// startCommand represents the start command
 func startCommand() *cobra.Command {
 	var controller net.IP
 	var iqn string

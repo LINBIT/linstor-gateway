@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// completionCommand represents the completion command
 func completionCommand(dst *cobra.Command) *cobra.Command {
 	var completionCmd = &cobra.Command{
 		Use:   "completion",

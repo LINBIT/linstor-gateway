@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// stopCommand represents the stop command
 func stopCommand() *cobra.Command {
 	var controller net.IP
 	var iqn string

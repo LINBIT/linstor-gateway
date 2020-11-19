@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// deleteCommand represents the delete command
 func deleteISCSICommand() *cobra.Command {
 	var controller net.IP
 	var iqn string

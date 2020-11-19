@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createCommand represents the create command
 func createISCSICommand() *cobra.Command {
 	var ipCIDR string
 	var controller net.IP

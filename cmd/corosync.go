@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// corosyncCommand represents the corosync command
 func corosyncCommand() *cobra.Command {
 	var nodeIPs []net.IP
 	var clusterName string

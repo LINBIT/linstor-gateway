@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// serverCommand represents the server command
 func serverCommand() *cobra.Command {
 	var addr string
 

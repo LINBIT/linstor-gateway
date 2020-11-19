@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listCommand represents the list command
 func listNFSCommand() *cobra.Command {
 	var controller net.IP
 	var listCmd = &cobra.Command{

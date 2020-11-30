@@ -38,8 +38,8 @@ all necessary order and location constraints. The Pacemaker primites are
 prefixed with p_, contain the resource name and a resource type postfix.
 
 For example:
-linstor-nfs create --resource=example --service_ip=192.168.211.122  \
- --allowed_ips=192.168.0.0/255.255.255.0 --resource_group=ssd_thin_2way --size=2G
+linstor-nfs create --resource=example --service-ip=192.168.211.122  \
+ --allowed-ips=192.168.0.0/255.255.255.0 --resource-group=ssd_thin_2way --size=2G
 
 Creates linstor resource example, volume 0 and
 pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
@@ -55,7 +55,7 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 			}
 			allowedIPs, allowedIPsNet, err = net.ParseCIDR(allowedIPsCIDR)
 			if err != nil {
-				log.Fatalf("Invalid allowed_ips parameter: %s", err.Error())
+				log.Fatalf("Invalid allowed-ips parameter: %s", err.Error())
 			}
 		},
 
@@ -96,10 +96,10 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 		},
 	}
 
-	createCmd.Flags().StringVarP(&resourceGroupName, "resource_group", "g", "default", "Set the LINSTOR resource group name")
+	createCmd.Flags().StringVarP(&resourceGroupName, "resource-group", "g", "default", "Set the LINSTOR resource group name")
 	createCmd.Flags().StringVarP(&resourceName, "resource", "r", "", "Set the resource name (required)")
-	createCmd.Flags().StringVar(&serviceIPCIDR, "service_ip", "127.0.0.1/8", "Set the service IP and netmask of the target (required)")
-	createCmd.Flags().StringVar(&allowedIPsCIDR, "allowed_ips", "", "Set the IP address mask of clients that are allowed access")
+	createCmd.Flags().StringVar(&serviceIPCIDR, "service-ip", "127.0.0.1/8", "Set the service IP and netmask of the target (required)")
+	createCmd.Flags().StringVar(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 	createCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
 
 	units := unit.DefaultUnits
@@ -114,8 +114,8 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 	createCmd.Flags().Var(sz, "size", "Set a size (e.g, 1TiB)")
 
 	createCmd.MarkFlagRequired("resource")
-	createCmd.MarkFlagRequired("service_ip")
-	createCmd.MarkFlagRequired("allowed_ips")
+	createCmd.MarkFlagRequired("service-ip")
+	createCmd.MarkFlagRequired("allowed-ips")
 
 	return createCmd
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func stopCommand() *cobra.Command {
+func stopISCSICommand() *cobra.Command {
 	var controller net.IP
 	var iqn string
 	var lun int

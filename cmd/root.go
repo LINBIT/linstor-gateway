@@ -71,9 +71,9 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.AddCommand(docsCommand(rootCmd))
 	rootCmd.AddCommand(listISCSICommand())
 	rootCmd.AddCommand(serverCommand())
-	rootCmd.AddCommand(startCommand())
+	rootCmd.AddCommand(startISCSICommand())
 	rootCmd.AddCommand(statusISCSICommand())
-	rootCmd.AddCommand(stopCommand())
+	rootCmd.AddCommand(stopISCSICommand())
 
 	return rootCmd
 
@@ -111,9 +111,7 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.AddCommand(docsCommand(rootCmd))
 	rootCmd.AddCommand(listNFSCommand())
 	rootCmd.AddCommand(serverCommand())
-	rootCmd.AddCommand(startCommand())
 	rootCmd.AddCommand(statusNFSCommand())
-	rootCmd.AddCommand(stopCommand())
 
 	return rootCmd
 

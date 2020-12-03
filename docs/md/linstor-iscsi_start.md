@@ -18,15 +18,16 @@ linstor-iscsi start [flags]
 ### Options
 
 ```
-  -h, --help   help for start
+  -c, --controller ip   Set the IP of the linstor controller node (default 127.0.0.1)
+  -h, --help            help for start
+  -i, --iqn string      Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)
+  -l, --lun int         Set the LUN Number (required) (default 1)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -i, --iqn string        Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)
       --loglevel string   Set the log level (as defined by logrus) (default "info")
-  -l, --lun int           Set the LUN Number (required) (default 1)
 ```
 
 ### SEE ALSO

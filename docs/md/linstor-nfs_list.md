@@ -1,17 +1,17 @@
-## linstor-iscsi list
+## linstor-nfs list
 
-Lists iSCSI targets
+Lists NFS resources
 
 ### Synopsis
 
-Lists the iSCSI targets created with this tool and provides an overview
+Lists the NFS resources created with this tool and provides an overview
 about the existing Pacemaker and linstor parts
 
 For example:
-linstor-iscsi list
+linstor-nfs list
 
 ```
-linstor-iscsi list [flags]
+linstor-nfs list [flags]
 ```
 
 ### Options
@@ -29,5 +29,5 @@ linstor-iscsi list [flags]
 
 ### SEE ALSO
 
-* [linstor-iscsi](linstor-iscsi.md)	 - Manages Highly-Available iSCSI targets
+* [linstor-nfs](linstor-nfs.md)	 - Manages Highly-Available NFS exports
 

@@ -32,6 +32,8 @@ linstor-gateway manages higly available iSCSI targets and NFS shares using LINST
 %install
 mkdir -p %{buildroot}/%{_sbindir}/
 cp %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/%{_sbindir}/
+ln -s %{_sbindir}/%{name} %{buildroot}/%{_sbindir}/linstor-iscsi
+ln -s %{_sbindir}/%{name} %{buildroot}/%{_sbindir}/linstor-nfs
 install -D -m 644 linstor-gateway.service %{buildroot}%{_unitdir}/linstor-gateway.service
 install -D -m 644 linstor-gateway.xml %{buildroot}%{_firewalldir}/services/linstor-gateway.xml
 
@@ -48,6 +50,8 @@ install -D -m 644 linstor-gateway.xml %{buildroot}%{_firewalldir}/services/linst
 %files
 %defattr(-,root,root)
 	%{_sbindir}/%{name}
+	%{_sbindir}/linstor-iscsi
+	%{_sbindir}/linstor-nfs
 	%{_unitdir}/linstor-gateway.service
 	%dir %{_firewalldir}
 	%dir %{_firewalldir}/services

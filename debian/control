@@ -1,4 +1,4 @@
-Source: linstor-iscsi
+Source: linstor-gateway
 Section: admin
 Priority: optional
 Maintainer: Roland Kammerer <roland.kammerer@linbit.com>
@@ -8,9 +8,9 @@ Homepage: https://linbit.github.io/drbdtop
 #Vcs-Git: https://anonscm.debian.org/collab-maint/drbdtop.git
 #Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/drbdtop.git
 
-Package: linstor-iscsi
+Package: linstor-gateway
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: linstor-iscsi manages higly available iSCSI targets
+Description: linstor-gateway manages higly available iSCSI targets and NFS exports.
  Setting linstor including storage pools and resource groups as well as
  Corosync and Pacemaker's properties a prerequisite to use this tool.

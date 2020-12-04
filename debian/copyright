@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: linstor-iscsi
-Source: https://github.com/LINBIT/linstor-iscsi
+Upstream-Name: linstor-gateway
+Source: https://github.com/LINBIT/linstor-gateway
 
 Files: *
 Copyright: 2019 Robert Altnoeder <robert.altnoeder@linbit.com>

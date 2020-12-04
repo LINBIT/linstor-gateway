@@ -1,0 +1,2 @@
+usr/sbin/linstor-gateway usr/sbin/linstor-iscsi
+usr/sbin/linstor-gateway usr/sbin/linstor-nfs

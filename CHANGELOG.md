@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.0 - 2020-12-04
+* Add ability to manage NFS exports
+* Rename to linstor-gateway
+
 ## 0.6.2 - 2020-10-14
 * Remove drbd-pacemaker depencency to fix packaging
 

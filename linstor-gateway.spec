@@ -34,15 +34,19 @@ mkdir -p %{buildroot}/%{_sbindir}/
 cp %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/%{_sbindir}/
 ln -s %{_sbindir}/%{name} %{buildroot}/%{_sbindir}/linstor-iscsi
 ln -s %{_sbindir}/%{name} %{buildroot}/%{_sbindir}/linstor-nfs
-install -D -m 644 linstor-gateway.service %{buildroot}%{_unitdir}/linstor-gateway.service
-install -D -m 644 linstor-gateway.xml %{buildroot}%{_firewalldir}/services/linstor-gateway.xml
+install -D -m 644 linstor-iscsi.service %{buildroot}%{_unitdir}/linstor-iscsi.service
+install -D -m 644 linstor-nfs.service %{buildroot}%{_unitdir}/linstor-nfs.service
+install -D -m 644 linstor-iscsi.xml %{buildroot}%{_firewalldir}/services/linstor-iscsi.xml
+install -D -m 644 linstor-nfs.xml %{buildroot}%{_firewalldir}/services/linstor-nfs.xml
 
 %post
-%systemd_post linstor-gateway.service
+%systemd_post linstor-iscsi.service
+%systemd_post linstor-nfs.service
 %firewalld_reload
 
 %preun
-%systemd_preun linstor-gateway.service
+%systemd_preun linstor-iscsi.service
+%systemd_preun linstor-nfs.service
 
 %postun
 %systemd_postun
@@ -52,7 +56,9 @@ install -D -m 644 linstor-gateway.xml %{buildroot}%{_firewalldir}/services/linst
 	%{_sbindir}/%{name}
 	%{_sbindir}/linstor-iscsi
 	%{_sbindir}/linstor-nfs
-	%{_unitdir}/linstor-gateway.service
+	%{_unitdir}/linstor-iscsi.service
+	%{_unitdir}/linstor-nfs.service
 	%dir %{_firewalldir}
 	%dir %{_firewalldir}/services
-	%{_firewalldir}/services/linstor-gateway.xml
+	%{_firewalldir}/services/linstor-iscsi.xml
+	%{_firewalldir}/services/linstor-nfs.xml

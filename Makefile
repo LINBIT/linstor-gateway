@@ -36,7 +36,8 @@ linstor-gateway-$(LATESTTAG).tar.gz: linstor-gateway
 	strip linstor-gateway
 	dh_clean || true
 	tar --transform="s,^,linstor-gateway-$(LATESTTAG)/," --owner=0 --group=0 -czf $@ \
-		linstor-gateway debian linstor-gateway.spec linstor-gateway.service linstor-gateway.xml
+		linstor-gateway debian linstor-gateway.spec linstor-iscsi.service \
+		linstor-nfs.service linstor-iscsi.xml linstor-nfs.xml
 
 debrelease: linstor-gateway-$(LATESTTAG).tar.gz
 

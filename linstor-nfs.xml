@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+<short>Linstor NFS gateway</short>
+<description>A utility to get an NFS share from LINSTOR</description>
+<port protocol="tcp" port="8081"/><!-- REST API -->
+</service>

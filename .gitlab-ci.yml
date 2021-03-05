@@ -2,10 +2,13 @@ image: golang:buster
 
 stages:
     - build
+    - package
     - test
 
 build:
   stage: build
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
   script:
     - GOPATH=$(pwd)/.mygo make
   artifacts:
@@ -13,8 +16,35 @@ build:
       - linstor-gateway
     expire_in: 3 months
 
+package:
+    stage: package
+    image: $LINBIT_DOCKER_REGISTRY/build-helpers:latest
+    rules:
+      #- if: $CI_COMMIT_BRANCH == 'master'
+      - if: $CI_MERGE_REQUEST_ID
+    before_script:
+      - |
+        curl -sSL $LINBIT_REGISTRY_URL/repository/lbbuild/lbbuildctl-latest -o /usr/local/bin/lbbuildctl
+        chmod +x /usr/local/bin/lbbuildctl
+    script:
+      - |
+        VERSION=0.0.0.$CI_COMMIT_SHA
+        dummy-release.sh linstor-gateway $VERSION 1 linstor-gateway.spec
+        make VERSION=$VERSION debrelease
+        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$VERSION.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+        lbbuildctl build linstor-gateway --ci \
+          --arch amd64 -v "$VERSION" \
+          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
+          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
+          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
+          -d rhel8.0
+    dependencies:
+      - build
+
 test:
   stage: test
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
   cache:
     paths:
       - .mygo/pkg/mod

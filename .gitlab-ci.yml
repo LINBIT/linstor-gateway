@@ -10,7 +10,7 @@ build:
     - GOPATH=$(pwd)/.mygo make
   artifacts:
     paths:
-      - linstor-iscsi
+      - linstor-gateway
     expire_in: 3 months
 
 test:

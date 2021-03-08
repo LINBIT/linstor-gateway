@@ -18,6 +18,11 @@ func (s *server) ISCSIList() http.HandlerFunc {
 			return
 		}
 
+		for i := range targets {
+			targets[i].Username = ""
+			targets[i].Password = ""
+		}
+
 		json.NewEncoder(w).Encode(targets)
 	}
 }

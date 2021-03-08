@@ -216,10 +216,10 @@ func TestGenerateCreateLuXML(t *testing.T) {
       <rsc_colocation id="co_iscsi_example" rsc="p_iscsi_example" score="INFINITY" with-rsc="p_pblock_example" />
       <rsc_colocation id="co_iscsi_example_lu0" rsc="p_iscsi_example_lu0" score="INFINITY" with-rsc="p_iscsi_example" />
       <rsc_colocation id="co_punblock_example" rsc="p_punblock_example" score="INFINITY" with-rsc="p_iscsi_example_ip" />
-      <rsc_order first="p_iscsi_example_ip" id="o_pblock_example" score="INFINITY" then="p_pblock_example" />
-      <rsc_order first="p_pblock_example" id="o_iscsi_example" score="INFINITY" then="p_iscsi_example" />
-      <rsc_order first="p_iscsi_example" id="o_iscsi_example_lu0" score="INFINITY" then="p_iscsi_example_lu0" />
-      <rsc_order first="p_iscsi_example_lu0" id="o_punblock_example" score="INFINITY" then="p_punblock_example" />
+      <rsc_order first="p_iscsi_example_ip" id="o_pblock_example" kind="Mandatory" then="p_pblock_example" />
+      <rsc_order first="p_pblock_example" id="o_iscsi_example" kind="Mandatory" then="p_iscsi_example" />
+      <rsc_order first="p_iscsi_example" id="o_iscsi_example_lu0" kind="Mandatory" then="p_iscsi_example_lu0" />
+      <rsc_order first="p_iscsi_example_lu0" id="o_punblock_example" kind="Mandatory" then="p_punblock_example" />
     </constraints>
   </configuration>
 	`

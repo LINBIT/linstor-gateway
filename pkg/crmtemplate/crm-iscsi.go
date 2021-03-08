@@ -106,12 +106,12 @@ const CRM_ISCSI = `<configuration>
       <rsc_colocation id="co_iscsi_{{$rsc}}" score="INFINITY" rsc="p_iscsi_{{$rsc}}" with-rsc="p_iscsi_{{$.TargetName}}"/>
 {{end}}
       <rsc_colocation id="co_punblock_{{.TargetName}}" score="INFINITY" rsc="p_punblock_{{.TargetName}}" with-rsc="p_iscsi_{{.TargetName}}_ip"/>
-      <rsc_order id="o_pblock_{{.TargetName}}" score="INFINITY" first="p_iscsi_{{.TargetName}}_ip" then="p_pblock_{{.TargetName}}"/>
-      <rsc_order id="o_iscsi_{{.TargetName}}" score="INFINITY" first="p_pblock_{{.TargetName}}" then="p_iscsi_{{.TargetName}}"/>
+      <rsc_order id="o_pblock_{{.TargetName}}" kind="Mandatory" first="p_iscsi_{{.TargetName}}_ip" then="p_pblock_{{.TargetName}}"/>
+      <rsc_order id="o_iscsi_{{.TargetName}}" kind="Mandatory" first="p_pblock_{{.TargetName}}" then="p_iscsi_{{.TargetName}}"/>
 {{range $.Target.LUNs}}
 {{$rsc := (printf "%s_lu%d" $.TargetName .ID)}}
-      <rsc_order id="o_iscsi_{{$rsc}}" score="INFINITY" first="p_iscsi_{{$.TargetName}}" then="p_iscsi_{{$.TargetName}}_lu{{.ID}}"/>
-      <rsc_order id="o_punblock_{{$.TargetName}}" score="INFINITY" first="p_iscsi_{{$rsc}}" then="p_punblock_{{$.TargetName}}"/>
+      <rsc_order id="o_iscsi_{{$rsc}}" kind="Mandatory" first="p_iscsi_{{$.TargetName}}" then="p_iscsi_{{$.TargetName}}_lu{{.ID}}"/>
+      <rsc_order id="o_punblock_{{$.TargetName}}" kind="Mandatory" first="p_iscsi_{{$rsc}}" then="p_punblock_{{$.TargetName}}"/>
 {{end}}
     </constraints>
 </configuration>`

@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/logrusorgru/aurora v0.0.0-20190803045625-94edacc10f9b
+	github.com/mattn/go-isatty v0.0.12
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/rck/unit v0.0.3
 	github.com/rsto/xmltest v0.0.0-20150625174141-1abcdaa746f0

@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/logrusorgru/aurora"
+	"github.com/mattn/go-isatty"
 )
 
 const (
@@ -57,6 +60,10 @@ func stateToStatus(state cib.LrmRunState) string {
 		str = statusUnknown
 	}
 
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return str
+	}
+
 	return stateToColor(state)(str).String()
 }
 
@@ -72,6 +79,9 @@ func linstorStateToStatus(state linstorcontrol.ResourceState) string {
 	default:
 		str = statusUnknown
 	}
+
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return str
+	}
 	return linstorStateToColor(state)(str).String()
 }
-

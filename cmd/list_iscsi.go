@@ -9,8 +9,10 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/targetutil"
+	"github.com/mattn/go-isatty"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/cobra"
 )
 
@@ -43,8 +45,11 @@ linstor-iscsi list`,
 
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"IQN", "LUN", "Pacemaker LUN", "Pacemaker", "Pacemaker IP", "LINSTOR"})
-			whiteBold := tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
-			table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
+
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				whiteBold := tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
+				table.SetHeaderColor(whiteBold, whiteBold, whiteBold, whiteBold, whiteBold, whiteBold)
+			}
 
 			for _, target := range targets {
 				linstorCfg := linstorcontrol.Linstor{

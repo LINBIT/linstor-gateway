@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.0 - 2021-03-23
+* Fix a bug related to Pacemaker 2 (use the "kind" attribute for order constraints instead of "score")
+* Implement pipe detection; disable colors when not writing to a TTY
+* Do not send back the iSCSI credentials over the REST API
+
 ## 0.7.0 - 2020-12-04
 * Add ability to manage NFS exports
 * Rename to linstor-gateway

@@ -1,6 +1,6 @@
 %define name linstor-gateway
 %define release 1
-%define version 0.7.0
+%define version 0.8.0
 #%define buildroot %{_topdir}/BUILD/%{name}-%{version}
 
 %define _firewalldir /usr/lib/firewalld

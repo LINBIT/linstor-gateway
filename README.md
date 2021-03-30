@@ -48,6 +48,28 @@ linstor-gateway uses Pacemaker's `ocf::heartbeat:iSCSITarget` resource agent for
 its iSCSI integration, which requires an iSCSI implementation to be installed.
 Using `targetcli` is recommended.
 
+## NFS
+
+There are a few requirements for NFS as well.
+
+First, an NFS server needs to be started. The `nfsd` kernel module needs to be
+loaded and the user-space NFS process needs to be running. The easiest way to
+ensure that is to use
+
+```
+systemctl enable --now nfs-server
+```
+
+on all nodes.
+
+The resource group that is used for the linstor-nfs create command needs to have
+the `FileSystem/Type` attribute set. Configure this by doing
+```
+linstor resource-group set-property MyResourceGroup FileSystem/Type ext4
+```
+
+Note that currently only the `ext4` filesystem is supported.
+
 # Documentation
 Start by browsing the documentation for [linstor-iscsi](./docs/md/linstor-iscsi.md)
 or [linstor-nfs](./docs/md/linstor-nfs.md).

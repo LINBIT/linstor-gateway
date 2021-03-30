@@ -56,10 +56,10 @@ const (
 
 // CrmConfiguration stores information about (Pacemaker) CRM resources
 type CrmConfiguration struct {
-	Targets []*Target
-	LUs     []*Lu
-	IPs     []*IP
-	TIDs    *IntSet
+	Targets     []*Target
+	LUs         []*Lu
+	IPs         []*IP
+	TIDs        *IntSet
 	Mountpoints []*FSMount
 	NFSExports  []*ExportFS
 }
@@ -94,11 +94,11 @@ type FSMount struct {
 }
 
 type ExportFS struct {
-	ID              string
-        Directory       string
-        AllowedIPs      net.IP
-        AllowedIPsMask  uint8
-	FSID            string
+	ID             string
+	Directory      string
+	AllowedIPs     net.IP
+	AllowedIPsMask uint8
+	FSID           string
 }
 
 type ResourceRunState struct {
@@ -193,7 +193,9 @@ func generateCreateNFSXML(nfsCfg nfsbase.NFSConfig, storageNodes []string,
 	}
 
 	log.Debug("crmcontrol.go generateCreateNFSXML: Setting template variables")
-	allowedIPs := nfsCfg.AllowedIPs.String() + "/" + strconv.Itoa(nfsCfg.AllowedIPsNetBits)
+	allowedIPsMask := net.CIDRMask(nfsCfg.AllowedIPsNetBits, 32)
+	allowedIPs := fmt.Sprintf("%s/%d.%d.%d.%d", nfsCfg.AllowedIPs,
+		allowedIPsMask[0], allowedIPsMask[1], allowedIPsMask[2], allowedIPsMask[3])
 	bracketedAllowedIPs := allowedIPs
 	if strings.IndexByte(allowedIPs, ':') != -1 {
 		bracketedAllowedIPs = "[" + allowedIPs + "]"
@@ -269,9 +271,9 @@ func DeleteNFS(nfsCfg nfsbase.NFSConfig) error {
 
 	// TODO: Maybe replace those magic values with constants
 	var idList []string
-	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_fs")
-	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_exp")
-	idList = append(idList, "p_nfs_" + nfsCfg.ResourceName + "_ip")
+	idList = append(idList, "p_nfs_"+nfsCfg.ResourceName+"_fs")
+	idList = append(idList, "p_nfs_"+nfsCfg.ResourceName+"_exp")
+	idList = append(idList, "p_nfs_"+nfsCfg.ResourceName+"_ip")
 
 	// Stop resources
 	for _, id := range idList {
@@ -544,7 +546,7 @@ func ProbeNFSResource(resourceName string) (NFSRunState, error) {
 		MountpointState: cib.Unknown,
 		ExportFSState:   cib.Unknown,
 		ServiceIPState:  cib.Unknown,
-		OnNode:      "",
+		OnNode:          "",
 	}
 
 	var cibObj cib.CIB
@@ -862,11 +864,11 @@ func findNFSExports(rscSection *xmltree.Element) []*ExportFS {
 				net, netMask, err := parseIPv4Net(clientSpecPrm.Value)
 				if err == nil {
 					expEntry := &ExportFS{
-						ID: id.Value,
-						Directory: directory.Value,
-						AllowedIPs: net,
+						ID:             id.Value,
+						Directory:      directory.Value,
+						AllowedIPs:     net,
 						AllowedIPsMask: netMask,
-						FSID: FSID.Value,
+						FSID:           FSID.Value,
 					}
 					nfsExports = append(nfsExports, expEntry)
 				} else {
@@ -888,6 +890,10 @@ func findNFSExports(rscSection *xmltree.Element) []*ExportFS {
 	return nfsExports
 }
 
+// parseIPv4Net parses an IP/netmask combination in a format like
+// "192.168.0.0/255.255.0.0". It returns the network address as well as the
+// netmask in CIDR format ("192.168.0.0" and 16 in this example), and an error
+// if one occurred.
 func parseIPv4Net(clientSpecPrm string) (net.IP, uint8, error) {
 	prmParts := strings.Split(clientSpecPrm, "/")
 	if len(prmParts) != 2 {
@@ -898,7 +904,7 @@ func parseIPv4Net(clientSpecPrm string) (net.IP, uint8, error) {
 	if network == nil {
 		return nil, 0, errors.New("Unparsable IP address")
 	}
-	maskData:= net.ParseIP(prmParts[1])
+	maskData := net.ParseIP(prmParts[1])
 	if maskData == nil {
 		return nil, 0, errors.New("Unparsable subnet mask")
 	}

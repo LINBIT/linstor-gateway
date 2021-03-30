@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
-)
 
-import (
-	log "github.com/sirupsen/logrus"
 	"github.com/LINBIT/gopacemaker/cib"
 	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/nfsbase"
+	log "github.com/sirupsen/logrus"
 )
 
 // Top-level object comprising an NFS export configuration (NFSConfig) with
@@ -23,11 +21,11 @@ type NFSResource struct {
 }
 
 type NFSListItem struct {
-	ResourceName	string
-	LinstorRsc      linstorcontrol.Linstor
-	Mountpoint      crmcontrol.FSMount
-	NFSExport       crmcontrol.ExportFS
-	ServiceIP       crmcontrol.IP
+	ResourceName string
+	LinstorRsc   linstorcontrol.Linstor
+	Mountpoint   crmcontrol.FSMount
+	NFSExport    crmcontrol.ExportFS
+	ServiceIP    crmcontrol.IP
 }
 
 func (nfsRsc *NFSResource) CreateResource() error {
@@ -57,7 +55,7 @@ func (nfsRsc *NFSResource) CreateResource() error {
 	// Create the NFS export directory
 	log.Debug("nfs.go CreateResource: Creating export directory")
 	directory := nfsbase.NFSBasePath + "/" + nfsRsc.NFS.ResourceName
-	err = os.Mkdir(directory, 0755)
+	err = os.MkdirAll(directory, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -123,8 +121,8 @@ func ListResources() ([]NFSListItem, error) {
 	for _, nfsExport := range config.NFSExports {
 		rscName, isExport := getRscNameFromNFSExport(nfsExport)
 		if isExport {
-			mountpoint, haveMountpoint := mountpointMap["p_nfs_" + rscName + "_fs"]
-			svcIP, haveSvcIP := svcIPMap["p_nfs_" + rscName + "_ip"]
+			mountpoint, haveMountpoint := mountpointMap["p_nfs_"+rscName+"_fs"]
+			svcIP, haveSvcIP := svcIPMap["p_nfs_"+rscName+"_ip"]
 
 			if haveMountpoint && haveSvcIP {
 				entry := NFSListItem{
@@ -163,7 +161,7 @@ func getRscNameFromNFSExport(nfsExport *crmcontrol.ExportFS) (string, bool) {
 	var isExport bool = false
 	id := nfsExport.ID
 	if strings.HasPrefix(id, "p_nfs_") && strings.HasSuffix(id, "_exp") {
-		rscName = id[6:len(id) - 4]
+		rscName = id[6 : len(id)-4]
 		isExport = true
 	}
 	return rscName, isExport

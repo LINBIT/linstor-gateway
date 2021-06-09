@@ -21,6 +21,7 @@ const CRM_NFS = `<configuration>
           <nvpair name="fsid" value="{{.FsId}}" id="p_nfs_{{.ResourceName}}_exp-instance_attributes-fsid"/>
           <nvpair name="directory" value="{{.Directory}}" id="p_nfs_{{.ResourceName}}_exp-instance_attributes-directory"/>
           <nvpair name="clientspec" value="{{.BracketedAllowedIPs}}" id="p_nfs_{{.ResourceName}}_exp-instance_attributes-clientspec"/>
+          <nvpair name="options" value="rw" id="p_nfs_{{.ResourceName}}_exp-instance_attributes-options"/>
         </instance_attributes>
         <operations>
           <op name="monitor" interval="15" timeout="40" id="p_nfs_{{.ResourceName}}_exp-monitor-15"/>

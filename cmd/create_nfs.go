@@ -69,7 +69,6 @@ pacemaker primitives p_nfs_example_ip, p_nfs_example, p_nfs_example_export`,
 				}
 			}
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:          log.GetLevel().String(),
 				ControllerIP:      controller,
 				ResourceGroupName: resourceGroupName,
 			}

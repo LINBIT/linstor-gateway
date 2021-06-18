@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	client "github.com/LINBIT/golinstor/client"
+	"github.com/sirupsen/logrus"
 )
 
 // Linstor is a struct containing the the configuration that is needed to create or delete a LINSTOR resource.
@@ -67,12 +68,11 @@ func (l *Linstor) CreateVolume() (CreateResult, error) {
 	if loglevel == "" {
 		loglevel = "info"
 	}
-	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return result, err
 	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
 	if err != nil {
 		return result, err
 	}
@@ -122,12 +122,11 @@ func (l *Linstor) DeleteVolume() error {
 	if loglevel == "" {
 		loglevel = "info"
 	}
-	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return err
 	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
 	if err != nil {
 		return err
 	}
@@ -141,12 +140,11 @@ func (l *Linstor) AggregateResourceState() (ResourceState, error) {
 	if loglevel == "" {
 		loglevel = "info"
 	}
-	logCfg := &client.LogCfg{Level: loglevel}
 	u, err := ipToURL(l.ControllerIP)
 	if err != nil {
 		return Unknown, err
 	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logCfg))
+	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
 	if err != nil {
 		return Unknown, err
 	}

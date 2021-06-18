@@ -33,7 +33,6 @@ linstor-iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 				}
 			}
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}
 			targetCfg := targetutil.TargetConfig{

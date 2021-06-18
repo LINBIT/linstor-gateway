@@ -53,7 +53,6 @@ linstor-iscsi list`,
 
 			for _, target := range targets {
 				linstorCfg := linstorcontrol.Linstor{
-					Loglevel:     log.GetLevel().String(),
 					ControllerIP: controller,
 				}
 				targetCfg := targetutil.TargetConfig{

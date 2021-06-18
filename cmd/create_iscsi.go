@@ -69,7 +69,6 @@ pacemaker primitives p_iscsi_example_ip, p_iscsi_example, p_iscsi_example_lu0`,
 				}
 			}
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:          log.GetLevel().String(),
 				ControllerIP:      controller,
 				ResourceGroupName: group,
 				SizeKiB:           sizeKiB,

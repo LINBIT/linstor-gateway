@@ -33,7 +33,6 @@ linstor-nfs delete --resource=example`,
 			}
 			linstorCfg := linstorcontrol.Linstor{
 				ResourceName: resourceName,
-				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}
 			nfsCfg := nfsbase.NFSConfig{

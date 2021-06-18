@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/LINBIT/linstor-gateway/pkg/crmcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/LINBIT/linstor-gateway/pkg/nfsbase"
-	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,7 +52,6 @@ linstor-nfs list`,
 				}
 				linstorCfg := linstorcontrol.Linstor{
 					ResourceName: nfsItem.ResourceName,
-					Loglevel:     log.GetLevel().String(),
 					ControllerIP: controller,
 				}
 				nfsRsc := nfs.NFSResource{

@@ -41,7 +41,6 @@ linstor-nfs status --resource=example`,
 			log.Debugf("Using LINSTOR controller at %s", controller)
 
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 				ResourceName: resourceName,
 			}

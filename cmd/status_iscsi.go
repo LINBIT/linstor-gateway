@@ -47,7 +47,6 @@ linstor-iscsi status --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 				log.Fatal(err)
 			}
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 				ResourceName: linstorcontrol.ResourceNameFromLUN(targetName, uint8(lun)),
 			}

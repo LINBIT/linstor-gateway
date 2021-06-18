@@ -27,7 +27,6 @@ linstor-iscsi start --iqn=iqn.2019-08.com.linbit:example --lun=1`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			linstorCfg := linstorcontrol.Linstor{
-				Loglevel:     log.GetLevel().String(),
 				ControllerIP: controller,
 			}
 			targetCfg := targetutil.TargetConfig{

@@ -3,6 +3,8 @@ github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6 h1:Vr6stSSgYp9aT
 github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6/go.mod h1:dtnA05lXEidGHF8NyvJ0k4JLY8tMbuwLbLg6EvBqfSw=
 github.com/LINBIT/golinstor v0.16.3 h1:/JzRZTIzgqEyppSJE1Mig4EsB6gZALG9A7d6BXwnOPg=
 github.com/LINBIT/golinstor v0.16.3/go.mod h1:p2V1Y5ppce3isjO7IBiZGOwY8R8oIm+nYZqOa77bpXM=
+github.com/LINBIT/golinstor v0.34.3 h1:2iNT/x+6U9lCM5fKrJqYzJknm4ZbtHwx9emFyGLuX4Q=
+github.com/LINBIT/golinstor v0.34.3/go.mod h1:506Wb/BCd449g/u2IGXlsIKNdiEmAEsgyOPrIYjbKyg=
 github.com/LINBIT/gopacemaker v0.0.0-20191217090309-99ff7a879105 h1:Y6NsklDqrBFRyCmM+g8ud5utJ6f93B2/ovsCH86K9hI=
 github.com/LINBIT/gopacemaker v0.0.0-20191217090309-99ff7a879105/go.mod h1:ugPaUAsxeziuCeao4bKAbyQ2XyJWUz/W58cO4T4GUVo=
 github.com/LINBIT/gopacemaker v0.1.0 h1:4ty3ogmMv/aiWg2BGXOzPA/+xEggxRsG3xRS71NqL2s=
@@ -24,6 +26,8 @@ github.com/cpuguy83/go-md2man v1.0.10/go.mod h1:SmD6nW6nTyfqj6ABTjUi3V3JVMnlJmwc
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/donovanhide/eventsource v0.0.0-20171031113327-3ed64d21fb0b h1:eR1P/A4QMYF2/LpHRhYAts9wyYEtF7qNk/tVNiYCWc8=
+github.com/donovanhide/eventsource v0.0.0-20171031113327-3ed64d21fb0b/go.mod h1:56wL82FO0bfMU5RvfXoIwSOP2ggqqxT+tAfNEIyxuHw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/google/go-cmp v0.3.1 h1:Xye71clBPdm5HgqGwUkwhbynsUJZhDbS20FvLhQ2izg=

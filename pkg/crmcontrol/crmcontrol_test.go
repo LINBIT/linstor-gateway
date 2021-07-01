@@ -70,9 +70,8 @@ func TestParseConfiguration(t *testing.T) {
 	}
 
 	if !cmp.Equal(config.Targets, expectedTargets) {
-		t.Errorf("Targets are not equal")
-		t.Errorf("Expected: %+v", expectedTargets)
-		t.Errorf("Actual: %+v", config.Targets)
+		t.Error("Targets are not equal")
+		t.Error(cmp.Diff(expectedTargets, config.Targets))
 	}
 
 	expectedLus := []*Lu{
@@ -85,9 +84,8 @@ func TestParseConfiguration(t *testing.T) {
 	}
 
 	if !cmp.Equal(config.LUs, expectedLus) {
-		t.Errorf("LUs are not equal")
-		t.Errorf("Expected: %+v", expectedLus)
-		t.Errorf("Actual: %+v", config.LUs)
+		t.Error("LUs are not equal")
+		t.Error(cmp.Diff(expectedLus, config.LUs))
 	}
 
 	expectedIPs := []*IP{
@@ -99,9 +97,8 @@ func TestParseConfiguration(t *testing.T) {
 	}
 
 	if !cmp.Equal(config.IPs, expectedIPs) {
-		t.Errorf("IPs are not equal")
-		t.Errorf("Expected: %+v", expectedIPs)
-		t.Errorf("Actual: %+v", config.IPs)
+		t.Error("IPs are not equal")
+		t.Error(cmp.Diff(expectedIPs, config.IPs))
 	}
 }
 
@@ -118,9 +115,8 @@ func TestGenerateCrmObjectNames(t *testing.T) {
 	actual := generateCrmObjectNames("example", []uint8{1, 105, 12})
 
 	if !cmp.Equal(expect, actual) {
-		t.Errorf("Generated object names are wrong")
-		t.Errorf("Expected: %s", expect)
-		t.Errorf("Actual: %s", actual)
+		t.Error("Generated object names are wrong")
+		t.Error(cmp.Diff(expect, actual))
 	}
 }
 
@@ -258,8 +254,7 @@ func TestGenerateCreateLuXML(t *testing.T) {
 
 	if normActual != normExpect {
 		t.Error("XML does not match")
-		t.Errorf("Expected: %s", normExpect)
-		t.Errorf("Actual: %s", normActual)
+		t.Error(cmp.Diff(normExpect, normActual))
 	}
 }
 
@@ -316,8 +311,7 @@ func TestGetIDsToDelete(t *testing.T) {
 
 		if !cmp.Equal(ids, c.expect) {
 			t.Errorf("IDs do not match for input %s", c.name)
-			t.Errorf("Expected: %v", c.expect)
-			t.Errorf("Actual:   %v", ids)
+			t.Error(cmp.Diff(c.expect, ids))
 		}
 	}
 }

@@ -2,18 +2,6 @@ package crmtemplate
 
 const CRM_ISCSI = `<configuration>
     <resources>
-      <primitive id="p_iscsi_{{.TargetName}}_ip" class="ocf" provider="heartbeat" type="IPaddr2">
-        <instance_attributes id="p_iscsi_{{.TargetName}}_ip-instance_attributes">
-          <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-ip"/>
-          <nvpair name="cidr_netmask" value="{{.Target.ServiceIPNetmask}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-cidr_netmask"/>
-        </instance_attributes>
-        <operations>
-          <op name="monitor" interval="15" timeout="40" id="p_iscsi_{{.TargetName}}_ip-monitor-15"/>
-          <op name="start" timeout="40" interval="0" id="p_iscsi_{{.TargetName}}_ip-start-0"/>
-          <op name="stop" timeout="40" interval="0" id="p_iscsi_{{.TargetName}}_ip-stop-0"/>
-        </operations>
-      </primitive>
-
       <primitive id="p_pblock_{{.TargetName}}" class="ocf" provider="heartbeat" type="portblock">
         <instance_attributes id="p_pblock_{{.TargetName}}-instance_attributes">
           <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_pblock_{{.TargetName}}-instance_attributes-ip"/>
@@ -27,6 +15,22 @@ const CRM_ISCSI = `<configuration>
         </operations>
         <meta_attributes id="p_pblock_{{.TargetName}}-meta_attributes">
           <nvpair name="target-role" value="Started" id="p_pblock_{{.TargetName}}-meta_attributes-target-role"/>
+          <nvpair name="failure-timeout" value="60" id="p_pblock_{{.TargetName}}-meta_attributes-failure_timeout"/>
+        </meta_attributes>
+      </primitive>
+
+      <primitive id="p_iscsi_{{.TargetName}}_ip" class="ocf" provider="heartbeat" type="IPaddr2">
+        <instance_attributes id="p_iscsi_{{.TargetName}}_ip-instance_attributes">
+          <nvpair name="ip" value="{{.Target.ServiceIP}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-ip"/>
+          <nvpair name="cidr_netmask" value="{{.Target.ServiceIPNetmask}}" id="p_iscsi_{{.TargetName}}_ip-instance_attributes-cidr_netmask"/>
+        </instance_attributes>
+        <operations>
+          <op name="monitor" interval="15" timeout="40" id="p_iscsi_{{.TargetName}}_ip-monitor-15"/>
+          <op name="start" timeout="40" interval="0" id="p_iscsi_{{.TargetName}}_ip-start-0"/>
+          <op name="stop" timeout="40" interval="0" id="p_iscsi_{{.TargetName}}_ip-stop-0"/>
+        </operations>
+        <meta_attributes id="p_iscsi_{{.TargetName}}_ip-meta_attributes">
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_{{.TargetName}}_ip-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
 
@@ -45,6 +49,7 @@ const CRM_ISCSI = `<configuration>
         </operations>
         <meta_attributes id="p_iscsi_{{.TargetName}}-meta_attributes">
           <nvpair name="target-role" value="Started" id="p_iscsi_{{.TargetName}}-meta_attributes-target-role"/>
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_{{.TargetName}}-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
 
@@ -61,6 +66,9 @@ const CRM_ISCSI = `<configuration>
           <op name="stop" timeout="40" interval="0" id="p_iscsi_{{$rsc}}-stop-0"/>
           <op name="monitor" timeout="40" interval="15" id="p_iscsi_{{$rsc}}-monitor-15"/>
         </operations>
+        <meta_attributes id="p_iscsi_{{$rsc}}-meta_attributes">
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_{{$rsc}}-meta_attributes-failure_timeout"/>
+        </meta_attributes>
       </primitive>
 {{end}}
 
@@ -79,6 +87,7 @@ const CRM_ISCSI = `<configuration>
         </operations>
         <meta_attributes id="p_punblock_{{.TargetName}}-meta_attributes">
           <nvpair name="target-role" value="Started" id="p_punblock_{{.TargetName}}-meta_attributes-target-role"/>
+          <nvpair name="failure-timeout" value="60" id="p_punblock_{{.TargetName}}-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
       <clone id="drbd-attr-clone">
@@ -99,19 +108,38 @@ const CRM_ISCSI = `<configuration>
       </rsc_location>
 {{end}}
 
-      <rsc_colocation id="co_pblock_{{.TargetName}}" score="INFINITY" rsc="p_pblock_{{.TargetName}}" with-rsc="p_iscsi_{{.TargetName}}_ip"/>
-      <rsc_colocation id="co_iscsi_{{.TargetName}}" score="INFINITY" rsc="p_iscsi_{{.TargetName}}" with-rsc="p_pblock_{{.TargetName}}"/>
+      <rsc_colocation id="co_set_{{.TargetName}}" score="INFINITY">
+        <resource_set id="co_set_{{.TargetName}}-0">
+          <resource_ref id="p_pblock_{{.TargetName}}"/>
+          <resource_ref id="p_iscsi_{{.TargetName}}_ip"/>
+          <resource_ref id="p_iscsi_{{.TargetName}}"/>
+        </resource_set>
+        <resource_set sequential="false" id="co_set_{{.TargetName}}-1">
 {{range $.Target.LUNs}}
 {{$rsc := (printf "%s_lu%d" $.TargetName .ID)}}
-      <rsc_colocation id="co_iscsi_{{$rsc}}" score="INFINITY" rsc="p_iscsi_{{$rsc}}" with-rsc="p_iscsi_{{$.TargetName}}"/>
+          <resource_ref id="p_iscsi_{{$rsc}}"/>
 {{end}}
-      <rsc_colocation id="co_punblock_{{.TargetName}}" score="INFINITY" rsc="p_punblock_{{.TargetName}}" with-rsc="p_iscsi_{{.TargetName}}_ip"/>
-      <rsc_order id="o_pblock_{{.TargetName}}" kind="Mandatory" first="p_iscsi_{{.TargetName}}_ip" then="p_pblock_{{.TargetName}}"/>
-      <rsc_order id="o_iscsi_{{.TargetName}}" kind="Mandatory" first="p_pblock_{{.TargetName}}" then="p_iscsi_{{.TargetName}}"/>
+        </resource_set>
+        <resource_set id="co_set_{{.TargetName}}-2">
+          <resource_ref id="p_punblock_{{.TargetName}}"/>
+        </resource_set>
+      </rsc_colocation>
+
+      <rsc_order id="o_set_{{.TargetName}}" kind="Mandatory">
+        <resource_set id="o_set_{{.TargetName}}-0">
+          <resource_ref id="p_pblock_{{.TargetName}}"/>
+          <resource_ref id="p_iscsi_{{.TargetName}}_ip"/>
+          <resource_ref id="p_iscsi_{{.TargetName}}"/>
+        </resource_set>
+        <resource_set sequential="false" id="o_set_{{.TargetName}}-1">
 {{range $.Target.LUNs}}
 {{$rsc := (printf "%s_lu%d" $.TargetName .ID)}}
-      <rsc_order id="o_iscsi_{{$rsc}}" kind="Mandatory" first="p_iscsi_{{$.TargetName}}" then="p_iscsi_{{$.TargetName}}_lu{{.ID}}"/>
-      <rsc_order id="o_punblock_{{$.TargetName}}" kind="Mandatory" first="p_iscsi_{{$rsc}}" then="p_punblock_{{$.TargetName}}"/>
+          <resource_ref id="p_iscsi_{{$rsc}}"/>
 {{end}}
+        </resource_set>
+        <resource_set id="o_set_{{.TargetName}}-2">
+          <resource_ref id="p_punblock_{{.TargetName}}"/>
+        </resource_set>
+      </rsc_order>
     </constraints>
 </configuration>`

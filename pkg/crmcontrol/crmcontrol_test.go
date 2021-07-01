@@ -123,17 +123,6 @@ func TestGenerateCrmObjectNames(t *testing.T) {
 func TestGenerateCreateLuXML(t *testing.T) {
 	expect := `<configuration>
     <resources>
-      <primitive class="ocf" id="p_iscsi_example_ip" provider="heartbeat" type="IPaddr2">
-        <instance_attributes id="p_iscsi_example_ip-instance_attributes">
-          <nvpair id="p_iscsi_example_ip-instance_attributes-ip" name="ip" value="192.168.1.1" />
-          <nvpair id="p_iscsi_example_ip-instance_attributes-cidr_netmask" name="cidr_netmask" value="16" />
-        </instance_attributes>
-        <operations>
-          <op id="p_iscsi_example_ip-monitor-15" interval="15" name="monitor" timeout="40" />
-          <op id="p_iscsi_example_ip-start-0" interval="0" name="start" timeout="40" />
-          <op id="p_iscsi_example_ip-stop-0" interval="0" name="stop" timeout="40" />
-        </operations>
-      </primitive>
       <primitive class="ocf" id="p_pblock_example" provider="heartbeat" type="portblock">
         <instance_attributes id="p_pblock_example-instance_attributes">
           <nvpair id="p_pblock_example-instance_attributes-ip" name="ip" value="192.168.1.1" />
@@ -147,6 +136,21 @@ func TestGenerateCreateLuXML(t *testing.T) {
         </operations>
         <meta_attributes id="p_pblock_example-meta_attributes">
           <nvpair id="p_pblock_example-meta_attributes-target-role" name="target-role" value="Started" />
+          <nvpair name="failure-timeout" value="60" id="p_pblock_example-meta_attributes-failure_timeout"/>
+        </meta_attributes>
+      </primitive>
+      <primitive class="ocf" id="p_iscsi_example_ip" provider="heartbeat" type="IPaddr2">
+        <instance_attributes id="p_iscsi_example_ip-instance_attributes">
+          <nvpair id="p_iscsi_example_ip-instance_attributes-ip" name="ip" value="192.168.1.1" />
+          <nvpair id="p_iscsi_example_ip-instance_attributes-cidr_netmask" name="cidr_netmask" value="16" />
+        </instance_attributes>
+        <operations>
+          <op id="p_iscsi_example_ip-monitor-15" interval="15" name="monitor" timeout="40" />
+          <op id="p_iscsi_example_ip-start-0" interval="0" name="start" timeout="40" />
+          <op id="p_iscsi_example_ip-stop-0" interval="0" name="stop" timeout="40" />
+        </operations>
+        <meta_attributes id="p_iscsi_example_ip-meta_attributes">
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_example_ip-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
       <primitive class="ocf" id="p_iscsi_example" provider="heartbeat" type="iSCSITarget">
@@ -164,6 +168,7 @@ func TestGenerateCreateLuXML(t *testing.T) {
         </operations>
         <meta_attributes id="p_iscsi_example-meta_attributes">
           <nvpair id="p_iscsi_example-meta_attributes-target-role" name="target-role" value="Started" />
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_example-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
       <primitive class="ocf" id="p_iscsi_example_lu0" provider="heartbeat" type="iSCSILogicalUnit">
@@ -177,6 +182,9 @@ func TestGenerateCreateLuXML(t *testing.T) {
           <op id="p_iscsi_example_lu0-stop-0" interval="0" name="stop" timeout="40" />
           <op id="p_iscsi_example_lu0-monitor-15" interval="15" name="monitor" timeout="40" />
         </operations>
+        <meta_attributes id="p_iscsi_example_lu0-meta_attributes">
+          <nvpair name="failure-timeout" value="60" id="p_iscsi_example_lu0-meta_attributes-failure_timeout"/>
+        </meta_attributes>
       </primitive>
       <primitive class="ocf" id="p_punblock_example" provider="heartbeat" type="portblock">
         <instance_attributes id="p_punblock_example-instance_attributes">
@@ -193,6 +201,7 @@ func TestGenerateCreateLuXML(t *testing.T) {
         </operations>
         <meta_attributes id="p_punblock_example-meta_attributes">
           <nvpair id="p_punblock_example-meta_attributes-target-role" name="target-role" value="Started" />
+          <nvpair name="failure-timeout" value="60" id="p_punblock_example-meta_attributes-failure_timeout"/>
         </meta_attributes>
       </primitive>
       <clone id="drbd-attr-clone">
@@ -208,14 +217,33 @@ func TestGenerateCreateLuXML(t *testing.T) {
           <expression attribute="drbd-promotion-score-example_lu0" id="lo_iscsi_example_lu0-rule-0-expression" operation="defined" />
         </rule>
       </rsc_location>
-      <rsc_colocation id="co_pblock_example" rsc="p_pblock_example" score="INFINITY" with-rsc="p_iscsi_example_ip" />
-      <rsc_colocation id="co_iscsi_example" rsc="p_iscsi_example" score="INFINITY" with-rsc="p_pblock_example" />
-      <rsc_colocation id="co_iscsi_example_lu0" rsc="p_iscsi_example_lu0" score="INFINITY" with-rsc="p_iscsi_example" />
-      <rsc_colocation id="co_punblock_example" rsc="p_punblock_example" score="INFINITY" with-rsc="p_iscsi_example_ip" />
-      <rsc_order first="p_iscsi_example_ip" id="o_pblock_example" kind="Mandatory" then="p_pblock_example" />
-      <rsc_order first="p_pblock_example" id="o_iscsi_example" kind="Mandatory" then="p_iscsi_example" />
-      <rsc_order first="p_iscsi_example" id="o_iscsi_example_lu0" kind="Mandatory" then="p_iscsi_example_lu0" />
-      <rsc_order first="p_iscsi_example_lu0" id="o_punblock_example" kind="Mandatory" then="p_punblock_example" />
+      <rsc_colocation id="co_set_example" score="INFINITY">
+        <resource_set id="co_set_example-0">
+          <resource_ref id="p_pblock_example"/>
+          <resource_ref id="p_iscsi_example_ip"/>
+          <resource_ref id="p_iscsi_example"/>
+        </resource_set>
+        <resource_set sequential="false" id="co_set_example-1">
+          <resource_ref id="p_iscsi_example_lu0"/>
+        </resource_set>
+        <resource_set id="co_set_example-2">
+          <resource_ref id="p_punblock_example"/>
+        </resource_set>
+      </rsc_colocation>
+
+      <rsc_order id="o_set_example" kind="Mandatory">
+        <resource_set id="o_set_example-0">
+          <resource_ref id="p_pblock_example"/>
+          <resource_ref id="p_iscsi_example_ip"/>
+          <resource_ref id="p_iscsi_example"/>
+        </resource_set>
+        <resource_set sequential="false" id="o_set_example-1">
+          <resource_ref id="p_iscsi_example_lu0"/>
+        </resource_set>
+        <resource_set id="o_set_example-2">
+          <resource_ref id="p_punblock_example"/>
+        </resource_set>
+      </rsc_order>
     </constraints>
   </configuration>
 	`

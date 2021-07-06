@@ -1,8 +1,8 @@
 module github.com/LINBIT/linstor-gateway
 
 require (
+	bitbucket.org/creachadair/shell v0.0.6
 	github.com/BurntSushi/toml v0.3.1
-	github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6
 	github.com/LINBIT/golinstor v0.35.0
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.7.3

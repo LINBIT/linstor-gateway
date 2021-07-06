@@ -11,15 +11,19 @@ func (s *server) routes() {
 		})
 	})
 
-	/*
-	iscsiv1 := apiv1.PathPrefix("/iscsi").Subrouter()
-	iscsiv1.HandleFunc("", s.ISCSICreate()).Methods("POST")
+	iscsiv1 := apiv2.PathPrefix("/iscsi").Subrouter()
 	iscsiv1.HandleFunc("", s.ISCSIList()).Methods("GET")
-	iscsiv1.HandleFunc("/{iqn}/{lun}", s.ISCSIDelete()).Methods("DELETE")
-	iscsiv1.HandleFunc("/{iqn}/{lun}", s.ISCSIStatus()).Methods("GET")
-	iscsiv1.HandleFunc("/{iqn}/{lun}/start", s.ISCSIStart()).Methods("POST")
-	iscsiv1.HandleFunc("/{iqn}/{lun}/stop", s.ISCSIStop()).Methods("POST")
+	iscsiv1.HandleFunc("", s.ISCSICreate()).Methods("POST")
+	iscsiv1.HandleFunc("({iqn}", s.ISCSIGet(true)).Methods("GET")
+	iscsiv1.HandleFunc("/{iqn}", s.ISCSIDelete(true)).Methods("DELETE")
+	iscsiv1.HandleFunc("/{iqn}/start", s.ISCSIStart()).Methods("POST")
+	iscsiv1.HandleFunc("/{iqn}/stop", s.ISCSIStop()).Methods("POST")
+	iscsiv1.HandleFunc("/{iqn}/{lun}", s.ISCSIGet(false)).Methods("GET")
+	iscsiv1.HandleFunc("/{iqn}/{lun}", s.ISCSIAddVolume()).Methods("PUT")
+	iscsiv1.HandleFunc("/{iqn}/{lun}", s.ISCSIDelete(false)).Methods("DELETE")
 
+
+        /*
 	nfsv1 := apiv1.PathPrefix("/nfs").Subrouter()
 	nfsv1.HandleFunc("", s.NFSCreate()).Methods("POST")
 	nfsv1.HandleFunc("", s.NFSList()).Methods("GET")

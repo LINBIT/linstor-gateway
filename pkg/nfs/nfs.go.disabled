@@ -47,7 +47,7 @@ func (nfsRsc *NFSResource) CreateResource() error {
 	// Create a LINSTOR resource definition, volume definition and associated resources
 	nfsRsc.Linstor.ResourceName = nfsRsc.NFS.ResourceName
 	nfsRsc.Linstor.SizeKiB = nfsRsc.NFS.SizeKiB
-	rsc, err := nfsRsc.Linstor.CreateVolume()
+	rsc, err := nfsRsc.Linstor.CreateResource()
 	if err != nil {
 		return fmt.Errorf("LINSTOR volume operations failed, error: %v", err)
 	}
@@ -62,7 +62,7 @@ func (nfsRsc *NFSResource) CreateResource() error {
 
 	log.Debug("nfs.go CreateResource: Creating CRM resources and constraints")
 	// Create CRM resources and constraints for the NFS export
-	err = crmcontrol.CreateNFS(nfsRsc.NFS, rsc.StorageNodeList, rsc.DevicePath, directory)
+	err = crmcontrol.CreateNFS(nfsRsc.NFS, rsc.StorageNodes, rsc.DevicePath, directory)
 	if err != nil {
 		return err
 	}

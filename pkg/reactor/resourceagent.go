@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"bitbucket.org/creachadair/shell"
 	"github.com/BurntSushi/toml"
 )
 
@@ -16,8 +17,8 @@ type ResourceAgent struct {
 }
 
 func (r *ResourceAgent) UnmarshalText(text []byte) error {
-	parts := strings.Split(string(text), " ")
-	if len(parts) < 2 {
+	parts, valid := shell.Split(string(text))
+	if !valid || len(parts) < 2 {
 		return errors.New("expected at least type and name")
 	}
 
@@ -39,7 +40,7 @@ func (r *ResourceAgent) UnmarshalText(text []byte) error {
 func (r ResourceAgent) MarshalText() (text []byte, err error) {
 	args := make([]string, 0, len(r.Attributes))
 	for k, v := range r.Attributes {
-		args = append(args, fmt.Sprintf("%s=%s", k, v))
+		args = append(args, fmt.Sprintf("%s=%s", k, shell.Quote(v)))
 	}
 
 	// Ensure consistent serialization order

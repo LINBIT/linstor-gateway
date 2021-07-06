@@ -4,17 +4,16 @@ import (
 	"encoding/json"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 )
 
 func (s *server) ISCSIList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s.Lock()
-		defer s.Unlock()
-
-		targets, err := iscsi.ListResources()
+		targets, err := iscsi.List(r.Context())
 		if err != nil {
-			_, _ = Errorf(http.StatusInternalServerError, w, "Could not list targets: %v", err)
+			MustError(http.StatusInternalServerError, w, "Could not list targets: %v", err)
 			return
 		}
 
@@ -23,6 +22,12 @@ func (s *server) ISCSIList() http.HandlerFunc {
 			targets[i].Password = ""
 		}
 
-		json.NewEncoder(w).Encode(targets)
+		w.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(w)
+
+		err = enc.Encode(targets)
+		if err != nil {
+			log.WithError(err).Warn("failed to write response")
+		}
 	}
 }

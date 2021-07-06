@@ -68,15 +68,13 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(completionCommand(rootCmd))
-	//rootCmd.AddCommand(corosyncCommand())
-	//rootCmd.AddCommand(createISCSICommand())
-	//rootCmd.AddCommand(deleteISCSICommand())
+	rootCmd.AddCommand(createISCSICommand())
+	rootCmd.AddCommand(deleteISCSICommand())
 	rootCmd.AddCommand(docsCommand(rootCmd))
-	//rootCmd.AddCommand(listISCSICommand())
+	rootCmd.AddCommand(listISCSICommand())
 	rootCmd.AddCommand(serverCommand())
-	//rootCmd.AddCommand(startISCSICommand())
-	//rootCmd.AddCommand(statusISCSICommand())
-	//rootCmd.AddCommand(stopISCSICommand())
+	rootCmd.AddCommand(startISCSICommand())
+	rootCmd.AddCommand(stopISCSICommand())
 
 	return rootCmd
 }
@@ -107,7 +105,6 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.DisableAutoGenTag = true
 
 	rootCmd.AddCommand(completionCommand(rootCmd))
-	rootCmd.AddCommand(corosyncCommand())
 	// rootCmd.AddCommand(createNFSCommand())
 	// rootCmd.AddCommand(deleteNFSCommand())
 	// rootCmd.AddCommand(docsCommand(rootCmd))

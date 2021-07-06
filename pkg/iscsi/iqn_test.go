@@ -1,8 +1,16 @@
-package targetutil
+package iscsi_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+)
 
 func TestCheckIQN(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		descr       string
 		input       string
@@ -49,11 +57,18 @@ func TestCheckIQN(t *testing.T) {
 		expectError: true,
 	}}
 
-	for _, c := range cases {
-		err := CheckIQN(c.input)
-		if err != nil != c.expectError {
-			t.Errorf("Test '%s': Unexpected error state: %v", c.descr, err)
-			continue
-		}
+	for i := range cases {
+		tcase := &cases[i]
+		t.Run(tcase.descr, func(t *testing.T) {
+			t.Parallel()
+
+			iqn, err := iscsi.NewIqn(tcase.input)
+			if !tcase.expectError {
+				assert.NoError(t, err)
+				assert.Equal(t, tcase.input, iqn.String())
+			} else {
+				assert.Error(t, err)
+			}
+		})
 	}
 }

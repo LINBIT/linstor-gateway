@@ -1,0 +1,36 @@
+---
+- name: Add pacemaker repo
+  yum_repository:
+    name: pacemaker
+    description: LINBIT Packages for LINSTOR and DRBD
+    baseurl: "{{ pacemaker_repo_baseurl }}"
+    gpgcheck: true
+    gpgkey: https://packages.linbit.com/package-signing-pubkey.asc
+  tags:
+    - preload
+
+
+- name: Install resource-agents
+  yum:
+    pkg:
+      - resource-agents
+    enablerepo: pacemaker
+  tags:
+    - preload
+
+
+- name: Install resource-agents helpers
+  yum:
+    pkg:
+      - iptables
+      - targetcli
+  tags:
+    - preload
+
+- name: Enable nfs server
+  service:
+    name: nfs-server
+    state: started
+    enabled: yes
+  tags:
+    - preload

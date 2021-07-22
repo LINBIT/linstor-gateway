@@ -1,0 +1,10 @@
+---
+- name: Reload drbd-reactor
+  systemd:
+    service: drbd-reactor.service
+    state: restarted
+
+- name: Reload drbd-reactor reloader
+  systemd:
+    service: drbd-reactor-reload.path
+    state: restarted

@@ -1,0 +1,5 @@
+pool_name: default
+pool_type: lvm
+thin_size: "100%VG"
+vg_name: "linstor_{{ pool_name }}"
+thinpool_name: "{{ pool_name }}"

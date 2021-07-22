@@ -1,0 +1,17 @@
+---
+- name: Setup LINSTOR cluster
+  hosts: all
+  roles:
+    - role: linstor-cluster
+    - role: register-linstor-satellite
+    - role: linstor-storage-pool
+      pool_name: thinpool
+      vg_name: linstor_vg
+      devices:
+      - "{{ linstor_device_path }}"
+      pool_type: lvmthin
+      thin_size: "100%FREE"
+      thinpool_name: thinpool
+    - role: linstor-gateway
+    - role: drbd-reactor
+      configure_autoreload: yes

@@ -1,0 +1,41 @@
+---
+- name: Create snippets dir
+  file:
+    path: /etc/drbd-reactor.d
+    state: directory
+
+- name: Install drbd-reactor
+  yum:
+    pkg:
+      - drbd-reactor
+    state: present
+  notify:
+    - Reload drbd-reactor
+
+- name: Enable drbd-reactor service
+  service:
+    name: drbd-reactor.service
+    state: started
+    enabled: yes
+
+- name: Configure reloading service
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: yes
+  with_items:
+    - src: /usr/share/doc/drbd-reactor/drbd-reactor-reload.service
+      dest: /etc/systemd/system/drbd-reactor-reload.service
+    - src: /usr/share/doc/drbd-reactor/drbd-reactor-reload.path
+      dest: /etc/systemd/system/drbd-reactor-reload.path
+  register: drbd_reactor_reloader
+  notify:
+    - Reload drbd-reactor reloader
+  when: configure_autoreload
+
+- name: Enable drbd-reactor reloader
+  service:
+    name: drbd-reactor-reload.path
+    state: started
+    enabled: yes
+  when: configure_autoreload and drbd_reactor_reloader.changed

@@ -1,4 +1,4 @@
-linstor-gateway
-linstor-iscsi
-linstor-nfs
+/linstor-gateway
+/linstor-iscsi
+/linstor-nfs
 *.tar.gz

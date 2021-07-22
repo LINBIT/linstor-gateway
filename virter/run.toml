@@ -1,0 +1,18 @@
+[values]
+DRBDRepoBaseURL = ""
+PacemakerRepoBaseURL = ""
+LinstorDevicePath = "/dev/vdb"
+
+[[steps]]
+[steps.docker]
+image = "quay.io/ansible/ansible-runner:stable-2.9-devel"
+command = [
+    "ansible-playbook",
+    "--inventory", "/virter/workspace/virter/inventory",
+    "/virter/workspace/virter/provision-playbook.yml",
+    "--extra-vars", "drbd_repo_baseurl={{ .DRBDRepoBaseURL }}",
+    "--extra-vars", "pacemaker_repo_baseurl={{ .PacemakerRepoBaseURL }}",
+    "--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
+]
+[steps.docker.env]
+ANSIBLE_PIPELINING="yes"

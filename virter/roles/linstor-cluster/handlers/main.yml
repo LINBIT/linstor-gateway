@@ -1,0 +1,6 @@
+---
+
+- name: Restart satellite
+  service:
+    name: linstor-satellite
+    state: restarted

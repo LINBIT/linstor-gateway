@@ -1,0 +1,5 @@
+---
+linstor_controller_hosts: "{{ groups['linstor_controller'] }}"
+lbdist_tar_url: https://github.com/LINBIT/python-lbdist/archive/master.tar.gz
+node_hash: ""
+drbd_repo_baseurl: "https://packages.linbit.com/{{ node_hash }}/yum/rhel$releasever/drbd-9.0/$basearch"

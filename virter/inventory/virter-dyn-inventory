@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import json
+import os
+import socket
+import sys
+
+DEFAULT_HOSTVARS = {
+    "ansible_ssh_private_key_file": "/root/.ssh/id_rsa",
+    "ansible_ssh_common_args": "-o UserKnownHostsFile=/root/.ssh/known_hosts",
+    "ansible_user": "root",
+}
+
+USAGE = f"""{sys.argv[0]}: Build an ansible inventory in a virter provision run.
+
+Actions:
+  --host HOST  Output information of just a single host
+  --list       Output the inventory built from the virter environment
+"""
+
+
+def build_inventory():
+    targets = sorted(os.environ["TARGETS"].split(","))
+
+    all_nodes = {x: {"ansible_host": x, **DEFAULT_HOSTVARS, "ip": socket.gethostbyname(x)} for x in targets}
+    return {
+        "_meta": {
+            "hostvars": all_nodes,
+        },
+        "all": {"hosts": list(all_nodes.keys())},
+        "linstor_controller": {"hosts": [min(all_nodes.keys())]}
+    }
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(USAGE, file=sys.stderr)
+        sys.exit(1)
+
+    if sys.argv[1] == "--list":
+        encoded = json.dumps(build_inventory())
+        print(encoded)
+        return
+    if sys.argv[1] == "--host":
+        if len(sys.argv) != 3:
+            print(USAGE, file=sys.stderr)
+            sys.exit(1)
+        inventory = build_inventory()
+        hostvar = inventory.get("_meta", {}).get('hostvars', {}).get(sys.argv[2])
+        encoded = json.dumps(hostvar)
+        print(encoded)
+        return
+
+    print(USAGE, file=sys.stderr)
+    sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

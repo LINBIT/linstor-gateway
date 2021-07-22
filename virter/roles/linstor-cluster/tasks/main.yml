@@ -1,0 +1,136 @@
+---
+
+- name: Add linstor repo
+  yum_repository:
+    name: drbd
+    description: LINBIT Packages for LINSTOR and DRBD
+    baseurl: "{{ drbd_repo_baseurl }}"
+    gpgcheck: true
+    gpgkey: https://packages.linbit.com/package-signing-pubkey.asc
+  tags:
+    - preload
+
+- name: Fetch lbdist helper
+  unarchive:
+    src: "{{ lbdist_tar_url }}"
+    dest: /var/cache
+    remote_src: true
+    creates: /var/cache/python-lbdist-master
+  tags:
+    - preload
+
+
+- name: List available kmods
+  yum:
+    list: "kmod-drbd-*_*"
+    disablerepo: "*"
+    enablerepo: "drbd"
+  register: kmods
+  tags:
+    - preload
+
+- name: Determine best kmod
+  command: "{{ ansible_python['executable'] }} /var/cache/python-lbdist-master/lbdisttool.py --kmods {{ kmods.results | map(attribute='version') | map('regex_replace', '^(.*)$', 'kmod-drbd-\\1') | join(' ')}}"
+  register: best_kmod
+  tags:
+    - preload
+
+- name: Install DRBD
+  yum:
+    pkg:
+      - drbd-utils
+      - "{{ best_kmod.stdout }}"
+  notify:
+    - Restart satellite
+  tags:
+    - preload
+
+- name: Configure DRBD utils to not phone home
+  lineinfile:
+    path: /etc/drbd.d/global_common.conf
+    regexp: 'usage-count'
+    line: "\tusage-count no;"
+    state: present
+    validate: drbdadm -c %s dump
+  tags:
+    - preload
+
+- name: Install software components
+  yum:
+    pkg:
+      - gnupg
+      - lvm2
+      - linstor-controller
+      - linstor-satellite
+      - linstor-client
+  notify:
+    - Restart satellite
+  tags:
+    - preload
+
+- name: Trigger handlers
+  meta: flush_handlers
+
+- name: Add blacklist for DRBD devices
+  copy:
+    src: lvm.conf
+    dest: /etc/lvm/lvm.conf
+    owner: root
+    mode: 0644
+  notify:
+    - Restart satellite
+  tags:
+    - preload
+
+- name: Populate service facts
+  service_facts:
+  tags:
+    - preload
+
+
+- name: Stop multipathd, as it could screw with DRBD
+  service:
+    name: multipathd
+    state: stopped
+    enabled: no
+  when: '"multipathd.service" in services'
+  tags:
+    - preload
+
+- name: Restart systemd-udevd to ensure the hostname got updated
+  service:
+    name: systemd-udevd
+    state: restarted
+
+- name: Enable satellite
+  service:
+    name: linstor-satellite
+    enabled: yes
+  notify:
+    - Restart satellite
+  tags:
+    - preload
+
+- name: Set up linstor-controller service (on controller)
+  service:
+    name: linstor-controller
+    enabled: yes
+    state: started
+  when: inventory_hostname in linstor_controller_hosts
+
+- name: Wait for controller to come online
+  wait_for:
+    port: 3370
+  when: inventory_hostname in linstor_controller_hosts
+
+- name: Disable linstor-controller service (on non-controllers)
+  service:
+    name: linstor-controller
+    enabled: no
+    state: stopped
+  when: inventory_hostname not in linstor_controller_hosts
+
+- name: Create linstor configuration file
+  template:
+    src: linstor-client.conf.j2
+    dest: /etc/linstor/linstor-client.conf

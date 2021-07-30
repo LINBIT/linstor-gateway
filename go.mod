@@ -1,21 +1,19 @@
 module github.com/LINBIT/linstor-gateway
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/LINBIT/gocorosync v0.0.0-20191112122810-7649d5dae9b6
-	github.com/LINBIT/golinstor v0.34.3
-	github.com/LINBIT/gopacemaker v0.1.7
-	github.com/beevik/etree v1.1.0
-	github.com/google/go-cmp v0.4.0
-	github.com/google/uuid v1.1.1
+	github.com/LINBIT/golinstor v0.35.0
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.7.3
-	github.com/logrusorgru/aurora v0.0.0-20190803045625-94edacc10f9b
-	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/olekukonko/tablewriter v0.0.1
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rck/unit v0.0.3
-	github.com/rsto/xmltest v0.0.0-20150625174141-1abcdaa746f0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/cobra v0.0.5
+	github.com/stretchr/testify v1.3.0
+	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
 )
 
 go 1.13

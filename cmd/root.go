@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,31 +17,35 @@ var (
 
 // rootCommand represents the base command when called without any subcommands
 func rootCommand() *cobra.Command {
-	if os.Args == nil {
-		log.Fatal("Program started with null-pointer argument list")
-	}
 	if len(os.Args) < 1 {
 		log.Fatal("Program started with a zero-length argument list")
 	}
 
-	var cmd *cobra.Command
-	pgmName := path.Base(os.Args[0])
-	if (pgmName == "linstor-iscsi") {
-		cmd = iscsiCommands()
-	} else if (pgmName == "linstor-nfs") {
-		cmd = nfsCommands()
-	} else {
-		execHint(pgmName)
-		log.Fatal("Could not determine whether to run in iSCSI or NFS mode - aborting")
+	switch os.Args[0] {
+	case "linstor-iscsi":
+		return iscsiCommands("linstor-iscsi")
+	case "linstor-nfs":
+		return nfsCommands("linstor-nfs")
+	default:
+		rootCmd := &cobra.Command{
+			Use:     "linstor-gateway",
+			Version: version,
+			Short:   "Manage linstor-gateway targets and exports",
+			Args:    cobra.NoArgs,
+		}
+		rootCmd.AddCommand(iscsiCommands("iscsi"))
+		rootCmd.AddCommand(nfsCommands("nfs"))
+		rootCmd.AddCommand(nvmeCommands())
+		rootCmd.AddCommand(serverCommand())
+		return rootCmd
 	}
-        return cmd
 }
-		
-func iscsiCommands() *cobra.Command {
+
+func iscsiCommands(use string) *cobra.Command {
 	var loglevel string
 
 	var rootCmd = &cobra.Command{
-		Use:     "linstor-iscsi",
+		Use:     use,
 		Version: version,
 		Short:   "Manages Highly-Available iSCSI targets",
 		Long: `linstor-iscsi manages higly available iSCSI targets by leveraging on linstor
@@ -65,25 +68,24 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(completionCommand(rootCmd))
-	rootCmd.AddCommand(corosyncCommand())
-	rootCmd.AddCommand(createISCSICommand())
-	rootCmd.AddCommand(deleteISCSICommand())
+	//rootCmd.AddCommand(corosyncCommand())
+	//rootCmd.AddCommand(createISCSICommand())
+	//rootCmd.AddCommand(deleteISCSICommand())
 	rootCmd.AddCommand(docsCommand(rootCmd))
-	rootCmd.AddCommand(listISCSICommand())
+	//rootCmd.AddCommand(listISCSICommand())
 	rootCmd.AddCommand(serverCommand())
-	rootCmd.AddCommand(startISCSICommand())
-	rootCmd.AddCommand(statusISCSICommand())
-	rootCmd.AddCommand(stopISCSICommand())
+	//rootCmd.AddCommand(startISCSICommand())
+	//rootCmd.AddCommand(statusISCSICommand())
+	//rootCmd.AddCommand(stopISCSICommand())
 
 	return rootCmd
-
 }
 
-func nfsCommands() *cobra.Command {
+func nfsCommands(use string) *cobra.Command {
 	var loglevel string
 
 	var rootCmd = &cobra.Command{
-		Use:     "linstor-nfs",
+		Use:     use,
 		Version: "0.1.0",
 		Short:   "Manages Highly-Available NFS exports",
 		Long: `linstor-nfs manages higly available NFS exports by leveraging on linstor
@@ -106,12 +108,12 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 
 	rootCmd.AddCommand(completionCommand(rootCmd))
 	rootCmd.AddCommand(corosyncCommand())
-	rootCmd.AddCommand(createNFSCommand())
-	rootCmd.AddCommand(deleteNFSCommand())
-	rootCmd.AddCommand(docsCommand(rootCmd))
-	rootCmd.AddCommand(listNFSCommand())
+	// rootCmd.AddCommand(createNFSCommand())
+	// rootCmd.AddCommand(deleteNFSCommand())
+	// rootCmd.AddCommand(docsCommand(rootCmd))
+	// rootCmd.AddCommand(listNFSCommand())
 	rootCmd.AddCommand(serverCommand())
-	rootCmd.AddCommand(statusNFSCommand())
+	// rootCmd.AddCommand(statusNFSCommand())
 
 	return rootCmd
 
@@ -125,15 +127,4 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func execHint(currentName string) {
-	fmt.Printf(
-		"This program must be executed as either\n" +
-		" - linstor-iscsi\n" +
-		"or\n" +
-		" - linstor-nfs\n" +
-		"Rename the program executable file accordingly, or create symbolic links\n" +
-		"using those names and point them at the " + currentName + " executable.\n",
-	)
 }

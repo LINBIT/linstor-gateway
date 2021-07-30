@@ -4,23 +4,29 @@ package linstorcontrol
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
-	"net/url"
-	"strconv"
+	"sort"
 
-	client "github.com/LINBIT/golinstor/client"
-	"github.com/sirupsen/logrus"
+	apiconsts "github.com/LINBIT/golinstor"
+	"github.com/LINBIT/golinstor/client"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/LINBIT/linstor-gateway/pkg/common"
 )
 
-// Linstor is a struct containing the the configuration that is needed to create or delete a LINSTOR resource.
+// Linstor is a struct containing the configuration that is needed to create or delete a LINSTOR resource.
 type Linstor struct {
-	ResourceName      string `json:"resource_name,omitempty"`
-	SizeKiB           uint64 `json:"size_kib,omitempty"`
-	ResourceGroupName string `json:"resource_group_name,omitempty"`
-	Loglevel          string `json:"loglevel,omitempty"`
-	ControllerIP      net.IP `json:"controller_ip,omitempty"`
+	*client.Client
+}
+
+type Resource struct {
+	Name          string                `json:"resource_name,omitempty"`
+	Volumes       []common.VolumeConfig `json:"volumes,omitempty"`
+	ResourceGroup string                `json:"resource_group_name,omitempty"`
+	Loglevel      string                `json:"loglevel,omitempty"`
+	ControllerIP  net.IP                `json:"controller_ip,omitempty"`
 }
 
 // CreateResult is a struct than is used as the result of a successful create action.
@@ -29,158 +35,212 @@ type CreateResult struct {
 	// Linux device path (e.g., /dev/drbd1001)
 	DevicePath string
 	// List of nodes where the actual data got places (i.e., after autoplace)
-	StorageNodeList []string
+	StorageNodes []string
 }
 
-type ResourceRunState struct {
-	ResourceState ResourceState `json:"resource"`
-}
+func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefinition, resources []client.ResourceWithVolumes) common.ResourceStatus {
+	resourceState := common.Unknown
+	service := common.ServiceStateStopped
+	primary := ""
+	nodes := make([]string, 0, len(resources))
 
-type ResourceState int
+	volumeByNumber := make(map[int][]*client.Volume)
+	for _, nodeRsc := range resources {
+		nodes = append(nodes, nodeRsc.NodeName)
 
-const (
-	Unknown ResourceState = iota
-	OK
-	Degraded
-	Bad
-)
-
-func (l ResourceState) String() string {
-	switch l {
-	case OK:
-		return "OK"
-	case Degraded:
-		return "Degraded"
-	case Bad:
-		return "Bad"
-	}
-	return "Unknown"
-}
-
-func (l ResourceState) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
-
-// CreateVolume creates a  LINSTOR resource based on a given resource group name.
-func (l *Linstor) CreateVolume() (CreateResult, error) {
-	result := CreateResult{}
-
-	clientCtx := context.Background()
-	loglevel := l.Loglevel
-	if loglevel == "" {
-		loglevel = "info"
-	}
-	u, err := ipToURL(l.ControllerIP)
-	if err != nil {
-		return result, err
-	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
-	if err != nil {
-		return result, err
-	}
-
-	spawn := client.ResourceGroupSpawn{
-		ResourceDefinitionName: l.ResourceName,
-		VolumeSizes:            []int64{int64(l.SizeKiB)},
-	}
-	err = ctrlConn.ResourceGroups.Spawn(clientCtx, l.ResourceGroupName, spawn)
-	if err != nil {
-		return result, err
-	}
-
-	var storageNodes []string
-	lopt := client.ListOpts{Resource: []string{l.ResourceName}}
-	resources, err := ctrlConn.Resources.GetResourceView(clientCtx, &lopt)
-	if err != nil {
-		return result, err
-	}
-
-	for _, r := range resources {
-		if r.Name != l.ResourceName {
-			continue
+		if nodeRsc.State.InUse {
+			primary = nodeRsc.NodeName
 		}
-		if len(r.Volumes) == 0 {
-			return result, errors.New("The volume list queried from the LINSTOR server contains no volumes")
+
+		for _, vol := range nodeRsc.Volumes {
+			volumeByNumber[int(vol.VolumeNumber)] = append(volumeByNumber[int(vol.VolumeNumber)], &vol)
 		}
-		if r.Volumes[0].ProviderKind != client.DISKLESS {
-			storageNodes = append(storageNodes, r.NodeName)
-			if result.DevicePath == "" {
-				result.DevicePath = r.Volumes[0].DevicePath
+	}
+
+	if definition.Props[fmt.Sprintf("files%s", serviceCfgPath)] == "True" {
+		service = common.ServiceStateStarted
+	}
+
+	volumes := make([]common.VolumeState, 0, len(volumeByNumber))
+	for nr, deployedVols := range volumeByNumber {
+		upToDate := 0
+		for _, vol := range deployedVols {
+			if vol.State.DiskState == "UpToDate" || vol.State.DiskState == "Diskless" {
+				upToDate++
+			}
+		}
+
+		aggregateState := common.ResourceStateBad
+		if upToDate == len(deployedVols) {
+			aggregateState = common.ResourceStateOK
+		} else if upToDate > 0 {
+			aggregateState = common.ResourceStateDegraded
+		}
+
+		volumes = append(volumes, common.VolumeState{
+			Number: nr,
+			State:  aggregateState,
+		})
+
+		if resourceState < aggregateState {
+			resourceState = aggregateState
+		}
+	}
+
+	sort.Slice(volumes, func(i, j int) bool {
+		return volumes[i].Number < volumes[j].Number
+	})
+
+	return common.ResourceStatus{
+		State:   resourceState,
+		Service: service,
+		Primary: primary,
+		Nodes:   nodes,
+		Volumes: volumes,
+	}
+}
+
+func Default() (*Linstor, error) {
+	// TODO: determine connection parameters from somewhere
+	cli, err := client.NewClient(client.Log(log.StandardLogger()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Linstor{Client: cli}, nil
+}
+
+// EnsureResource creates or updates the given resource.
+func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.ResourceDefinition, []client.ResourceWithVolumes, error) {
+	logger := log.WithField("resource", res.Name)
+
+	logger.Trace("ensure resource group exists")
+
+	err := l.ResourceGroups.Create(ctx, client.ResourceGroup{
+		Name: res.ResourceGroup,
+	})
+	if err != nil && !isErrAlreadyExists(err) {
+		return nil, nil, fmt.Errorf("failed to create resource group: %w", err)
+	}
+
+	logger.Trace("ensure resource definition exists")
+
+	err = l.ResourceDefinitions.Create(ctx, client.ResourceDefinitionCreate{
+		ResourceDefinition: client.ResourceDefinition{
+			Name:              res.Name,
+			ResourceGroupName: res.ResourceGroup,
+			Props: map[string]string{
+				apiconsts.NamespcDrbdResourceOptions + "/auto-promote": "no",
+			},
+		},
+	})
+	if err != nil && !isErrAlreadyExists(err) {
+		return nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
+	}
+
+	for _, vol := range res.Volumes {
+		logger.WithField("volNr", vol.Number).Trace("ensure volume definition exists")
+
+		err := l.ResourceDefinitions.CreateVolumeDefinition(ctx, res.Name, client.VolumeDefinitionCreate{
+			VolumeDefinition: client.VolumeDefinition{
+				VolumeNumber: int32(vol.Number),
+				SizeKib:      vol.SizeKiB,
+			},
+		})
+		if err != nil && !isErrAlreadyExists(err) {
+			return nil, nil, fmt.Errorf("failed to ensure volume definition: %w", err)
+		}
+	}
+
+	logger.Trace("ensure resource is placed")
+
+	err = l.Resources.Autoplace(ctx, res.Name, client.AutoPlaceRequest{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to autoplace resources: %w", err)
+	}
+
+	logger.Trace("fetch existing resource definition")
+
+	rdef, err := l.ResourceDefinitions.Get(ctx, res.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch existing resource definition: %w", err)
+	}
+
+	logger.Trace("fetch existing resources")
+
+	view, err := l.Resources.GetResourceView(ctx, &client.ListOpts{Resource: []string{res.Name}})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch resource view: %w", err)
+	}
+
+	if len(view) == 0 {
+		return nil, nil, errors.New(fmt.Sprintf("failed to fetch resource '%s'", res.Name))
+	}
+
+	for _, existingVol := range view[0].Volumes {
+		logger.WithField("volNr", existingVol.VolumeNumber).Trace("ensure existing volume is defined")
+
+		expected := false
+		for _, expectedVol := range res.Volumes {
+			if int(existingVol.VolumeNumber) == expectedVol.Number {
+				expected = true
+				break
+			}
+		}
+		if !expected {
+			err := l.ResourceDefinitions.DeleteVolumeDefinition(ctx, res.Name, int(existingVol.VolumeNumber))
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to delete unexpected volume definition: %w", err)
 			}
 		}
 	}
-	if len(storageNodes) == 0 {
-		return result, errors.New("Resource successfully deployed, but now found on on 0 nodes")
-	}
-	result.StorageNodeList = storageNodes
 
-	return result, nil
+	return &rdef, view, nil
 }
 
-// DeleteVolume deletes a LINSTOR resource definition (and therefore all resources) identified by name.
-func (l *Linstor) DeleteVolume() error {
-	clientCtx := context.Background()
-	loglevel := l.Loglevel
-	if loglevel == "" {
-		loglevel = "info"
-	}
-	u, err := ipToURL(l.ControllerIP)
-	if err != nil {
-		return err
-	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
-	if err != nil {
-		return err
+func isErrAlreadyExists(err error) bool {
+	if err == nil {
+		return false
 	}
 
-	return ctrlConn.ResourceDefinitions.Delete(clientCtx, l.ResourceName)
-}
-
-func (l *Linstor) AggregateResourceState() (ResourceState, error) {
-	clientCtx := context.Background()
-	loglevel := l.Loglevel
-	if loglevel == "" {
-		loglevel = "info"
-	}
-	u, err := ipToURL(l.ControllerIP)
-	if err != nil {
-		return Unknown, err
-	}
-	ctrlConn, err := client.NewClient(client.BaseURL(u), client.Log(logrus.StandardLogger()))
-	if err != nil {
-		return Unknown, err
+	apiErr, ok := err.(client.ApiCallError)
+	if !ok {
+		return false
 	}
 
-	resources, err := ctrlConn.Resources.GetResourceView(clientCtx, &client.ListOpts{
-		Resource: []string{l.ResourceName},
-	})
-	if err != nil {
-		return Unknown, err
+	possibleErrs := []uint64{
+		apiconsts.FailExistsNode,
+		apiconsts.FailExistsRscDfn,
+		apiconsts.FailExistsRsc,
+		apiconsts.FailExistsVlmDfn,
+		apiconsts.FailExistsVlm,
+		apiconsts.FailExistsNetIf,
+		apiconsts.FailExistsNodeConn,
+		apiconsts.FailExistsRscConn,
+		apiconsts.FailExistsVlmConn,
+		apiconsts.FailExistsStorPoolDfn,
+		apiconsts.FailExistsStorPool,
+		apiconsts.FailExistsStltConn,
+		apiconsts.FailExistsCryptPassphrase,
+		apiconsts.FailExistsWatch,
+		apiconsts.FailExistsSnapshotDfn,
+		apiconsts.FailExistsSnapshot,
+		apiconsts.FailExistsExtName,
+		apiconsts.FailExistsNvmeTargetPerRscDfn,
+		apiconsts.FailExistsNvmeInitiatorPerRscDfn,
+		apiconsts.FailLostStorPool,
+		apiconsts.FailExistsRscGrp,
+		apiconsts.FailExistsVlmGrp,
+		apiconsts.FailExistsOpenflexTargetPerRscDfn,
+		apiconsts.FailExistsSnapshotShipping,
+		apiconsts.FailExistsExosEnclosure,
 	}
 
-	if len(resources) == 0 {
-		return Unknown, errors.New("Specified resource not found")
-	}
-
-	uptodate := 0
-	for _, r := range resources {
-		state := r.Volumes[0].State.DiskState
-		if state == "UpToDate" || state == "Diskless" {
-			uptodate += 1
+	for _, e := range possibleErrs {
+		if apiErr.Is(e) {
+			return true
 		}
 	}
 
-	if uptodate == len(resources) {
-		return OK, nil
-	} else if uptodate > 0 {
-		return Degraded, nil
-	} else {
-		return Bad, nil
-	}
-}
-
-func ipToURL(ip net.IP) (*url.URL, error) {
-	return url.Parse("http://" + ip.String() + ":3370")
-}
-
-func ResourceNameFromLUN(target string, lun uint8) string {
-	return target + "_lu" + strconv.Itoa(int(lun))
+	return false
 }

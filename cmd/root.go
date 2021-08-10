@@ -86,8 +86,8 @@ func nfsCommands(use string) *cobra.Command {
 		Use:     use,
 		Version: "0.1.0",
 		Short:   "Manages Highly-Available NFS exports",
-		Long: `linstor-nfs manages higly available NFS exports by leveraging on linstor
-and Pacemaker. Setting linstor including storage pools and resource groups
+		Long: `linstor-nfs manages higly available NFS exports by leveraging LINSTOR
+and drbd-reactor. Setting linstor including storage pools and resource groups
 as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
 		Args: cobra.NoArgs,
 		// We could have our custom flag types, but this is really simple enough...
@@ -105,12 +105,11 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.DisableAutoGenTag = true
 
 	rootCmd.AddCommand(completionCommand(rootCmd))
-	// rootCmd.AddCommand(createNFSCommand())
-	// rootCmd.AddCommand(deleteNFSCommand())
-	// rootCmd.AddCommand(docsCommand(rootCmd))
-	// rootCmd.AddCommand(listNFSCommand())
+	rootCmd.AddCommand(createNFSCommand())
+	rootCmd.AddCommand(deleteNFSCommand())
+	rootCmd.AddCommand(docsCommand(rootCmd))
+	rootCmd.AddCommand(listNFSCommand())
 	rootCmd.AddCommand(serverCommand())
-	// rootCmd.AddCommand(statusNFSCommand())
 
 	return rootCmd
 

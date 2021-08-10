@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"sort"
 
 	apiconsts "github.com/LINBIT/golinstor"
@@ -25,8 +24,7 @@ type Resource struct {
 	Name          string                `json:"resource_name,omitempty"`
 	Volumes       []common.VolumeConfig `json:"volumes,omitempty"`
 	ResourceGroup string                `json:"resource_group_name,omitempty"`
-	Loglevel      string                `json:"loglevel,omitempty"`
-	ControllerIP  net.IP                `json:"controller_ip,omitempty"`
+	FileSystem    string                `json:"file_system,omitempty"`
 }
 
 // CreateResult is a struct than is used as the result of a successful create action.
@@ -125,13 +123,18 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 
 	logger.Trace("ensure resource definition exists")
 
+	props := map[string]string{}
+	if res.FileSystem == "" {
+		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "no"
+	} else {
+		props[apiconsts.NamespcFilesystem+"/Type"] = "ext4"
+	}
+
 	err = l.ResourceDefinitions.Create(ctx, client.ResourceDefinitionCreate{
 		ResourceDefinition: client.ResourceDefinition{
 			Name:              res.Name,
 			ResourceGroupName: res.ResourceGroup,
-			Props: map[string]string{
-				apiconsts.NamespcDrbdResourceOptions + "/auto-promote": "no",
-			},
+			Props:             props,
 		},
 	})
 	if err != nil && !isErrAlreadyExists(err) {

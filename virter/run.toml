@@ -2,6 +2,8 @@
 DRBDRepoBaseURL = ""
 PacemakerRepoBaseURL = ""
 LinstorDevicePath = "/dev/vdb"
+CIRepoBaseURL = ""
+LinstorGatewayVersion = "*"
 
 [[steps]]
 [steps.docker]
@@ -13,6 +15,8 @@ command = [
     "--extra-vars", "drbd_repo_baseurl={{ .DRBDRepoBaseURL }}",
     "--extra-vars", "pacemaker_repo_baseurl={{ .PacemakerRepoBaseURL }}",
     "--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
+    "--extra-vars", "ci_repo_baseurl={{ .CIRepoBaseURL }}",
+    "--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
 ]
 [steps.docker.env]
 ANSIBLE_PIPELINING="yes"

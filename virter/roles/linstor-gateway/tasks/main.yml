@@ -9,6 +9,15 @@
   tags:
     - preload
 
+- name: Add CI repo
+  yum_repository:
+    name: linbit-ci
+    description: LINBIT CI Packages
+    baseurl: "{{ ci_repo_baseurl }}"
+    gpgcheck: false
+  tags:
+    - preload
+
 
 - name: Install resource-agents
   yum:
@@ -26,6 +35,18 @@
       - targetcli
   tags:
     - preload
+
+- name: Install nvme CLI
+  yum:
+    pkg:
+      - nvme-cli
+  tags:
+    - preload
+
+- name: Install LINSTOR Gateway
+  yum:
+    pkg:
+      - "linstor-gateway-{{ linstor_gateway_version }}"
 
 - name: Enable nfs server
   service:

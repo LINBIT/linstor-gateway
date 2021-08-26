@@ -15,6 +15,7 @@
     description: LINBIT CI Packages
     baseurl: "{{ ci_repo_baseurl }}"
     gpgcheck: false
+    http_caching: packages
   tags:
     - preload
 

@@ -1,8 +1,5 @@
 [values]
-DRBDRepoBaseURL = ""
-PacemakerRepoBaseURL = ""
 LinstorDevicePath = "/dev/vdb"
-CIRepoBaseURL = ""
 LinstorGatewayVersion = "*"
 
 [[steps]]
@@ -12,11 +9,9 @@ command = [
     "ansible-playbook",
     "--inventory", "/virter/workspace/virter/inventory",
     "/virter/workspace/virter/provision-playbook.yml",
-    "--extra-vars", "drbd_repo_baseurl={{ .DRBDRepoBaseURL }}",
-    "--extra-vars", "pacemaker_repo_baseurl={{ .PacemakerRepoBaseURL }}",
     "--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
-    "--extra-vars", "ci_repo_baseurl={{ .CIRepoBaseURL }}",
     "--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
+    "--skip-tags", "preload",
 ]
 [steps.docker.env]
 ANSIBLE_PIPELINING="yes"

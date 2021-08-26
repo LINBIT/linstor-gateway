@@ -3,6 +3,8 @@
   file:
     path: /etc/drbd-reactor.d
     state: directory
+  tags:
+    - preload
 
 - name: Install drbd-reactor
   yum:
@@ -11,12 +13,16 @@
     state: present
   notify:
     - Reload drbd-reactor
+  tags:
+    - preload
 
 - name: Enable drbd-reactor service
   service:
     name: drbd-reactor.service
     state: started
     enabled: yes
+  tags:
+    - preload
 
 - name: Configure reloading service
   copy:
@@ -32,6 +38,8 @@
   notify:
     - Reload drbd-reactor reloader
   when: configure_autoreload
+  tags:
+    - preload
 
 - name: Enable drbd-reactor reloader
   service:
@@ -39,3 +47,5 @@
     state: started
     enabled: yes
   when: configure_autoreload and drbd_reactor_reloader.changed
+  tags:
+    - preload

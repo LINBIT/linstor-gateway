@@ -1,6 +1,18 @@
 image: golang:buster
 
+variables:
+  BUILD_HELPERS_VERSION: dfbf85c26dd39ad1a88807b01fda1dc1d536abbb
+  VIRTER_VERSION: v0.14.0
+  VMSHED_VERSION: v0.12.1
+  # we have to change the way GitLab CI clones the repository.
+  # by default, it is shallow, which gives us a wrong commit count when
+  # we do `git rev-list --count origin/master` below.
+  GIT_DEPTH: 0
+  GIT_STRATEGY: clone
+
+
 stages:
+    - base-image
     - build
     - package
     - test
@@ -40,6 +52,37 @@ package:
           -d rhel8.0
     dependencies:
       - build
+
+base-image:
+  stage: base-image
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+      when: manual
+    - if: $CI_COMMIT_BRANCH == 'master'
+      when: manual
+  tags:
+    - libvirt
+  # avoid blocking the pipeline with a manual job
+  allow_failure: true
+  script:
+    - |
+      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
+      mv build-helpers-* build-helpers
+      . build-helpers/gitlab-utils.sh
+    - |
+      ci_prepare_tools
+      ci_fetch_rq
+      ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
+    - |
+      virter image rm gateway-base-image
+      virter image build centos-8 \
+        --provision virter/provision-base.toml \
+        --set values.DRBDRepoBaseURL=$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/drbd-9/x86_64 \
+        --set values.PacemakerRepoBaseURL=$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/pacemaker-2/x86_64 \
+        --set values.CIRepoBaseURL=$LINBIT_REGISTRY_URL/repository/rhel8 \
+        gateway-base-image
+      virter image save gateway-base-image | curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD -H "Tranfer-Encoding: chunked" -F raw.directory=/ -F raw.asset0=@- -F "raw.asset0.filename=centos-8-gateway" "$LINBIT_REGISTRY_URL/service/rest/v1/components?repository=vm-image"
+      virter image rm gateway-base-image
 
 test:
   stage: test

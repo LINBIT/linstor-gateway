@@ -51,3 +51,4 @@ test:
   script:
     - GOPATH=$(pwd)/.mygo go test -coverprofile .testCoverage.txt ./...
     - GOPATH=$(pwd)/.mygo go tool cover -func=.testCoverage.txt
+  needs: []

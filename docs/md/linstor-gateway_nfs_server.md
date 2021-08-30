@@ -1,4 +1,4 @@
-## linstor-nfs server
+## linstor-gateway nfs server
 
 Starts a web server serving a REST API
 
@@ -6,13 +6,13 @@ Starts a web server serving a REST API
 
 Starts a web server serving a REST API
 An up to date version of the REST-API documentation can be found here:
-https://app.swaggerhub.com/apis-docs/Linstor/linstor-iscsi/
+https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 
 For example:
-linstor-iscsi server --addr=":8080"
+linstor-gateway server --addr=":8080"
 
 ```
-linstor-nfs server [flags]
+linstor-gateway nfs server [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ linstor-nfs server [flags]
 
 ### SEE ALSO
 
-* [linstor-nfs](linstor-nfs.md)	 - Manages Highly-Available NFS exports
+* [linstor-gateway nfs](linstor-gateway_nfs.md)	 - Manages Highly-Available NFS exports
 

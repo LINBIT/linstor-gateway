@@ -1,4 +1,4 @@
-## linstor-iscsi server
+## linstor-gateway iscsi server
 
 Starts a web server serving a REST API
 
@@ -6,13 +6,13 @@ Starts a web server serving a REST API
 
 Starts a web server serving a REST API
 An up to date version of the REST-API documentation can be found here:
-https://app.swaggerhub.com/apis-docs/Linstor/linstor-iscsi/
+https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 
 For example:
-linstor-iscsi server --addr=":8080"
+linstor-gateway server --addr=":8080"
 
 ```
-linstor-iscsi server [flags]
+linstor-gateway iscsi server [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ linstor-iscsi server [flags]
 
 ### SEE ALSO
 
-* [linstor-iscsi](linstor-iscsi.md)	 - Manages Highly-Available iSCSI targets
+* [linstor-gateway iscsi](linstor-gateway_iscsi.md)	 - Manages Highly-Available iSCSI targets
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+<short>LINSTOR Gateway</short>
+<description>A utility to expose LINSTOR storage via iSCSI, NFS, and NVMe</description>
+<port protocol="tcp" port="8080"/><!-- REST API -->
+</service>

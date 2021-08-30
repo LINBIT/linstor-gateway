@@ -4,7 +4,7 @@ servers:
     description: Local LINSTOR iSCSI server
 info:
   description: |
-    Linstor iSCSI REST API V1
+    Linstor Gateway REST API V1
 
     The v1 REST API should stay compatible and only additions are made to the API.
     If there are breaking changes or redesigned a new major REST API version will be issued.
@@ -13,7 +13,7 @@ info:
 
     To change the bind address or port you can use the following linstor client commands:
     ```
-    linstor-iscsi server --addr=":8080"
+    linstor-gateway server --addr=":8080"
     ```
 
 

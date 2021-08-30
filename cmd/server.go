@@ -13,10 +13,10 @@ func serverCommand() *cobra.Command {
 		Short: "Starts a web server serving a REST API",
 		Long: `Starts a web server serving a REST API
 An up to date version of the REST-API documentation can be found here:
-https://app.swaggerhub.com/apis-docs/Linstor/linstor-iscsi/
+https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 
 For example:
-linstor-iscsi server --addr=":8080"`,
+linstor-gateway server --addr=":8080"`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			rest.ListenAndServe(addr)

@@ -14,7 +14,7 @@ func docsCommand(dst *cobra.Command) *cobra.Command {
 
 	var docsCmd = &cobra.Command{
 		Use:   "docs",
-		Short: "Generate linstor-iscsi documentation",
+		Short: "Generate linstor-gateway documentation",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			for _, f := range format {
@@ -23,7 +23,7 @@ func docsCommand(dst *cobra.Command) *cobra.Command {
 				switch f {
 				case "man":
 					header := &doc.GenManHeader{
-						Title:   "linstor-iscsi",
+						Title:   "linstor-gateway",
 						Section: "3",
 					}
 					if err := doc.GenManTree(dst, header, dir); err != nil {

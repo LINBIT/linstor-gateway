@@ -12,12 +12,12 @@ func completionCommand(dst *cobra.Command) *cobra.Command {
 		Short: "Generates bash completion script",
 		Long: `To load completion run
 
-. <(linstor-iscsi completion)
+. <(linstor-gateway completion)
 
 To configure your bash shell to load completions for each session add to your bashrc
 
 # ~/.bashrc or ~/.profile
-. <(linstor-iscsi completion)`,
+. <(linstor-gateway completion)`,
 		Run: func(cmd *cobra.Command, args []string) {
 			dst.GenBashCompletion(os.Stdout)
 		},

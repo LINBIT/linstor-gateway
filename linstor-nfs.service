@@ -1,9 +1,0 @@
-[Unit]
-Description=Linstor NFS gateway
-After=network.target
-
-[Service]
-ExecStart=/usr/sbin/linstor-nfs server --addr ":8081"
-
-[Install]
-WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-## completion
+## linstor-gateway completion
 
 Generates bash completion script
 
@@ -6,15 +6,15 @@ Generates bash completion script
 
 To load completion run
 
-. <(linstor-iscsi completion)
+. <(linstor-gateway completion)
 
 To configure your bash shell to load completions for each session add to your bashrc
 
 # ~/.bashrc or ~/.profile
-. <(linstor-iscsi completion)
+. <(linstor-gateway completion)
 
 ```
-completion [flags]
+linstor-gateway completion [flags]
 ```
 
 ### Options
@@ -22,4 +22,8 @@ completion [flags]
 ```
   -h, --help   help for completion
 ```
+
+### SEE ALSO
+
+* [linstor-gateway](linstor-gateway.md)	 - Manage linstor-gateway targets and exports
 

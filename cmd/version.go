@@ -9,7 +9,7 @@ import (
 func versionCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print version information of linstor-iscsi",
+		Short: "Print version information of LINSTOR Gateway",
 		Run: func(cmd *cobra.Command, args []string) {
 			if version == "" {
 				version = "DEV"
@@ -20,7 +20,7 @@ func versionCommand() *cobra.Command {
 			if githash == "" {
 				githash = "DEV"
 			}
-			fmt.Printf("linstor-iscsi version %s\n", version)
+			fmt.Printf("LINSTOR Gateway version %s\n", version)
 			fmt.Printf("Built at %s\n", builddate)
 			fmt.Printf("Version control hash: %s\n", githash)
 

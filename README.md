@@ -1,46 +1,23 @@
-# linstor-gateway
+# LINSTOR Gateway
 
-`linstor-gateway` manages highly available iSCSI targets and NFS exports by leveraging on LINSTOR
-and Pacemaker. Setting up LINSTOR - including storage pools and resource groups -
-as well as Corosync and Pacemaker's properties are a prerequisite to use this tool.
+LINSTOR Gateway manages highly available iSCSI targets, NFS exports, and NVMe-oF
+targets by leveraging [LINSTOR](https://github.com/LINBIT/linstor-server) and
+[drbd-reactor](https://github.com/LINBIT/drbd-reactor). A working LINSTOR cluster
+with drbd-reactor are a prerequisite to use this tool.
 
-# Building
-Use a version of go that supports modules (>1.11). Then you can `go get` the code as usual.
+# Quick Start
 
-```
-go get github.com/LINBIT/linstor-gateway
-```
+1. Set up a [LINSTOR](https://github.com/LINBIT/linstor-server) cluster. Ensure
+   you have a [storage pool](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-storage_pools)
+   as well as a [resource group](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-linstor-resource-groups)
+   for your data.
+2. Set up [drbd-reactor](https://github.com/LINBIT/drbd-reactor). The daemon
+   should be configured to reload automatically when the configuration changes.
+3. LINSTOR Gateway is packaged as a single binary. Download one of the
+   [releases](https://github.com/LINBIT/linstor-gateway/releases), put it
+   into `/usr/local/bin`, and you are ready to go.
 
 # Requirements
-
-## Pacemaker
-
-A working Corosync/Pacemaker cluster is expected on the machine where linstor-gateway
-is running.
-
-The [drbd-attr](https://github.com/LINBIT/drbd-utils/blob/master/scripts/drbd-attr)
-resource agent is required to run linstor-gateway. This is included in LINBIT's
-drbd-utils package for Ubuntu based distributions, or the drbd-pacemaker package
-on RHEL/CentOS.
-
-linstor-gateway sets up all required Pacemaker resource and constraints by itself,
-except for the LINSTOR controller resource.
-
-## LINSTOR
-
-A LINSTOR cluster is required to operate linstor-gateway. It is highly recommended
-to run the LINSTOR controller as a Pacemaker resource. This needs to be configured
-manually. Such a resource could look like the following:
-
-```
-primitive p_linstor-controller systemd:linstor-controller \
-        op start interval=0 timeout=100s \
-        op stop interval=0 timeout=100s \
-        op monitor interval=30s timeout=100s
-```
-
-A storage pool needs to be created in LINSTOR. Also, a resource group for linstor-gateway
-needs to be created.
 
 ## iSCSI
 
@@ -71,7 +48,18 @@ linstor resource-group set-property MyResourceGroup FileSystem/Type ext4
 Note that currently only the `ext4` filesystem is supported.
 
 # Documentation
-Start by browsing the documentation for [linstor-iscsi](./docs/md/linstor-iscsi.md)
-or [linstor-nfs](./docs/md/linstor-nfs.md).
+Start by browsing the documentation for the [linstor-gateway](./docs/md/linstor-gateway.md)
+command line utility.
 
-The REST-API documentation can be found [here](https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway/).
+The REST API documentation can be found [here](https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway/).
+
+# Building
+
+If you want to test the latest unstable version of LINSTOR Gateway, you can build
+the git version from sources:
+
+```
+git clone https://github.com/LINBIT/linstor-gateway
+cd linstor-gateway
+go build .
+```

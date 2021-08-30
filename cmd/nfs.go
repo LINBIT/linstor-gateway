@@ -10,8 +10,43 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func nfsCommands() *cobra.Command {
+	var loglevel string
+
+	var rootCmd = &cobra.Command{
+		Use:     "nfs",
+		Version: version,
+		Short:   "Manages Highly-Available NFS exports",
+		Long: `linstor-gateway nfs manages higly available NFS exports by leveraging LINSTOR
+and drbd-reactor. Setting linstor including storage pools and resource groups
+as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
+		Args: cobra.NoArgs,
+		// We could have our custom flag types, but this is really simple enough...
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// TODO: regex most likely needs review
+			level, err := log.ParseLevel(loglevel)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.SetLevel(level)
+		},
+	}
+
+	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
+	rootCmd.DisableAutoGenTag = true
+
+	rootCmd.AddCommand(createNFSCommand())
+	rootCmd.AddCommand(deleteNFSCommand())
+	rootCmd.AddCommand(listNFSCommand())
+	rootCmd.AddCommand(serverCommand())
+
+	return rootCmd
+
+}
 
 func createNFSCommand() *cobra.Command {
 	var resourceGroupName string
@@ -30,7 +65,7 @@ At first it creates a new resource within the LINSTOR system under the
 specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS 
 export.`,
-		Example: "linstor-nfs create --resource=example --service-ip=192.168.211.122/24 --allowed-ips=192.168.0.0/16 --resource-group=ssd_thin_2way --size=2G",
+		Example: "linstor-gateway nfs create --resource=example --service-ip=192.168.211.122/24 --allowed-ips=192.168.0.0/16 --resource-group=ssd_thin_2way --size=2G",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rsc := &nfs.ResourceConfig{
@@ -90,7 +125,7 @@ func deleteNFSCommand() *cobra.Command {
 		Short: "Deletes an NFS export",
 		Long: `Deletes an NFS export by stopping and deleting the drbd-reactor config
 and removing the LINSTOR resources.`,
-		Example: "linstor-nfs delete --resource=example",
+		Example: "linstor-gateway nfs delete --resource=example",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := nfs.Delete(context.Background(), resourceName)
@@ -117,7 +152,7 @@ func listNFSCommand() *cobra.Command {
 		Short: "Lists NFS resources",
 		Long: `Lists the NFS resources created with this tool and provides an overview
 about the existing LINSTOR resources and service status.`,
-		Example: "linstor-nfs list",
+		Example: "linstor-gateway nfs list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			list, err := nfs.List(context.Background())

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<service>
-<short>Linstor iSCSI gateway</short>
-<description>A utility to get an iSCSI target from LINSTOR</description>
-<port protocol="tcp" port="8080"/><!-- REST API -->
-</service>

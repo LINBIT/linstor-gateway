@@ -38,7 +38,6 @@ func nvmeCommands() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	rootCmd.DisableAutoGenTag = true
 
-	rootCmd.AddCommand(completionCommand(rootCmd))
 	rootCmd.AddCommand(listNVMECommand())
 	rootCmd.AddCommand(createNVMECommand())
 	rootCmd.AddCommand(deleteNVMECommand())

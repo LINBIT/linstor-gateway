@@ -1,20 +1,18 @@
 GITHASH=$(shell git describe --abbrev=0 --always)
+GOSOURCES=$(shell find . -type f -name '*.go')
 
 ifndef VERSION
 # default to latest git tag
 VERSION=$(shell git describe --abbrev=0 --tags | tr -d 'v')
 endif
 
-all: linstor-iscsi linstor-nfs
+all: linstor-gateway
 
-linstor-gateway:
+linstor-gateway: $(GOSOURCES)
 	GO111MODULE=on go build \
 		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(VERSION) \
 		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
 		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"
-
-linstor-iscsi linstor-nfs: linstor-gateway
-	ln -s linstor-gateway $@
 
 # internal, public doc on swagger
 docs/rest/index.html: docs/rest_v1_openapi.yaml
@@ -40,10 +38,10 @@ linstor-gateway-$(VERSION).tar.gz: linstor-gateway
 	strip linstor-gateway
 	dh_clean || true
 	tar --transform="s,^,linstor-gateway-$(VERSION)/," --owner=0 --group=0 -czf $@ \
-		linstor-gateway debian linstor-gateway.spec linstor-iscsi.service \
-		linstor-nfs.service linstor-iscsi.xml linstor-nfs.xml
+		linstor-gateway debian linstor-gateway.spec linstor-gateway.service \
+		linstor-gateway.xml
 
 debrelease: linstor-gateway-$(VERSION).tar.gz
 
 clean:
-	rm linstor-gateway linstor-iscsi linstor-nfs
+	rm linstor-gateway

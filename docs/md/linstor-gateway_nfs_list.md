@@ -1,17 +1,20 @@
-## linstor-nfs list
+## linstor-gateway nfs list
 
 Lists NFS resources
 
 ### Synopsis
 
 Lists the NFS resources created with this tool and provides an overview
-about the existing Pacemaker and linstor parts
-
-For example:
-linstor-nfs list
+about the existing LINSTOR resources and service status.
 
 ```
-linstor-nfs list [flags]
+linstor-gateway nfs list [flags]
+```
+
+### Examples
+
+```
+linstor-gateway nfs list
 ```
 
 ### Options
@@ -29,5 +32,5 @@ linstor-nfs list [flags]
 
 ### SEE ALSO
 
-* [linstor-nfs](linstor-nfs.md)	 - Manages Highly-Available NFS exports
+* [linstor-gateway nfs](linstor-gateway_nfs.md)	 - Manages Highly-Available NFS exports
 

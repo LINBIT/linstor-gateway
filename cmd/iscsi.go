@@ -11,8 +11,43 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func iscsiCommands() *cobra.Command {
+	var loglevel string
+
+	var rootCmd = &cobra.Command{
+		Use:     "iscsi",
+		Version: version,
+		Short:   "Manages Highly-Available iSCSI targets",
+		Long: `linstor-gateway iscsi manages highly available iSCSI targets by leveraging
+LINSTOR and drbd-reacor. Setting up LINSTOR, including storage pools and resource groups,
+as well as drbd-reactor is a prerequisite to use this tool.`,
+		Args: cobra.NoArgs,
+		// We could have our custom flag types, but this is really simple enough...
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			level, err := log.ParseLevel(loglevel)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.SetLevel(level)
+		},
+	}
+
+	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
+	rootCmd.DisableAutoGenTag = true
+
+	rootCmd.AddCommand(createISCSICommand())
+	rootCmd.AddCommand(deleteISCSICommand())
+	rootCmd.AddCommand(listISCSICommand())
+	rootCmd.AddCommand(serverCommand())
+	rootCmd.AddCommand(startISCSICommand())
+	rootCmd.AddCommand(stopISCSICommand())
+
+	return rootCmd
+}
 
 func createISCSICommand() *cobra.Command {
 	var username, password, portals, group string
@@ -32,7 +67,7 @@ specified resource group. The name of the linstor resources is derived
 from the IQN's World Wide Name, which must be unique'.
 After that it creates a configuration for drbd-reactor to manage the
 high availabilitiy primitives.`,
-		Example: "linstor-iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 --username=foo --lun=1 --password=bar --resource-group=ssd_thin_2way --size=2G",
+		Example: "linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 --username=foo --lun=1 --password=bar --resource-group=ssd_thin_2way --size=2G",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -89,7 +124,7 @@ func listISCSICommand() *cobra.Command {
 		Short: "Lists iSCSI targets",
 		Long: `Lists the iSCSI targets created with this tool and provides an overview
 about the existing drbd-reactor and linstor parts.`,
-		Example: "linstor-iscsi list",
+		Example: "linstor-gateway iscsi list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfgs, err := iscsi.List(context.Background())
@@ -128,7 +163,7 @@ func startISCSICommand() *cobra.Command {
 		Long: `Sets the target role attribute of a Pacemaker primitive to started.
 In case it does not start use your favourite pacemaker tools to analyze
 the root cause.`,
-		Example: "linstor-iscsi start --iqn=iqn.2019-08.com.linbit:example",
+		Example: "linstor-gateway iscsi start --iqn=iqn.2019-08.com.linbit:example",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := iscsi.Start(context.Background(), iqn)
@@ -163,7 +198,7 @@ func stopISCSICommand() *cobra.Command {
 This causes pacemaker to stop the components of an iSCSI target.
 
 For example:
-linstor-iscsi stop --iqn=iqn.2019-08.com.linbit:example`,
+linstor-gateway iscsi stop --iqn=iqn.2019-08.com.linbit:example`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := iscsi.Stop(context.Background(), iqn)
@@ -197,7 +232,7 @@ func deleteISCSICommand() *cobra.Command {
 		Short: "Deletes an iSCSI target",
 		Long: `Deletes an iSCSI target by stopping and deleting the pacemaker resource
 primitives and removing the linstor resources.`,
-		Example: "linstor-iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=1",
+		Example: "linstor-gateway iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=1",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

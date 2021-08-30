@@ -31,7 +31,6 @@ package:
     stage: package
     image: $LINBIT_DOCKER_REGISTRY/build-helpers:latest
     rules:
-      - if: $CI_COMMIT_BRANCH == 'master'
       - if: $CI_MERGE_REQUEST_ID
     before_script:
       - |
@@ -85,7 +84,6 @@ base-image:
 publish-docker:
   stage: package
   rules:
-    - if: $CI_COMMIT_BRANCH == 'master'
     - if: $CI_MERGE_REQUEST_ID
   tags:
     - shell
@@ -99,7 +97,6 @@ test:
   stage: test
   image: golang:buster
   rules:
-    - if: $CI_COMMIT_BRANCH == 'master'
     - if: $CI_MERGE_REQUEST_ID
   cache:
     paths:
@@ -112,7 +109,6 @@ test:
 test-e2e:
   stage: test
   rules:
-    - if: $CI_COMMIT_BRANCH == 'master'
     - if: $CI_MERGE_REQUEST_ID
   tags:
     - libvirt

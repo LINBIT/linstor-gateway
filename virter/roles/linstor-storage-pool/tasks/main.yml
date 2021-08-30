@@ -4,6 +4,8 @@
   lvg:
     vg: "{{ vg_name }}"
     pvs: "{{ devices | join(',') }}"
+  tags:
+    - run
 
 - name: Create thin volume
   lvol:
@@ -13,12 +15,18 @@
     size: "{{ thin_size }}"
     shrink: no
   when: pool_type == 'lvmthin'
+  tags:
+    - run
 
 - name: Check linstor storage pool
   command: "linstor --machine --output-version v1 storage-pool list --nodes {{ inventory_hostname }} --storage-pools {{ pool_name }}"
   register: storage_pool_list_out
   changed_when: no
+  tags:
+    - run
 
 - name: Register storage pool in Linstor
   command: "linstor storage-pool create {{ pool_type }} {{ inventory_hostname }} {{ pool_name }} {{ vg_name }}{% if pool_type == 'lvmthin' %}{{ '/%s' % thinpool_name }}{% endif %}"
   when: "not (storage_pool_list_out.stdout | from_json)[0]"
+  tags:
+    - run

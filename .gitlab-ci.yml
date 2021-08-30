@@ -1,5 +1,3 @@
-image: golang:buster
-
 variables:
   BUILD_HELPERS_VERSION: dfbf85c26dd39ad1a88807b01fda1dc1d536abbb
   VIRTER_VERSION: v0.14.0
@@ -19,6 +17,7 @@ stages:
 
 build:
   stage: build
+  image: golang:buster
   rules:
     - if: $CI_MERGE_REQUEST_ID
   script:
@@ -32,7 +31,7 @@ package:
     stage: package
     image: $LINBIT_DOCKER_REGISTRY/build-helpers:latest
     rules:
-      #- if: $CI_COMMIT_BRANCH == 'master'
+      - if: $CI_COMMIT_BRANCH == 'master'
       - if: $CI_MERGE_REQUEST_ID
     before_script:
       - |
@@ -71,7 +70,6 @@ base-image:
       . build-helpers/gitlab-utils.sh
     - |
       ci_prepare_tools
-      ci_fetch_rq
       ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
     - |
       virter image rm gateway-base-image
@@ -81,12 +79,27 @@ base-image:
         --set values.PacemakerRepoBaseURL=$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/pacemaker-2/x86_64 \
         --set values.CIRepoBaseURL=$LINBIT_REGISTRY_URL/repository/rhel8 \
         gateway-base-image
-      virter image save gateway-base-image | curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD -H "Tranfer-Encoding: chunked" -F raw.directory=/ -F raw.asset0=@- -F "raw.asset0.filename=centos-8-gateway" "$LINBIT_REGISTRY_URL/service/rest/v1/components?repository=vm-image"
+      virter image push gateway-base-image $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8
       virter image rm gateway-base-image
+
+publish-docker:
+  stage: package
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_MERGE_REQUEST_ID
+  tags:
+    - shell
+  script:
+    - |
+      cd virter/docker
+      docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest .
+      docker push $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
 
 test:
   stage: test
+  image: golang:buster
   rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
     - if: $CI_MERGE_REQUEST_ID
   cache:
     paths:
@@ -95,3 +108,34 @@ test:
     - GOPATH=$(pwd)/.mygo go test -coverprofile .testCoverage.txt ./...
     - GOPATH=$(pwd)/.mygo go tool cover -func=.testCoverage.txt
   needs: []
+
+test-e2e:
+  stage: test
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_MERGE_REQUEST_ID
+  tags:
+    - libvirt
+  script:
+    - |
+      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN https://gitlab.at.linbit.com/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
+      mv build-helpers-* build-helpers
+      . build-helpers/gitlab-utils.sh
+    - |
+      ci_prepare_tools
+      ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
+      ci_fetch_binary vmshed vmshed-$VMSHED_VERSION https://github.com/LINBIT/vmshed/releases/download/$VMSHED_VERSION/vmshed-linux-amd64
+    - virter image pull centos-8-gateway $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8
+    - |
+      docker pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
+      vmshed                                                                    \
+        --out-dir "$(readlink -f tests-out)"                                    \
+        --startvm 20                                                            \
+        --nvms 12                                                               \
+        --vms virter/vms.toml                                                   \
+        --tests virter/tests.toml                                               \
+        --set values.TestSuiteImage=$LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest \
+        --set values.LinstorGatewayVersion=0.0.0.$CI_COMMIT_SHA
+  needs:
+    - package
+    - publish-docker

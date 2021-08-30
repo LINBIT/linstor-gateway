@@ -1,0 +1,7 @@
+name = "t"
+provision_file = "provision-test.toml"
+
+[[vms]]
+base_image = "centos-8-gateway"
+vcpus = 2
+memory = "4G"

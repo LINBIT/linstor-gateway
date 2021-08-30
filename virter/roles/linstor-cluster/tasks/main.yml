@@ -101,6 +101,8 @@
   service:
     name: systemd-udevd
     state: restarted
+  tags:
+    - preload
 
 - name: Enable satellite
   service:
@@ -117,11 +119,15 @@
     enabled: yes
     state: started
   when: inventory_hostname in linstor_controller_hosts
+  tags:
+    - run
 
 - name: Wait for controller to come online
   wait_for:
     port: 3370
   when: inventory_hostname in linstor_controller_hosts
+  tags:
+    - run
 
 - name: Disable linstor-controller service (on non-controllers)
   service:
@@ -129,8 +135,12 @@
     enabled: no
     state: stopped
   when: inventory_hostname not in linstor_controller_hosts
+  tags:
+    - run
 
 - name: Create linstor configuration file
   template:
     src: linstor-client.conf.j2
     dest: /etc/linstor/linstor-client.conf
+  tags:
+    - run

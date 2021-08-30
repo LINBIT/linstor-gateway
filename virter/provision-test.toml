@@ -1,7 +1,5 @@
 [values]
 LinstorGatewayVersion = "*"
-LinstorDevicePath = "/dev/sda"
-TestSuiteImage = "linstor-gateway-e2e"
 
 [[steps]]
 [steps.docker]
@@ -11,12 +9,7 @@ command = [
     "--inventory", "/virter/workspace/virter/inventory",
     "/virter/workspace/virter/provision-playbook.yml",
     "--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
-    "--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
-    "--tags", "run",
+    "--tags", "testimage"
 ]
 [steps.docker.env]
 ANSIBLE_PIPELINING="yes"
-
-[[steps]]
-[steps.docker]
-image = "{{.TestSuiteImage}}"

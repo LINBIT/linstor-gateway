@@ -15,7 +15,7 @@
     description: LINBIT CI Packages
     baseurl: "{{ ci_repo_baseurl }}"
     gpgcheck: false
-    http_caching: packages
+    metadata_expire: 0
   tags:
     - preload
 
@@ -48,6 +48,8 @@
   yum:
     pkg:
       - "linstor-gateway-{{ linstor_gateway_version }}"
+  tags:
+    - testimage
 
 - name: Enable nfs server
   service:

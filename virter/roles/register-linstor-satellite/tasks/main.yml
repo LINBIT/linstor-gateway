@@ -2,7 +2,11 @@
   command: "linstor --machine --output-version v1 node list --nodes {{ inventory_hostname }}"
   register: node_list_output
   changed_when: no
+  tags:
+    - run
 
 - name: Register satellite
   command: "linstor node create {{ inventory_hostname }}"
   when: 'not (node_list_output.stdout | from_json)[0]'
+  tags:
+    - run

@@ -1,0 +1,3 @@
+[tests]
+[tests.hello]
+vms = [3]

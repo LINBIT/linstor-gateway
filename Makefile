@@ -8,7 +8,7 @@ endif
 all: linstor-iscsi linstor-nfs
 
 linstor-gateway:
-	GO111MODULE=on go build \
+	CGO_ENABLED=0 GO111MODULE=on go build \
 		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(VERSION) \
 		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
 		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"

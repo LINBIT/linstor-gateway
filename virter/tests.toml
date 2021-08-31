@@ -1,3 +1,9 @@
 [tests]
-[tests.hello]
+[tests.iscsi-create]
+vms = [3]
+
+[tests.nfs-create]
+vms = [3]
+
+[tests.nvme-create]
 vms = [3]

@@ -41,14 +41,28 @@ test:
 prepare-release: test md-doc
 	GO111MODULE=on go mod tidy
 
-linstor-gateway-$(VERSION).tar.gz: linstor-gateway
+.PHONY: debrelease
+debrelease: checkVERSION
 	strip linstor-gateway
 	dh_clean || true
-	tar --transform="s,^,linstor-gateway-$(VERSION)/," --owner=0 --group=0 -czf $@ \
+	tar --transform="s,^,linstor-gateway-$(VERSION)/," --owner=0 --group=0 -czf linstor-gateway-$(VERSION).tar.gz \
 		linstor-gateway debian linstor-gateway.spec linstor-gateway.service \
 		linstor-gateway.xml
 
-debrelease: linstor-gateway-$(VERSION).tar.gz
+ifndef VERSION
+checkVERSION:
+	$(error environment variable VERSION is not set)
+else
+checkVERSION:
+ifdef FORCE
+	true
+else
+	test -z "$$(git ls-files -m)"
+	lbvers.py check --base=$(BASE) --build=$(BUILD) --build-nr=$(BUILD_NR) --pkg-nr=$(PKG_NR) \
+		--rpm-spec=linstor-gateway.spec --debian-changelog=debian/changelog --changelog=CHANGELOG.md
+endif
+endif
+
 
 clean:
 	rm linstor-gateway

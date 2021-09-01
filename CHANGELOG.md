@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.0-rc.1 - 2021-09-01
+* Change high-availibility backend from Pacemaker to LINBIT's own drbd-reactor
+* Add support for NVME-oF targets
+* Remove requirement for symlinking the binary: use "linstor-gateway iscsi" instead of "linstor-iscsi"
+* Improve CI testing (integration tests)
+
 ## 0.8.0 - 2021-03-23
 * Fix a bug related to Pacemaker 2 (use the "kind" attribute for order constraints instead of "score")
 * Implement pipe detection; disable colors when not writing to a TTY

@@ -1,8 +1,3 @@
-%define name linstor-gateway
-%define release 1
-%define version 0.8.0
-#%define buildroot %{_topdir}/BUILD/%{name}-%{version}
-
 %define _firewalldir /usr/lib/firewalld
 
 %if 0%{?suse_version}
@@ -11,15 +6,18 @@
 %define firewall_macros_package firewalld-filesystem
 %endif
 
+Name: linstor-gateway
+Version: 0.9.0~rc.1
+Release: 1
+Summary: LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
+%global tarball_version %(echo "%{version}" | sed -e 's/~rc/-rc/' -e 's/~alpha/-alpha/')
+
+URL: https://www.github.com/LINBIT/linstor-gateway
+Source: %{name}-%{version}.tar.gz
 BuildRoot: %{buildroot}
 BuildRequires: %{firewall_macros_package}
-Summary: LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
 License: GPLv3+
 ExclusiveOS: linux
-Name: %{name}
-Version: %{version}
-Release: %{release}
-Source: %{name}-%{version}.tar.gz
 
 %description
 LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
@@ -52,3 +50,16 @@ install -D -m 644 %{name}.xml %{buildroot}%{_firewalldir}/services/%{name}.xml
 	%dir %{_firewalldir}
 	%dir %{_firewalldir}/services
 	%{_firewalldir}/services/%{name}.xml
+
+%changelog
+* Wed Sep 1 2021 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 0.9.0~rc.1-1
+-  New upstream release
+
+* Tue Mar 23 2021 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 0.8.0-1
+-  New upstream release
+
+* Fri Dec 04 2020 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 0.7.0-1
+-  Rename to linstor-gateway
+
+* Wed Oct 09 2019 Roland Kammerer <roland.kammerer@linbit.com> - 0.1.0-1
+-  Initial Release

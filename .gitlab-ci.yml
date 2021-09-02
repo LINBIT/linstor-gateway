@@ -23,16 +23,18 @@ build:
 
 package:
     stage: package
-    image: $LINBIT_DOCKER_REGISTRY/build-helpers:latest
+    image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
     rules:
       - if: $CI_MERGE_REQUEST_ID
+      - if: $CI_COMMIT_TAG
     before_script:
       - |
         curl -sSL $LINBIT_REGISTRY_URL/repository/lbbuild/lbbuildctl-latest -o /usr/local/bin/lbbuildctl
         chmod +x /usr/local/bin/lbbuildctl
     script:
       - |
-        VERSION=0.0.0.$CI_COMMIT_SHA
+        TAG=$(echo $CI_COMMIT_TAG | tr -d 'v')
+        VERSION=${TAG:-0.0.0.$CI_COMMIT_SHA}
         dummy-release.sh linstor-gateway $VERSION 1 linstor-gateway.spec
         make VERSION=$VERSION FORCE=1 debrelease
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$VERSION.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/

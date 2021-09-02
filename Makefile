@@ -12,14 +12,14 @@ linstor-gateway: $(GOSOURCES)
 	NAME="$@"; \
 	[ -n "$(GOOS)" ] && NAME="$${NAME}-$(GOOS)"; \
 	[ -n "$(GOARCH)" ] && NAME="$${NAME}-$(GOARCH)"; \
-	go build \
+	go build -o "$$NAME" \
 		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(VERSION) \
 		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
 		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"
 
 .PHONY: release
 release:
-	make linstor-gateway GOOS=linux GOARCH=amd64
+	make --always-make linstor-gateway GOOS=linux GOARCH=amd64
 
 # internal, public doc on swagger
 docs/rest/index.html: docs/rest_v1_openapi.yaml

@@ -98,9 +98,8 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 	}
 }
 
-func Default() (*Linstor, error) {
-	// TODO: determine connection parameters from somewhere
-	cli, err := client.NewClient(client.Log(log.StandardLogger()))
+func Default(controllers []string) (*Linstor, error) {
+	cli, err := client.NewClient(client.Log(log.StandardLogger()), client.Controllers(controllers))
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/nfs"
+	"github.com/LINBIT/linstor-gateway/pkg/nvmeof"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
@@ -14,6 +17,9 @@ import (
 
 type server struct {
 	router *mux.Router
+	iscsi  *iscsi.ISCSI
+	nfs    *nfs.NFS
+	nvmeof *nvmeof.NVMeoF
 	sync.Mutex
 }
 
@@ -49,9 +55,24 @@ func MustError(code int, w http.ResponseWriter, format string, a ...interface{})
 }
 
 // ListenAndServe is the entry point for the REST API
-func ListenAndServe(addr string) {
+func ListenAndServe(addr string, controllers []string) {
+	iscsi, err := iscsi.New(controllers)
+	if err != nil {
+		log.Fatalf("Failed to initialize ISCSI: %v", err)
+	}
+	nfs, err := nfs.New(controllers)
+	if err != nil {
+		log.Fatalf("Failed to initialize NFS: %v", err)
+	}
+	nvmeof, err := nvmeof.New(controllers)
+	if err != nil {
+		log.Fatalf("Failed to initialize NVMeoF: %v", err)
+	}
 	s := &server{
 		router: mux.NewRouter(),
+		iscsi:  iscsi,
+		nfs:    nfs,
+		nvmeof: nvmeof,
 	}
 
 	s.routes()

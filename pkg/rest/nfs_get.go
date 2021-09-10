@@ -7,15 +7,13 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 )
 
 func (s *server) NFSGet(all bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resource := mux.Vars(r)["resource"]
 
-		cfg, err := nfs.Get(r.Context(), resource)
+		cfg, err := s.nfs.Get(r.Context(), resource)
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "failed to fetch resource status: %v", err)
 			return

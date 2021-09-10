@@ -18,7 +18,7 @@ func (s *server) ISCSIStart() http.HandlerFunc {
 			return
 		}
 
-		cfg, err := iscsi.Start(r.Context(), iqn)
+		cfg, err := s.iscsi.Start(r.Context(), iqn)
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "failed to start target: %v", err)
 			return

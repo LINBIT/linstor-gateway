@@ -5,13 +5,11 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 )
 
 func (s *server) ISCSIList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		targets, err := iscsi.List(r.Context())
+		targets, err := s.iscsi.List(r.Context())
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "Could not list targets: %v", err)
 			return

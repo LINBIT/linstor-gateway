@@ -18,13 +18,20 @@ import (
 
 const IDFormat = "iscsi-%s"
 
-func Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
+type ISCSI struct {
+	cli *linstorcontrol.Linstor
+}
+
+func New(controllers []string) (*ISCSI, error) {
+	cli, err := linstorcontrol.Default(controllers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor client: %w", err)
 	}
+	return &ISCSI{cli}, nil
+}
 
-	cfg, path, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing config: %w", err)
 	}
@@ -33,7 +40,7 @@ func Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, cli.Client)
+	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 	}
@@ -48,26 +55,21 @@ func Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 	return deployedCfg, nil
 }
 
-func Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
+func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 	rsc.FillDefaults()
 
-	err = rsc.Valid()
+	err := rsc.Valid()
 	if err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	cfg, path, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, rsc.IQN.WWN()))
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, rsc.IQN.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing config: %w", err)
 	}
 
 	if cfg != nil {
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, cli.Client)
+		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 		}
@@ -86,7 +88,7 @@ func Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 		return deployedCfg, nil
 	}
 
-	resourceDefinition, deployment, err := cli.EnsureResource(ctx, linstorcontrol.Resource{
+	resourceDefinition, deployment, err := i.cli.EnsureResource(ctx, linstorcontrol.Resource{
 		Name:          rsc.IQN.WWN(),
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       rsc.Volumes,
@@ -100,12 +102,12 @@ func Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
 
-	_, err = Start(ctx, rsc.IQN)
+	_, err = i.Start(ctx, rsc.IQN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
@@ -115,13 +117,8 @@ func Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 	return rsc, nil
 }
 
-func Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	cfg, _, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
+	cfg, _, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -130,7 +127,7 @@ func Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.AttachConfig(ctx, cli.Client, cfg)
+	err = reactor.AttachConfig(ctx, i.cli.Client, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -138,21 +135,16 @@ func Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err = common.WaitUntilResourceCondition(waitCtx, cli.Client, iqn.WWN(), common.AnyResourcesInUse)
+	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.AnyResourcesInUse)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for resource to become used: %w", err)
 	}
 
-	return Get(ctx, iqn)
+	return i.Get(ctx, iqn)
 }
 
-func Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	cfg, _, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
+	cfg, _, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -161,7 +153,7 @@ func Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.DetachConfig(ctx, cli.Client, cfg)
+	err = reactor.DetachConfig(ctx, i.cli.Client, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -169,29 +161,24 @@ func Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err = common.WaitUntilResourceCondition(waitCtx, cli.Client, iqn.WWN(), common.NoResourcesInUse)
+	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.NoResourcesInUse)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for resource to become unused: %w", err)
 	}
 
-	return Get(ctx, iqn)
+	return i.Get(ctx, iqn)
 }
 
-func List(ctx context.Context) ([]*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	cfgs, paths, err := reactor.ListConfigs(ctx, cli.Client)
+func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
+	cfgs, paths, err := reactor.ListConfigs(ctx, i.cli.Client)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]*ResourceConfig, 0, len(cfgs))
-	for i := range cfgs {
-		cfg := &cfgs[i]
-		path := paths[i]
+	for j := range cfgs {
+		cfg := &cfgs[j]
+		path := paths[j]
 
 		var rsc string
 		n, _ := fmt.Sscanf(cfg.ID, IDFormat, &rsc)
@@ -200,7 +187,7 @@ func List(ctx context.Context) ([]*ResourceConfig, error) {
 			continue
 		}
 
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, cli.Client)
+		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 		if err != nil {
 			log.WithError(err).Warn("failed to fetch deployed resources")
 		}
@@ -219,13 +206,8 @@ func List(ctx context.Context) ([]*ResourceConfig, error) {
 	return result, nil
 }
 
-func Delete(ctx context.Context, iqn Iqn) error {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	err = reactor.DeleteConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) Delete(ctx context.Context, iqn Iqn) error {
+	err := reactor.DeleteConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return fmt.Errorf("failed to delete reactor config: %w", err)
 	}
@@ -233,12 +215,12 @@ func Delete(ctx context.Context, iqn Iqn) error {
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err = common.WaitUntilResourceCondition(waitCtx, cli.Client, iqn.WWN(), common.NoResourcesInUse)
+	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.NoResourcesInUse)
 	if err != nil {
 		return fmt.Errorf("error waiting for resource to become unused: %w", err)
 	}
 
-	err = cli.ResourceDefinitions.Delete(ctx, iqn.WWN())
+	err = i.cli.ResourceDefinitions.Delete(ctx, iqn.WWN())
 	if err != nil && err != client.NotFoundError {
 		return fmt.Errorf("failed to delete resources: %w", err)
 	}
@@ -246,13 +228,8 @@ func Delete(ctx context.Context, iqn Iqn) error {
 	return nil
 }
 
-func AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	cfg, path, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*ResourceConfig, error) {
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing config: %w", err)
 	}
@@ -261,7 +238,7 @@ func AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*Reso
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, cli.Client)
+	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 	}
@@ -300,7 +277,7 @@ func AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*Reso
 			return nil, fmt.Errorf("validation failed: %w", err)
 		}
 
-		resourceDefinition, resources, err = cli.EnsureResource(ctx, linstorcontrol.Resource{
+		resourceDefinition, resources, err = i.cli.EnsureResource(ctx, linstorcontrol.Resource{
 			Name:          deployedCfg.IQN.WWN(),
 			ResourceGroup: deployedCfg.ResourceGroup,
 			Volumes:       deployedCfg.Volumes,
@@ -315,7 +292,7 @@ func AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*Reso
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update config: %w", err)
 	}
@@ -325,13 +302,8 @@ func AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeConfig) (*Reso
 	return deployedCfg, nil
 }
 
-func DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error) {
-	cli, err := linstorcontrol.Default()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linstor client: %w", err)
-	}
-
-	cfg, path, err := reactor.FindConfig(ctx, cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error) {
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete reactor config: %w", err)
 	}
@@ -340,7 +312,7 @@ func DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinition, resources, err := cfg.DeployedResources(ctx, cli.Client)
+	resourceDefinition, volumeDefinition, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch deployed resources: %w", err)
 	}
@@ -355,17 +327,17 @@ func DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error
 		return nil, errors.New("cannot delete volume while service is running")
 	}
 
-	for i := range rscCfg.Volumes {
-		if rscCfg.Volumes[i].Number == lun {
-			err = cli.ResourceDefinitions.DeleteVolumeDefinition(ctx, iqn.WWN(), lun)
+	for j := range rscCfg.Volumes {
+		if rscCfg.Volumes[j].Number == lun {
+			err = i.cli.ResourceDefinitions.DeleteVolumeDefinition(ctx, iqn.WWN(), lun)
 			if err != nil && err != client.NotFoundError {
 				return nil, fmt.Errorf("failed to delete volume definition")
 			}
 
-			rscCfg.Volumes = append(rscCfg.Volumes[:i], rscCfg.Volumes[i+1:]...)
+			rscCfg.Volumes = append(rscCfg.Volumes[:j], rscCfg.Volumes[j+1:]...)
 			// Manually delete the resources from the current resource config
-			for j := range resources {
-				resources[j].Volumes = append(resources[j].Volumes[:i], resources[j].Volumes[i+1:]...)
+			for k := range resources {
+				resources[k].Volumes = append(resources[k].Volumes[:j], resources[k].Volumes[j+1:]...)
 			}
 
 			cfg, err = rscCfg.ToPromoter(resources)
@@ -373,7 +345,7 @@ func DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error
 				return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 			}
 
-			err = reactor.EnsureConfig(ctx, cli.Client, cfg)
+			err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
 			if err != nil {
 				return nil, fmt.Errorf("failed to update config")
 			}
@@ -382,5 +354,5 @@ func DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceConfig, error
 		}
 	}
 
-	return Get(ctx, iqn)
+	return i.Get(ctx, iqn)
 }

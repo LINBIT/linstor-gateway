@@ -15,6 +15,8 @@ var (
 	githash   string
 )
 
+var controllers []string
+
 // rootCommand represents the base command when called without any subcommands
 func rootCommand() *cobra.Command {
 	if len(os.Args) < 1 {
@@ -34,6 +36,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(completionCommand(rootCmd))
 	rootCmd.AddCommand(docsCommand(rootCmd))
+	rootCmd.Flags().StringSliceVar(&controllers, "controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
 	return rootCmd
 }
 

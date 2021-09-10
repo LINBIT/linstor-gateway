@@ -19,7 +19,7 @@ For example:
 linstor-gateway server --addr=":8080"`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			rest.ListenAndServe(addr)
+			rest.ListenAndServe(addr, controllers)
 		},
 	}
 

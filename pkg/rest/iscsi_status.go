@@ -19,7 +19,7 @@ func (s *server) ISCSIGet(all bool) http.HandlerFunc {
 			return
 		}
 
-		cfg, err := iscsi.Get(r.Context(), iqn)
+		cfg, err := s.iscsi.Get(r.Context(), iqn)
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "failed to fetch resource status: %v", err)
 			return

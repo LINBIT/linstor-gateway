@@ -71,8 +71,12 @@ high availabilitiy primitives.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			i, err := iscsi.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			}
 
-			_, err := iscsi.Create(ctx, &iscsi.ResourceConfig{
+			_, err = i.Create(ctx, &iscsi.ResourceConfig{
 				IQN:       iqn,
 				Username:  username,
 				Password:  password,
@@ -127,7 +131,11 @@ about the existing drbd-reactor and linstor parts.`,
 		Example: "linstor-gateway iscsi list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfgs, err := iscsi.List(context.Background())
+			i, err := iscsi.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			}
+			cfgs, err := i.List(context.Background())
 			if err != nil {
 				return err
 			}
@@ -166,7 +174,11 @@ the root cause.`,
 		Example: "linstor-gateway iscsi start --iqn=iqn.2019-08.com.linbit:example",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := iscsi.Start(context.Background(), iqn)
+			i, err := iscsi.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			}
+			cfg, err := i.Start(context.Background(), iqn)
 			if err != nil {
 				return err
 			}
@@ -201,7 +213,11 @@ For example:
 linstor-gateway iscsi stop --iqn=iqn.2019-08.com.linbit:example`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := iscsi.Stop(context.Background(), iqn)
+			i, err := iscsi.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			}
+			cfg, err := i.Stop(context.Background(), iqn)
 			if err != nil {
 				return err
 			}
@@ -236,8 +252,12 @@ primitives and removing the linstor resources.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			i, err := iscsi.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			}
 			if cmd.Flags().Changed("lun") {
-				cfg, err := iscsi.DeleteVolume(ctx, iqn, lun)
+				cfg, err := i.DeleteVolume(ctx, iqn, lun)
 				if err != nil {
 					return err
 				}
@@ -248,7 +268,7 @@ primitives and removing the linstor resources.`,
 					fmt.Printf("Deleted LU %d for target %s\n", lun, iqn)
 				}
 			} else {
-				err := iscsi.Delete(ctx, iqn)
+				err := i.Delete(ctx, iqn)
 				if err != nil {
 					return err
 				}

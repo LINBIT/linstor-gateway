@@ -49,7 +49,7 @@ func (s *server) NVMeoFAddVolume() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := nvmeof.AddVolume(ctx, nqn, &vCfg)
+		cfg, err := s.nvmeof.AddVolume(ctx, nqn, &vCfg)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to add volume to resource: %v", err)
 			return

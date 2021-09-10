@@ -49,7 +49,7 @@ func (s *server) ISCSIAddVolume() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := iscsi.AddVolume(ctx, iqn, &vCfg)
+		cfg, err := s.iscsi.AddVolume(ctx, iqn, &vCfg)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to add volume to resource: %v", err)
 			return
@@ -69,4 +69,3 @@ func (s *server) ISCSIAddVolume() func(http.ResponseWriter, *http.Request) {
 		}
 	}
 }
-

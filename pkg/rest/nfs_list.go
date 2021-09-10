@@ -5,13 +5,11 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 )
 
 func (s *server) NFSList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		targets, err := nfs.List(r.Context())
+		targets, err := s.nfs.List(r.Context())
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "Could not list exports: %v", err)
 			return

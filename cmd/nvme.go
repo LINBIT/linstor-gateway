@@ -55,7 +55,11 @@ func listNVMECommand() *cobra.Command {
 		Short: "list configured NVMe-oF targets",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfgs, err := nvmeof.List(context.Background())
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
+			cfgs, err := n.List(context.Background())
 			if err != nil {
 				return err
 			}
@@ -95,6 +99,11 @@ func createNVMECommand() *cobra.Command {
 				return err
 			}
 
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
+
 			serviceIP, err := common.ServiceIPFromString(args[1])
 			if err != nil {
 				return err
@@ -110,7 +119,7 @@ func createNVMECommand() *cobra.Command {
 				volumes = append(volumes, common.VolumeConfig{SizeKiB: uint64(val.Value / unit.K)})
 			}
 
-			_, err = nvmeof.Create(context.Background(), &nvmeof.ResourceConfig{
+			_, err = n.Create(context.Background(), &nvmeof.ResourceConfig{
 				NQN:           nqn,
 				ServiceIP:     serviceIP,
 				ResourceGroup: resourceGroup,
@@ -136,6 +145,10 @@ func deleteNVMECommand() *cobra.Command {
 		Short: "Delete existing NVMe-oF targets",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -144,7 +157,7 @@ func deleteNVMECommand() *cobra.Command {
 					continue
 				}
 
-				err = nvmeof.Delete(context.Background(), nqn)
+				err = n.Delete(context.Background(), nqn)
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -164,6 +177,10 @@ func startNVMECommand() *cobra.Command {
 		Short: "Start a stopped NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -172,7 +189,7 @@ func startNVMECommand() *cobra.Command {
 					continue
 				}
 
-				cfg, err := nvmeof.Start(context.Background(), nqn)
+				cfg, err := n.Start(context.Background(), nqn)
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -197,6 +214,10 @@ func stopNVMECommand() *cobra.Command {
 		Short: "Stop a started NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -205,7 +226,7 @@ func stopNVMECommand() *cobra.Command {
 					continue
 				}
 
-				cfg, err := nvmeof.Stop(context.Background(), nqn)
+				cfg, err := n.Stop(context.Background(), nqn)
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -235,6 +256,10 @@ func addVolumeNVMECommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
 
 			volNr, err := strconv.Atoi(args[1])
 			if err != nil {
@@ -246,7 +271,7 @@ func addVolumeNVMECommand() *cobra.Command {
 				return err
 			}
 
-			cfg, err := nvmeof.AddVolume(context.Background(), nqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
+			cfg, err := n.AddVolume(context.Background(), nqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
 			if err != nil {
 				return err
 			}
@@ -272,13 +297,17 @@ func deleteVolumeNVMECommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			n, err := nvmeof.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
+			}
 
 			volNr, err := strconv.Atoi(args[1])
 			if err != nil {
 				return err
 			}
 
-			cfg, err := nvmeof.DeleteVolume(context.Background(), nqn, volNr)
+			cfg, err := n.DeleteVolume(context.Background(), nqn, volNr)
 			if err != nil {
 				return err
 			}

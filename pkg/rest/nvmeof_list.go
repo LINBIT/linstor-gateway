@@ -5,15 +5,13 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/LINBIT/linstor-gateway/pkg/nvmeof"
 )
 
 func (s *server) NVMeoFList() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
 
-		cfgs, err := nvmeof.List(ctx)
+		cfgs, err := s.nvmeof.List(ctx)
 		if err != nil {
 			_, err := Errorf(http.StatusInternalServerError, writer, "nvmeof list failed: %v", err)
 			if err != nil {

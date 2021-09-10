@@ -21,7 +21,7 @@ func (s *server) NFSCreate() http.HandlerFunc {
 			return
 		}
 
-		result, err := nfs.Create(request.Context(), &rsc)
+		result, err := s.nfs.Create(request.Context(), &rsc)
 		if err != nil {
 			_, _ = Errorf(http.StatusBadRequest, writer, "failed to create nfs resource: %v", err)
 			return

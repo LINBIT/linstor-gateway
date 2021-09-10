@@ -23,7 +23,7 @@ func (s *server) ISCSIDelete(all bool) http.HandlerFunc {
 		}
 
 		if all {
-			err = iscsi.Delete(ctx, iqn)
+			err = s.iscsi.Delete(ctx, iqn)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "delete failed: %v", err)
 				return
@@ -35,7 +35,7 @@ func (s *server) ISCSIDelete(all bool) http.HandlerFunc {
 				return
 			}
 
-			oldCfg, err := iscsi.DeleteVolume(ctx, iqn, lun)
+			oldCfg, err := s.iscsi.DeleteVolume(ctx, iqn, lun)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "error deleting volume: %v", err)
 				return

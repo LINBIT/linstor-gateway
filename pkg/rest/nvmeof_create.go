@@ -20,7 +20,7 @@ func (s *server) NVMeoFCreate() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		result, err := nvmeof.Create(request.Context(), &rsc)
+		result, err := s.nvmeof.Create(request.Context(), &rsc)
 		if err != nil {
 			_, _ = Errorf(http.StatusBadRequest, writer, "failed to create nvmeof resource: %v", err)
 			return

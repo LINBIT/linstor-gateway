@@ -21,7 +21,7 @@ func (s *server) NVMeoFGet(all bool) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := nvmeof.Get(ctx, nqn)
+		cfg, err := s.nvmeof.Get(ctx, nqn)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to fetch resource status: %v", err)
 			return

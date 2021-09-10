@@ -21,7 +21,7 @@ func (s *server) ISCSICreate() http.HandlerFunc {
 			return
 		}
 
-		result, err := iscsi.Create(request.Context(), &rsc)
+		result, err := s.iscsi.Create(request.Context(), &rsc)
 		if err != nil {
 			_, _ = Errorf(http.StatusBadRequest, writer, "failed to create iscsi resource: %v", err)
 			return

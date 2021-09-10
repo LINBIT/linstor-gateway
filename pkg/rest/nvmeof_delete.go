@@ -22,7 +22,7 @@ func (s *server) NVMeoFDelete(all bool) func(http.ResponseWriter, *http.Request)
 		}
 
 		if all {
-			err = nvmeof.Delete(ctx, nqn)
+			err = s.nvmeof.Delete(ctx, nqn)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "nvmeof delete failed: %v", err)
 				return
@@ -34,7 +34,7 @@ func (s *server) NVMeoFDelete(all bool) func(http.ResponseWriter, *http.Request)
 				return
 			}
 
-			oldCfg, err := nvmeof.DeleteVolume(ctx, nqn, nsid)
+			oldCfg, err := s.nvmeof.DeleteVolume(ctx, nqn, nsid)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "error deleting volume: %v", err)
 				return

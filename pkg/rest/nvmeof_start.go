@@ -20,7 +20,7 @@ func (s *server) NVMeoFStart() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := nvmeof.Start(ctx, nqn)
+		cfg, err := s.nvmeof.Start(ctx, nqn)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to start resource: %v", err)
 			return

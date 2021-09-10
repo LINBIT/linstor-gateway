@@ -82,8 +82,12 @@ export.`,
 					},
 				},
 			}
+			n, err := nfs.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize nfs: %w", err)
+			}
 
-			_, err := nfs.Create(context.Background(), rsc)
+			_, err = n.Create(context.Background(), rsc)
 			if err != nil {
 				return err
 			}
@@ -128,7 +132,11 @@ and removing the LINSTOR resources.`,
 		Example: "linstor-gateway nfs delete --resource=example",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := nfs.Delete(context.Background(), resourceName)
+			n, err := nfs.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize nfs: %w", err)
+			}
+			err = n.Delete(context.Background(), resourceName)
 			if err != nil {
 				return err
 			}
@@ -155,7 +163,11 @@ about the existing LINSTOR resources and service status.`,
 		Example: "linstor-gateway nfs list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := nfs.List(context.Background())
+			n, err := nfs.New(controllers)
+			if err != nil {
+				return fmt.Errorf("failed to initialize nfs: %w", err)
+			}
+			list, err := n.List(context.Background())
 			if err != nil {
 				return err
 			}

@@ -11,12 +11,10 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func iscsiCommands() *cobra.Command {
-	var loglevel string
 
 	var rootCmd = &cobra.Command{
 		Use:     "iscsi",
@@ -26,17 +24,8 @@ func iscsiCommands() *cobra.Command {
 LINSTOR and drbd-reacor. Setting up LINSTOR, including storage pools and resource groups,
 as well as drbd-reactor is a prerequisite to use this tool.`,
 		Args: cobra.NoArgs,
-		// We could have our custom flag types, but this is really simple enough...
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			level, err := log.ParseLevel(loglevel)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.SetLevel(level)
-		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	rootCmd.DisableAutoGenTag = true
 
 	rootCmd.AddCommand(createISCSICommand())

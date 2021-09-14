@@ -9,7 +9,6 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
@@ -17,25 +16,14 @@ import (
 )
 
 func nvmeCommands() *cobra.Command {
-	var loglevel string
-
 	var rootCmd = &cobra.Command{
 		Use:     "nvme",
 		Version: version,
 		Short:   "Manages Highly-Available NVME targets",
 		Long:    `nvme manages highly available NVME targets by leveraging LINSTOR and DRBD.`,
 		Args:    cobra.NoArgs,
-		// We could have our custom flag types, but this is really simple enough...
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			level, err := log.ParseLevel(loglevel)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.SetLevel(level)
-		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	rootCmd.DisableAutoGenTag = true
 
 	rootCmd.AddCommand(listNVMECommand())

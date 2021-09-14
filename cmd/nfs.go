@@ -10,13 +10,10 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func nfsCommands() *cobra.Command {
-	var loglevel string
-
 	var rootCmd = &cobra.Command{
 		Use:     "nfs",
 		Version: version,
@@ -25,18 +22,8 @@ func nfsCommands() *cobra.Command {
 and drbd-reactor. Setting linstor including storage pools and resource groups
 as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
 		Args: cobra.NoArgs,
-		// We could have our custom flag types, but this is really simple enough...
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// TODO: regex most likely needs review
-			level, err := log.ParseLevel(loglevel)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.SetLevel(level)
-		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	rootCmd.DisableAutoGenTag = true
 
 	rootCmd.AddCommand(createNFSCommand())

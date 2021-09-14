@@ -183,7 +183,7 @@ func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
 		var rsc string
 		n, _ := fmt.Sscanf(cfg.ID, IDFormat, &rsc)
 		if n == 0 {
-			log.WithField("id", cfg.ID).Trace("not a nvme resource config, skipping")
+			log.WithField("id", cfg.ID).Trace("not an iscsi resource config, skipping")
 			continue
 		}
 

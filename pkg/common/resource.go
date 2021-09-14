@@ -56,6 +56,27 @@ func (l ResourceState) String() string {
 
 func (l ResourceState) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
 
+func (l *ResourceState) UnmarshalJSON(text []byte) error {
+	var raw string
+	err := json.Unmarshal(text, &raw)
+	if err != nil {
+		return err
+	}
+
+	switch raw {
+	case "OK":
+		*l = ResourceStateOK
+	case "Degraded":
+		*l = ResourceStateDegraded
+	case "Bad":
+		*l = ResourceStateBad
+	default:
+		return errors.New(fmt.Sprintf("unknown resource state: %s", l))
+	}
+
+	return nil
+}
+
 type ServiceState int
 
 const (

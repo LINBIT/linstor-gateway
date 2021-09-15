@@ -31,14 +31,16 @@ linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.1
   -p, --password string         Set the password (required)
       --portals string          Set up portals, if unset, the service ip and default port
   -g, --resource-group string   Set the LINSTOR resource-group (default "DfltRscGrp")
-      --size unit               Set a size (e.g, 1TiB) (default 1GiB)
+      --size unit               Set a size (e.g, 1TiB) (default 1G)
   -u, --username string         Set the username (required)
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --loglevel string   Set the log level (as defined by logrus) (default "info")
+      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
+      --loglevel string       Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

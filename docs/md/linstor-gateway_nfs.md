@@ -11,8 +11,15 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.
 ### Options
 
 ```
-  -h, --help              help for nfs
-      --loglevel string   Set the log level (as defined by logrus) (default "info")
+  -h, --help   help for nfs
+```
+
+### Options inherited from parent commands
+
+```
+      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
+      --loglevel string       Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

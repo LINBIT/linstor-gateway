@@ -13,7 +13,7 @@ Summary: LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS
 %global tarball_version %(echo "%{version}" | sed -e 's/~rc/-rc/' -e 's/~alpha/-alpha/')
 
 URL: https://www.github.com/LINBIT/linstor-gateway
-Source: %{name}-%{version}.tar.gz
+Source: %{name}-%{tarball_version}.tar.gz
 BuildRoot: %{buildroot}
 BuildRequires: %{firewall_macros_package}
 License: GPLv3+

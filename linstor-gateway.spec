@@ -23,7 +23,7 @@ ExclusiveOS: linux
 LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{tarball_version}
 
 %build
 

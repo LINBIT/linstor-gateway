@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.9.0-rc.2 - 2021-09-15
+* Some minor fixes over rc1
+* The list of controllers is now parsed from a config file (additionally to the
+  command line flag)
+
 ## 0.9.0-rc.1 - 2021-09-01
 * Change high-availibility backend from Pacemaker to LINBIT's own drbd-reactor
 * Add support for NVME-oF targets

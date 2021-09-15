@@ -29,7 +29,7 @@ LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe
 
 %install
 mkdir -p %{buildroot}/%{_sbindir}/
-cp %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/%{_sbindir}/
+cp %{_builddir}/%{name}-%{tarball_version}/%{name} %{buildroot}/%{_sbindir}/
 install -D -m 644 %{name}.service %{buildroot}%{_unitdir}/%{name}.service
 install -D -m 644 %{name}.xml %{buildroot}%{_firewalldir}/services/%{name}.xml
 

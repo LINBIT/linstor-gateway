@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.9.0-rc.3 - 2021-09-23
+* Minor fixes over rc2
+
 ## 0.9.0-rc.2 - 2021-09-15
 * Some minor fixes over rc1
 * The list of controllers is now parsed from a config file (additionally to the

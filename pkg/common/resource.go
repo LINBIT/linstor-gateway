@@ -70,8 +70,10 @@ func (l *ResourceState) UnmarshalJSON(text []byte) error {
 		*l = ResourceStateDegraded
 	case "Bad":
 		*l = ResourceStateBad
+	case "Unknown":
+		*l = Unknown
 	default:
-		return errors.New(fmt.Sprintf("unknown resource state: %s", l))
+		return errors.New(fmt.Sprintf("unknown resource state: %s", string(text)))
 	}
 
 	return nil

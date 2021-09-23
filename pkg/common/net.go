@@ -33,7 +33,7 @@ func (s *IpCidr) Set(raw string) error {
 	return nil
 }
 
-func (s *IpCidr) MarshalJSON() ([]byte, error) {
+func (s IpCidr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.IPNet.String())
 }
 

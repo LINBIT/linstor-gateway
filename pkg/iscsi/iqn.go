@@ -70,11 +70,11 @@ func (i *Iqn) UnmarshalJSON(b []byte) error {
 	return i.UnmarshalText([]byte(raw))
 }
 
-func (i *Iqn) MarshalText() ([]byte, error) {
+func (i Iqn) MarshalText() ([]byte, error) {
 	return []byte(i.String()), nil
 }
 
-func (i *Iqn) MarshalJSON() ([]byte, error) {
+func (i Iqn) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.String())
 }
 

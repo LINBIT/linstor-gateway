@@ -48,11 +48,11 @@ func (n *Nqn) UnmarshalJSON(text []byte) error {
 	return n.UnmarshalText([]byte(s))
 }
 
-func (n *Nqn) MarshalText() ([]byte, error) {
+func (n Nqn) MarshalText() ([]byte, error) {
 	return []byte(n.String()), nil
 }
 
-func (n *Nqn) MarshalJSON() ([]byte, error) {
+func (n Nqn) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.String())
 }
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.9.0 - 2021-09-28
+* Minor fixes over rc3
+
 ## 0.9.0-rc.3 - 2021-09-23
 * Minor fixes over rc2
 

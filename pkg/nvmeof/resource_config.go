@@ -165,7 +165,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		})
 	}
 
-	agents = append(agents, reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-port", Name: "port", Attributes: map[string]string{"nqns": r.NQN.String(), "addr": r.ServiceIP.String(), "type": "tcp"}})
+	agents = append(agents, reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-port", Name: "port", Attributes: map[string]string{"nqns": r.NQN.String(), "addr": r.ServiceIP.IP().String(), "type": "tcp"}})
 
 	return &reactor.PromoterConfig{
 		ID: r.ID(),

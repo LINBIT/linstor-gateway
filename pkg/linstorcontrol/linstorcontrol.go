@@ -123,11 +123,21 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 	logger.Trace("ensure resource definition exists")
 
 	props := map[string]string{}
-	if res.FileSystem == "" {
-		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "no"
-	} else {
+
+	// XXX: currently, LINSTOR requires auto-promote=yes when a file system is
+	// to be created because it does not try to promote the resource itself.
+	// So we fix that up here: set auto-promote to "yes" initially then change
+	// it back to "no" once the resource is created.
+	// This will change in a future version, remove this hack then.
+	if res.FileSystem != "" {
 		props[apiconsts.NamespcFilesystem+"/Type"] = "ext4"
+		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "yes"
+	} else {
+		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "no"
 	}
+
+	props[apiconsts.NamespcDrbdResourceOptions+"/quorum"] = "majority"
+	props[apiconsts.NamespcDrbdResourceOptions+"/on-no-quorum"] = "io-error"
 
 	err = l.ResourceDefinitions.Create(ctx, client.ResourceDefinitionCreate{
 		ResourceDefinition: client.ResourceDefinition{
@@ -159,6 +169,18 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 	err = l.Resources.Autoplace(ctx, res.Name, client.AutoPlaceRequest{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to autoplace resources: %w", err)
+	}
+
+	// XXX: remove this when LINSTOR supports this (see comment above).
+	if res.FileSystem != "" {
+		err = l.ResourceDefinitions.Modify(ctx, res.Name, client.GenericPropsModify{
+			OverrideProps: map[string]string{
+				apiconsts.NamespcDrbdResourceOptions+"/auto-promote": "no",
+			},
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update properties of resource definition '%s': %w", res.Name, err)
+		}
 	}
 
 	logger.Trace("fetch existing resource definition")

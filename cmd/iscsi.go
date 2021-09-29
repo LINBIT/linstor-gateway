@@ -88,8 +88,8 @@ high availability primitives.`,
 	createCmd.Flags().VarP(&iqn, "iqn", "i", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique)")
 	createCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN")
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
-	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username (required)")
-	createCmd.Flags().StringVarP(&password, "password", "p", "", "Set the password (required)")
+	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username to use for CHAP authentication")
+	createCmd.Flags().StringVarP(&password, "password", "p", "", "Set the password to use for CHAP authentication")
 
 	units := unit.DefaultUnits
 	units["KiB"] = units["K"]

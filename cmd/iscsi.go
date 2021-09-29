@@ -21,7 +21,7 @@ func iscsiCommands() *cobra.Command {
 		Version: version,
 		Short:   "Manages Highly-Available iSCSI targets",
 		Long: `linstor-gateway iscsi manages highly available iSCSI targets by leveraging
-LINSTOR and drbd-reacor. Setting up LINSTOR, including storage pools and resource groups,
+LINSTOR and drbd-reactor. Setting up LINSTOR, including storage pools and resource groups,
 as well as drbd-reactor is a prerequisite to use this tool.`,
 		Args: cobra.NoArgs,
 	}
@@ -55,7 +55,7 @@ At first it creates a new resource within the LINSTOR system, using the
 specified resource group. The name of the linstor resources is derived
 from the IQN's World Wide Name, which must be unique'.
 After that it creates a configuration for drbd-reactor to manage the
-high availabilitiy primitives.`,
+high availability primitives.`,
 		Example: "linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 --username=foo --lun=1 --password=bar --resource-group=ssd_thin_2way --size=2G",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

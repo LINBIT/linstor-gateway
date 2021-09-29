@@ -5,7 +5,7 @@ Manages Highly-Available iSCSI targets
 ### Synopsis
 
 linstor-gateway iscsi manages highly available iSCSI targets by leveraging
-LINSTOR and drbd-reacor. Setting up LINSTOR, including storage pools and resource groups,
+LINSTOR and drbd-reactor. Setting up LINSTOR, including storage pools and resource groups,
 as well as drbd-reactor is a prerequisite to use this tool.
 
 ### Options

@@ -9,7 +9,7 @@ At first it creates a new resource within the LINSTOR system, using the
 specified resource group. The name of the linstor resources is derived
 from the IQN's World Wide Name, which must be unique'.
 After that it creates a configuration for drbd-reactor to manage the
-high availabilitiy primitives.
+high availability primitives.
 
 ```
 linstor-gateway iscsi create [flags]

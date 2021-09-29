@@ -29,7 +29,7 @@ type Error struct {
 	Message string `json:"message"`
 }
 
-// Errorf takes a StatusCode, a ResponswWriter and a format string.
+// Errorf takes a StatusCode, a ResponseWriter and a format string.
 // It sets up the REST response and writes it to the ResponseWriter
 // It also sets the according error code.
 func Errorf(code int, w http.ResponseWriter, format string, a ...interface{}) (n int, err error) {

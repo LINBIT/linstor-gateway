@@ -57,7 +57,7 @@ func (s *IpCidr) UnmarshalJSON(b []byte) error {
 func ServiceIPFromString(s string) (IpCidr, error) {
 	ip, ipnet, err := net.ParseCIDR(s)
 	if err != nil {
-		return IpCidr{}, fmt.Errorf("failed to parse serivce ip: %w", err)
+		return IpCidr{}, fmt.Errorf("failed to parse service ip: %w", err)
 	}
 
 	ipnet.IP = ip

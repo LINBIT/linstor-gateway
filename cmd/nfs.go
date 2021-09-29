@@ -18,7 +18,7 @@ func nfsCommands() *cobra.Command {
 		Use:     "nfs",
 		Version: version,
 		Short:   "Manages Highly-Available NFS exports",
-		Long: `linstor-gateway nfs manages higly available NFS exports by leveraging LINSTOR
+		Long: `linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
 and drbd-reactor. Setting linstor including storage pools and resource groups
 as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
 		Args: cobra.NoArgs,

@@ -1,12 +1,12 @@
 Source: linstor-gateway
 Section: admin
 Priority: optional
-Maintainer: Roland Kammerer <roland.kammerer@linbit.com>
+Maintainer: Christoph Böhmwalder <christoph.boehmwalder@linbit.com>
 Build-Depends: debhelper (>= 9)
 Standards-Version: 3.9.8
-Homepage: https://linbit.github.io/drbdtop
-#Vcs-Git: https://anonscm.debian.org/collab-maint/drbdtop.git
-#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/drbdtop.git
+Homepage: https://github.com/LINBIT/linstor-gateway
+Vcs-Git: https://github.com/LINBIT/linstor-gateway.git
+Vcs-Browser: https://github.com/LINBIT/linstor-gateway
 
 Package: linstor-gateway
 Architecture: amd64

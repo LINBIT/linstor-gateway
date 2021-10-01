@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
@@ -45,7 +46,8 @@ func createISCSICommand() *cobra.Command {
 	var lun int
 
 	var sz *unit.Value
-	var serviceIp common.IpCidr
+	var serviceIpStrings []string
+	var serviceIps []common.IpCidr
 
 	var createCmd = &cobra.Command{
 		Use:   "create",
@@ -58,6 +60,16 @@ After that it creates a configuration for drbd-reactor to manage the
 high availability primitives.`,
 		Example: "linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 --username=foo --lun=1 --password=bar --resource-group=ssd_thin_2way --size=2G",
 		Args:    cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			for _, str := range serviceIpStrings {
+				ip, err := common.ServiceIPFromString(str)
+				if err != nil {
+					return fmt.Errorf("failed to parse service IP '%s': %w", str, err)
+				}
+				serviceIps = append(serviceIps, ip)
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			i, err := iscsi.New(controllers)
@@ -69,7 +81,7 @@ high availability primitives.`,
 				IQN:       iqn,
 				Username:  username,
 				Password:  password,
-				ServiceIP: serviceIp,
+				ServiceIPs: serviceIps,
 				Volumes: []common.VolumeConfig{
 					{Number: lun, SizeKiB: uint64(sz.Value / unit.K)},
 				},
@@ -84,7 +96,7 @@ high availability primitives.`,
 		},
 	}
 
-	createCmd.Flags().Var(&serviceIp, "ip", "Set the service IP and netmask of the target")
+	createCmd.Flags().StringSliceVar(&serviceIpStrings, "ip", nil, "Set the service IP and netmask of the target. Can be supplied multiple times to create multiple portals")
 	createCmd.Flags().VarP(&iqn, "iqn", "i", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique)")
 	createCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN")
 	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
@@ -134,9 +146,13 @@ about the existing drbd-reactor and linstor parts.`,
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
 			for _, cfg := range cfgs {
+				serviceIpStrings := make([]string, len(cfg.ServiceIPs))
+				for i := range cfg.ServiceIPs {
+					serviceIpStrings[i] = cfg.ServiceIPs[i].String()
+				}
 				for _, vol := range cfg.Status.Volumes {
 					table.Rich(
-						[]string{cfg.IQN.String(), cfg.ServiceIP.String(), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
+						[]string{cfg.IQN.String(), strings.Join(serviceIpStrings, ", "), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 				}

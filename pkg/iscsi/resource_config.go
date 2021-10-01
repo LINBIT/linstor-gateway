@@ -25,19 +25,25 @@ type ResourceConfig struct {
 	Volumes           []common.VolumeConfig `json:"volumes"`
 	Username          string                `json:"username,omitempty"`
 	Password          string                `json:"password,omitempty"`
-	ServiceIP         common.IpCidr         `json:"service_ip"`
+	ServiceIPs        []common.IpCidr       `json:"service_ips"`
 	Status            common.ResourceStatus `json:"status"`
 }
 
-func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefinition, volumeDefinition []client.VolumeDefinition) (*ResourceConfig, error) {
+const (
+	agentTypePortblock   = "ocf:heartbeat:portblock"
+	agentTypeIPaddr2     = "ocf:heartbeat:IPaddr2"
+	agentTypeISCSITarget = "ocf:heartbeat:iSCSITarget"
+)
+
+const minAgentEntries = 4 // portblock, service_ip, target, portunblock
+
+func parsePromoterConfig(cfg *reactor.PromoterConfig) (*ResourceConfig, error) {
 	r := &ResourceConfig{}
 	var res string
 	n, err := fmt.Sscanf(cfg.ID, IDFormat, &res)
 	if n != 1 {
 		return nil, fmt.Errorf("failed to parse id into resource name: %w", err)
 	}
-
-	r.ResourceGroup = definition.ResourceGroupName
 
 	if len(cfg.Resources) != 1 {
 		return nil, errors.New(fmt.Sprintf("promoter config without exactly 1 resource (has %d)", len(cfg.Resources)))
@@ -48,57 +54,74 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 		rscCfg = v
 	}
 
-	if len(rscCfg.Start) < 4 {
-		return nil, errors.New(fmt.Sprintf("config has to few agent entries, expected at least 3, got %d", len(rscCfg.Start)))
+	if len(rscCfg.Start) < minAgentEntries {
+		return nil, errors.New(fmt.Sprintf("config has too few agent entries, expected at least %d, got %d",
+			minAgentEntries, len(rscCfg.Start)))
 	}
 
-	portBlock := &rscCfg.Start[0]
-	if portBlock.Type != "ocf:heartbeat:portblock" {
-		return nil, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:portblock' agent, got '%s' instead", portBlock.Type))
-	}
-
-	ipAgent := &rscCfg.Start[1]
-	if ipAgent.Type != "ocf:heartbeat:IPaddr2" {
-		return nil, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:IPaddr2' agent, got '%s' instead", ipAgent.Type))
-	}
-
-	ip := net.ParseIP(ipAgent.Attributes["ip"])
-	if ip == nil {
-		return nil, fmt.Errorf("malformed ip %s", ipAgent.Attributes["ip"])
-	}
-
-	prefixLength, err := strconv.Atoi(ipAgent.Attributes["cidr_netmask"])
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse service ip prefix")
-	}
-
-	r.ServiceIP = common.ServiceIPFromParts(ip, prefixLength)
-
-	targetAgent := &rscCfg.Start[2]
-	if targetAgent.Type != "ocf:heartbeat:iSCSITarget" {
-		return nil, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:iSCSITarget' agent, got '%s' instead", targetAgent.Type))
-	}
-
-	r.IQN, err = NewIqn(targetAgent.Attributes["iqn"])
-	if err != nil {
-		return nil, fmt.Errorf("got malformed iqn: %w", err)
-	}
-
-	r.Username = targetAgent.Attributes["incoming_username"]
-	r.Password = targetAgent.Attributes["incoming_password"]
-
-	rawAllowed := targetAgent.Attributes["allowed_initiators"]
-	if rawAllowed != "" {
-		for _, allowed := range strings.Split(rawAllowed, " ") {
-			iqn, err := NewIqn(allowed)
-			if err != nil {
-				return nil, fmt.Errorf("got malformed iqn %s for allowed initiators: %w", allowed, err)
+	var numPortblocks, numPortunblocks int
+	for _, agent := range rscCfg.Start {
+		switch agent.Type {
+		case agentTypePortblock:
+			switch agent.Attributes["action"] {
+			case "block":
+				numPortblocks++
+			case "unblock":
+				numPortunblocks++
 			}
-			r.AllowedInitiators = append(r.AllowedInitiators, iqn)
+		case agentTypeIPaddr2:
+			ip := net.ParseIP(agent.Attributes["ip"])
+			if ip == nil {
+				return nil, fmt.Errorf("malformed ip %s", agent.Attributes["ip"])
+			}
+
+			prefixLength, err := strconv.Atoi(agent.Attributes["cidr_netmask"])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse service ip prefix")
+			}
+
+			r.ServiceIPs = append(r.ServiceIPs, common.ServiceIPFromParts(ip, prefixLength))
+		case agentTypeISCSITarget:
+			r.IQN, err = NewIqn(agent.Attributes["iqn"])
+			if err != nil {
+				return nil, fmt.Errorf("got malformed iqn: %w", err)
+			}
+
+			r.Username = agent.Attributes["incoming_username"]
+			r.Password = agent.Attributes["incoming_password"]
+
+			rawAllowed := agent.Attributes["allowed_initiators"]
+			if rawAllowed != "" {
+				for _, allowed := range strings.Split(rawAllowed, " ") {
+					iqn, err := NewIqn(allowed)
+					if err != nil {
+						return nil, fmt.Errorf("got malformed iqn %s for allowed initiators: %w", allowed, err)
+					}
+					r.AllowedInitiators = append(r.AllowedInitiators, iqn)
+				}
+			}
 		}
 	}
 
-	for _, vd := range volumeDefinition {
+	if numPortblocks != numPortunblocks {
+		return nil, fmt.Errorf("malformed configuration: got a different number of portblock and portunblock agents")
+	}
+
+	if numPortblocks != len(r.ServiceIPs) {
+		return nil, fmt.Errorf("malformed configuration: got a different number of portblock agents than IPaddr2 agents")
+	}
+
+	return r, nil
+}
+
+func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefinition, volumeDefinitions []client.VolumeDefinition) (*ResourceConfig, error) {
+	r, err := parsePromoterConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse promoter config: %w", err)
+	}
+	r.ResourceGroup = definition.ResourceGroupName
+
+	for _, vd := range volumeDefinitions {
 		r.Volumes = append(r.Volumes, common.VolumeConfig{
 			Number:  int(vd.VolumeNumber),
 			SizeKiB: vd.SizeKib,
@@ -151,12 +174,8 @@ func (r *ResourceConfig) Valid() error {
 		return common.ValidationError("iscsi wwn string to short (min. 2)")
 	}
 
-	if r.ServiceIP.IP() == nil {
-		return common.ValidationError("missing service ip")
-	}
-
-	if r.ServiceIP.Mask == nil {
-		return common.ValidationError("missing service ip prefix length")
+	if len(r.ServiceIPs) == 0 {
+		return common.ValidationError("missing service ips")
 	}
 
 	sort.Slice(r.Volumes, func(i, j int) bool {
@@ -185,8 +204,10 @@ func (r *ResourceConfig) Matches(o *ResourceConfig) bool {
 		return false
 	}
 
-	if r.ServiceIP.String() != o.ServiceIP.String() {
-		return false
+	for i := range r.ServiceIPs {
+		if r.ServiceIPs[i].String() != o.ServiceIPs[i].String() {
+			return false
+		}
 	}
 
 	if r.ResourceGroup != o.ResourceGroup {
@@ -218,8 +239,12 @@ func (r *ResourceConfig) Matches(o *ResourceConfig) bool {
 	return true
 }
 
-func (r *ResourceConfig) portal() string {
-	return fmt.Sprintf("%s:%d", r.ServiceIP.IP(), DefaultISCSIPort)
+func (r *ResourceConfig) portals() string {
+	var portals []string
+	for _, ip := range r.ServiceIPs {
+		portals = append(portals, fmt.Sprintf("%s:%d", ip.IP(), DefaultISCSIPort))
+	}
+	return strings.Join(portals, " ")
 }
 
 func (r *ResourceConfig) ID() string {
@@ -236,19 +261,42 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		allowedInitiatorStrings = append(allowedInitiatorStrings, r.AllowedInitiators[i].String())
 	}
 
-	agents := []reactor.ResourceAgent{
-		{Type: "ocf:heartbeat:portblock", Name: "pblock", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "portno": strconv.Itoa(DefaultISCSIPort), "action": "block", "protocol": "tcp"}},
-		{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}},
-		{
-			Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{
-				"iqn":                r.IQN.String(),
-				"portals":            r.portal(),
-				"incoming_username":  r.Username,
-				"incoming_password":  r.Password,
-				"allowed_initiators": strings.Join(allowedInitiatorStrings, " "),
+	var agents []reactor.ResourceAgent
+	for i, ip := range r.ServiceIPs {
+		agents = append(agents, reactor.ResourceAgent{
+			Type: "ocf:heartbeat:portblock",
+			Name: fmt.Sprintf("pblock%d", i),
+			Attributes: map[string]string{
+				"ip":       ip.IP().String(),
+				"portno":   strconv.Itoa(DefaultISCSIPort),
+				"action":   "block",
+				"protocol": "tcp",
 			},
-		},
+		})
 	}
+
+	for i, ip := range r.ServiceIPs {
+		agents = append(agents, reactor.ResourceAgent{
+			Type: "ocf:heartbeat:IPaddr2",
+			Name: fmt.Sprintf("service_ip%d", i),
+			Attributes: map[string]string{
+				"ip":           ip.IP().String(),
+				"cidr_netmask": strconv.Itoa(ip.Prefix()),
+			},
+		})
+	}
+
+	agents = append(agents, reactor.ResourceAgent{
+		Type: "ocf:heartbeat:iSCSITarget",
+		Name: "target",
+		Attributes: map[string]string{
+			"iqn":                r.IQN.String(),
+			"portals":            r.portals(),
+			"incoming_username":  r.Username,
+			"incoming_password":  r.Password,
+			"allowed_initiators": strings.Join(allowedInitiatorStrings, " "),
+		},
+	})
 
 	for i, vol := range deployment[0].Volumes {
 		if int(vol.VolumeNumber) != r.Volumes[i].Number {
@@ -279,16 +327,18 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		})
 	}
 
-	agents = append(agents, reactor.ResourceAgent{
-		Type: "ocf:heartbeat:portblock",
-		Name: "portunblock",
-		Attributes: map[string]string{
-			"ip":       r.ServiceIP.IP().String(),
-			"portno":   strconv.Itoa(DefaultISCSIPort),
-			"action":   "unblock",
-			"protocol": "tcp",
-		},
-	})
+	for i, ip := range r.ServiceIPs {
+		agents = append(agents, reactor.ResourceAgent{
+			Type: "ocf:heartbeat:portblock",
+			Name: fmt.Sprintf("portunblock%d", i),
+			Attributes: map[string]string{
+				"ip":       ip.IP().String(),
+				"portno":   strconv.Itoa(DefaultISCSIPort),
+				"action":   "unblock",
+				"protocol": "tcp",
+			},
+		})
+	}
 
 	return &reactor.PromoterConfig{
 		ID: r.ID(),

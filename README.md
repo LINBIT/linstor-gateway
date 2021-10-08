@@ -42,6 +42,15 @@ where the export may be located:
 systemctl enable --now nfs-server
 ```
 
+## NVMe-oF
+
+For NVMe-oF targets, the `nvmet` kernel module needs to be loaded on all nodes
+where the export may be located:
+
+```
+modprobe nvmet
+```
+
 # Documentation
 Start by browsing the documentation for the [linstor-gateway](./docs/md/linstor-gateway.md)
 command line utility.

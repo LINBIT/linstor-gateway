@@ -12,7 +12,8 @@ with drbd-reactor are a prerequisite to use this tool.
    as well as a [resource group](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-linstor-resource-groups)
    for your data.
 2. Set up [drbd-reactor](https://github.com/LINBIT/drbd-reactor). The daemon
-   should be configured to reload automatically when the configuration changes.
+   should be configured to reload automatically when the configuration changes – follow
+   the steps from the [drbd-reactor README](https://github.com/LINBIT/drbd-reactor/#automatic-reload).
 3. LINSTOR Gateway is packaged as a single binary. Download one of the
    [releases](https://github.com/LINBIT/linstor-gateway/releases), put it
    into `/usr/local/bin`, and you are ready to go.
@@ -21,31 +22,25 @@ with drbd-reactor are a prerequisite to use this tool.
 
 ## iSCSI
 
-linstor-gateway uses Pacemaker's `ocf::heartbeat:iSCSITarget` resource agent for
-its iSCSI integration, which requires an iSCSI implementation to be installed.
+When an iSCSI target is created, LINSTOR Gateway requires an iSCSI
+implementation to be installed on all nodes where the target may run.
+
 Using `targetcli` is recommended.
+
+```
+dnf install targetcli
+# or
+apt install targetcli
+```
 
 ## NFS
 
-There are a few requirements for NFS as well.
-
-First, an NFS server needs to be started. The `nfsd` kernel module needs to be
-loaded and the user-space NFS process needs to be running. The easiest way to
-ensure that is to use
+For NFS exports, an NFS server must be installed and started on all nodes
+where the export may be located:
 
 ```
 systemctl enable --now nfs-server
 ```
-
-on all nodes.
-
-The resource group that is used for the linstor-nfs create command needs to have
-the `FileSystem/Type` attribute set. Configure this by doing
-```
-linstor resource-group set-property MyResourceGroup FileSystem/Type ext4
-```
-
-Note that currently only the `ext4` filesystem is supported.
 
 # Documentation
 Start by browsing the documentation for the [linstor-gateway](./docs/md/linstor-gateway.md)

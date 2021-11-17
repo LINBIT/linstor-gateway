@@ -42,7 +42,7 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 					{
 						ID: "with-resources",
 						Resources: map[string]reactor.PromoterResourceConfig{
-							"rsc1": {Start: nil, Runner: "shell", OnStopFailure: "log", StopServicesOnExit: true, TargetAs: "BindsTo"},
+							"rsc1": {Start: nil, Runner: "shell", OnDrbdDemoteFailure: "log", StopServicesOnExit: true, TargetAs: "BindsTo"},
 							"rsc2": {},
 						},
 					},
@@ -53,7 +53,7 @@ func TestReactorConfig_MarshalText(t *testing.T) {
   [promoter.resources]
     [promoter.resources.rsc1]
       runner = "shell"
-      on-stop-failure = "log"
+      on-drbd-demote-failure = "log"
       stop-services-on-exit = true
       target-as = "BindsTo"
     [promoter.resources.rsc2]

@@ -358,11 +358,11 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		ID: r.ID(),
 		Resources: map[string]reactor.PromoterResourceConfig{
 			r.Name: {
-				Runner:             "systemd",
-				Start:              agents,
-				StopServicesOnExit: true,
-				OnStopFailure:      "echo b > /proc/sysrq-trigger",
-				TargetAs:           "BindsTo",
+				Runner:              "systemd",
+				Start:               agents,
+				StopServicesOnExit:  true,
+				OnDrbdDemoteFailure: "reboot-immediate",
+				TargetAs:            "BindsTo",
 			},
 		},
 	}, nil

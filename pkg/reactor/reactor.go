@@ -59,11 +59,11 @@ func (p *PromoterConfig) DeployedResources(ctx context.Context, cli *client.Clie
 
 // PromoterResourceConfig is the configuration of a single promotable resource used by drbd-reactor's promoter.
 type PromoterResourceConfig struct {
-	Start              []ResourceAgent `toml:"start,omitempty"`
-	Runner             string          `toml:"runner,omitempty"`
-	OnStopFailure      string          `toml:"on-stop-failure,omitempty"`
-	StopServicesOnExit bool            `toml:"stop-services-on-exit,omitempty"`
-	TargetAs           string          `toml:"target-as,omitempty"`
+	Start               []ResourceAgent `toml:"start,omitempty"`
+	Runner              string          `toml:"runner,omitempty"`
+	OnDrbdDemoteFailure string          `toml:"on-drbd-demote-failure,omitempty"`
+	StopServicesOnExit  bool            `toml:"stop-services-on-exit,omitempty"`
+	TargetAs            string          `toml:"target-as,omitempty"`
 }
 
 // EnsureConfig ensures the given config is registered in LINSTOR and up-to-date.

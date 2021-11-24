@@ -25,7 +25,7 @@
 
 ## 0.9.0-rc.1 - 2021-09-01
 
-* Change high-availibility backend from Pacemaker to LINBIT's own drbd-reactor
+* Change high-availability backend from Pacemaker to LINBIT's own drbd-reactor
 * Add support for NVME-oF targets
 * Remove requirement for symlinking the binary: use "linstor-gateway iscsi" instead of "linstor-iscsi"
 * Improve CI testing (integration tests)

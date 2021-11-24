@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.10.0 - 2021-11-24
+
+* No changes over rc1
+
 ## 0.10.0-rc.1 - 2021-11-17
 
 * Change quorum options of created resource to be appropriate for drbd-reactor

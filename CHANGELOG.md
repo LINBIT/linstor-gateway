@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add a new `check-health` command that checks whether all dependencies and requirements are met for LINSTOR Gateway
+
 ## 0.10.0 - 2021-11-24
 
 * No changes over rc1

@@ -49,6 +49,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(completionCommand(rootCmd))
 	rootCmd.AddCommand(docsCommand(rootCmd))
+	rootCmd.AddCommand(checkHealthCommand())
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "/etc/linstor-gateway/linstor-gateway.toml", "Config file to load")
 	rootCmd.PersistentFlags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")

@@ -2,6 +2,13 @@ variables:
   BUILD_HELPERS_VERSION: 49fa9154fc0ef50be501a9fbe63d5359b8a594ec
   VIRTER_VERSION: v0.14.0
   VMSHED_VERSION: v0.12.1
+  # we have to change the way GitLab CI clones the repository.
+  # by default, it is shallow, which gives us a wrong commit count when
+  # we do `git rev-list --count origin/master` below.
+  GIT_DEPTH: 0
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: normal
+
 
 stages:
     - base-image
@@ -22,35 +29,51 @@ build:
       - linstor-gateway
     expire_in: 3 months
 
-package:
-    stage: package
-    image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
-    rules:
-      - if: $CI_MERGE_REQUEST_ID
-      - if: $CI_COMMIT_TAG
-    before_script:
-      - |
-        curl -sSL $LINBIT_REGISTRY_URL/repository/lbbuild/lbbuildctl-latest -o /usr/local/bin/lbbuildctl
-        chmod +x /usr/local/bin/lbbuildctl
-    script:
-      - |
-        TAG=$(echo $CI_COMMIT_TAG | tr -d 'v')
-        if [ -z "$TAG" ]; then
-            VERSION=0.0.0.$CI_COMMIT_SHA
-            dummy-release.sh linstor-gateway $VERSION 1 linstor-gateway.spec
-        else
-            VERSION=$TAG
-        fi
-        make VERSION=$VERSION FORCE=1 debrelease
-        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$VERSION.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+.setup-lbbuild:
+  before_script:
+    - . gitlab-utils.sh
+    - ci_prepare_tools
+    - ci_fetch_lbbuildctl
+    - |
+      gateway_build() {
+        local version="$1"
+        local release="$2"
+
+        set -x
+
+        dummy-release.sh linstor-gateway $version $release linstor-gateway.spec
+        make VERSION=$version FORCE=1 debrelease
+        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$version.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
         lbbuildctl build linstor-gateway --ci \
-          --arch amd64 -v "$VERSION" \
+          --arch amd64 -v "$version" \
           -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
           -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
           -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
           -d rhel8.0
-    dependencies:
-      - build
+      }
+
+package:
+  stage: package
+  extends: [ .setup-lbbuild ]
+  image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "master"
+  script:
+    - if [ -n "$CI_COMMIT_TAG" ]; then
+    -   VERSION=$(echo $CI_COMMIT_TAG | tr -d 'v')
+    -   RELEASE=1
+    - elif [ "$CI_COMMIT_BRANCH" = "master" ]; then
+    -   VERSION=0.0.0.latest
+    -   RELEASE=$(git rev-list --count "origin/$CI_COMMIT_BRANCH")
+    - else
+    -   VERSION=0.0.0.$CI_COMMIT_SHA
+    -   RELEASE=1
+    - fi
+    - gateway_build $VERSION $RELEASE
+  dependencies:
+    - build
 
 base-image:
   stage: base-image

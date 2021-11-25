@@ -2,3 +2,4 @@
 /linstor-iscsi
 /linstor-nfs
 *.tar.gz
+/tests-out/

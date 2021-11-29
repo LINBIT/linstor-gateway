@@ -108,7 +108,7 @@ func Default(controllers []string) (*Linstor, error) {
 }
 
 // EnsureResource creates or updates the given resource.
-func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.ResourceDefinition, []client.ResourceWithVolumes, error) {
+func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, []client.ResourceWithVolumes, error) {
 	logger := log.WithField("resource", res.Name)
 
 	logger.Trace("ensure resource group exists")
@@ -146,8 +146,10 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 			Props:             props,
 		},
 	})
-	if err != nil && !isErrAlreadyExists(err) {
-		return nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
+	if err != nil {
+		if (!mayExist && isErrAlreadyExists(err)) || !isErrAlreadyExists(err) {
+			return nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
+		}
 	}
 
 	for _, vol := range res.Volumes {

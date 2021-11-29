@@ -92,7 +92,7 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		Name:          rsc.IQN.WWN(),
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       rsc.Volumes,
-	})
+	}, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)
 	}
@@ -281,7 +281,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 			Name:          deployedCfg.IQN.WWN(),
 			ResourceGroup: deployedCfg.ResourceGroup,
 			Volumes:       deployedCfg.Volumes,
-		})
+		}, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to reconcile linstor resource: %w", err)
 		}

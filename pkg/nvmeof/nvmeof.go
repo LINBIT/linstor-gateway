@@ -92,7 +92,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 		Name:          rsc.NQN.Subsystem(),
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       rsc.Volumes,
-	})
+	}, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)
 	}
@@ -281,7 +281,7 @@ func (n *NVMeoF) AddVolume(ctx context.Context, nqn Nqn, volCfg *common.VolumeCo
 			Name:          deployedCfg.NQN.Subsystem(),
 			ResourceGroup: deployedCfg.ResourceGroup,
 			Volumes:       deployedCfg.Volumes,
-		})
+		}, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to reconcile linstor resource: %w", err)
 		}

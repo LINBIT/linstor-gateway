@@ -114,7 +114,7 @@ publish-docker:
     - shell
   script:
     - |
-      cd virter/docker
+      cd integration-tests
       docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest .
       docker push $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
 

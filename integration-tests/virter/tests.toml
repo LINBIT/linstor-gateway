@@ -9,3 +9,6 @@ vms = [3]
 
 [tests.nvme-create]
 vms = [3]
+
+[tests.healthcheck]
+vms = [1]

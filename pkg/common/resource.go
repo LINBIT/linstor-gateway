@@ -11,8 +11,9 @@ import (
 )
 
 type VolumeConfig struct {
-	Number  int    `json:"number"`
-	SizeKiB uint64 `json:"size_kib"`
+	Number     int    `json:"number"`
+	SizeKiB    uint64 `json:"size_kib"`
+	FileSystem string `json:"file_system,omitempty"`
 }
 
 type ResourceStatus struct {

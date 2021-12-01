@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/LINBIT/golinstor/client"
+	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
@@ -15,6 +16,7 @@ import (
 )
 
 const IDFormat = "nfs-%s"
+const clusterPrivateVolumeSizeKiB = 64 * 1024 // 64MiB
 
 type NFS struct {
 	cli *linstorcontrol.Linstor
@@ -61,6 +63,24 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
+	configs, _, err := reactor.ListConfigs(ctx, n.cli.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check for existing NFS configs: %w", err)
+	}
+
+	for _, c := range configs {
+		if c.ID == rsc.ID() {
+			continue
+		}
+		for _, r := range c.Resources {
+			for _, a := range r.Start {
+				if a.Type == "ocf:heartbeat:nfsserver" {
+					return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", c.ID)
+				}
+			}
+		}
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, rsc.Name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing config: %w", err)
@@ -78,6 +98,8 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		}
 
 		if !rsc.Matches(deployedCfg) {
+			log.Debugf("existing resource found that does not match config")
+			log.Debugf("diff: %s", cmp.Diff(deployedCfg, rsc))
 			return nil, errors.New("resource already exists with incompatible config")
 		}
 
@@ -86,9 +108,14 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return deployedCfg, nil
 	}
 
-	volumes := make([]common.VolumeConfig, len(rsc.Volumes))
+	volumes := make([]common.VolumeConfig, len(rsc.Volumes)+1) // +1 for the "cluster private" volume
+	volumes[0] = common.VolumeConfig{
+		Number:     0,
+		SizeKiB:    clusterPrivateVolumeSizeKiB,
+		FileSystem: "ext4",
+	}
 	for i := range rsc.Volumes {
-		volumes[i] = rsc.Volumes[i].VolumeConfig
+		volumes[i+1] = rsc.Volumes[i].VolumeConfig
 	}
 
 	resourceDefinition, deployment, err := n.cli.EnsureResource(ctx, linstorcontrol.Resource{
@@ -133,7 +160,7 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 
 	err = reactor.AttachConfig(ctx, n.cli.Client, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
+		return nil, fmt.Errorf("failed to attach reactor configuration: %w", err)
 	}
 
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

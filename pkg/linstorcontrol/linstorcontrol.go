@@ -153,10 +153,15 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 	for _, vol := range res.Volumes {
 		logger.WithField("volNr", vol.Number).Trace("ensure volume definition exists")
 
+		volProps := map[string]string{}
+		if vol.FileSystem != "" {
+			volProps[apiconsts.NamespcFilesystem+"/Type"] = vol.FileSystem
+		}
 		err := l.ResourceDefinitions.CreateVolumeDefinition(ctx, res.Name, client.VolumeDefinitionCreate{
 			VolumeDefinition: client.VolumeDefinition{
 				VolumeNumber: int32(vol.Number),
 				SizeKib:      vol.SizeKiB,
+				Props:        volProps,
 			},
 		})
 		if err != nil && !isErrAlreadyExists(err) {
@@ -175,7 +180,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource) (*client.Res
 	if res.FileSystem != "" {
 		err = l.ResourceDefinitions.Modify(ctx, res.Name, client.GenericPropsModify{
 			OverrideProps: map[string]string{
-				apiconsts.NamespcDrbdResourceOptions+"/auto-promote": "no",
+				apiconsts.NamespcDrbdResourceOptions + "/auto-promote": "no",
 			},
 		})
 		if err != nil {

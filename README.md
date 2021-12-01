@@ -20,36 +20,16 @@ with drbd-reactor are a prerequisite to use this tool.
 
 # Requirements
 
-## iSCSI
+LINSTOR Gateway provides a built-in health check that automatically tests
+whether all requirements are correctly met on the current host.
 
-When an iSCSI target is created, LINSTOR Gateway requires an iSCSI
-implementation to be installed on all nodes where the target may run.
-
-Using `targetcli` is recommended.
+Simply execute
 
 ```
-dnf install targetcli
-# or
-apt install targetcli
+linstor-gateway check-health
 ```
 
-## NFS
-
-For NFS exports, an NFS server must be installed and started on all nodes
-where the export may be located:
-
-```
-systemctl enable --now nfs-server
-```
-
-## NVMe-oF
-
-For NVMe-oF targets, the `nvmet` kernel module needs to be loaded on all nodes
-where the export may be located:
-
-```
-modprobe nvmet
-```
+and follow any suggestions that may come up.
 
 # Documentation
 Start by browsing the documentation for the [linstor-gateway](./docs/md/linstor-gateway.md)

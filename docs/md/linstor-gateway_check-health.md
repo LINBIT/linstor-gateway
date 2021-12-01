@@ -1,19 +1,19 @@
-## linstor-gateway version
+## linstor-gateway check-health
 
-Print version information of LINSTOR Gateway
+Check if all requirements and dependencies are met on the current system
 
 ### Synopsis
 
-Print version information of LINSTOR Gateway
+Check if all requirements and dependencies are met on the current system
 
 ```
-linstor-gateway version [flags]
+linstor-gateway check-health [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for version
+  -h, --help   help for check-health
 ```
 
 ### Options inherited from parent commands

@@ -25,13 +25,13 @@ linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.1
 
 ```
   -h, --help                    help for create
-      --ip ip-cidr              Set the service IP and netmask of the target
+      --ip strings              Set the service IP and netmask of the target. Can be supplied multiple times to create multiple portals
   -i, --iqn iqn                 Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (default :)
   -l, --lun int                 Set the LUN (default 1)
   -p, --password string         Set the password to use for CHAP authentication
       --portals string          Set up portals, if unset, the service ip and default port
   -g, --resource-group string   Set the LINSTOR resource-group (default "DfltRscGrp")
-      --size unit               Set a size (e.g, 1TiB) (default 1G)
+      --size unit               Set a size (e.g, 1TiB) (default 1GiB)
   -u, --username string         Set the username to use for CHAP authentication
 ```
 

@@ -60,6 +60,26 @@ func (c *checkStartedAndEnabled) format(err error) string {
 	return b.String()
 }
 
+type checkNotStarted struct {
+	service string
+}
+
+func (c *checkNotStarted) check() error {
+	err := unitStartedAndEnabled(c.service)
+	if err != nil {
+		return nil
+	}
+	return fmt.Errorf("is started")
+}
+
+func (c *checkNotStarted) format(_ error) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "    %s Service %s is started, but it is not supposed to be.\n", color.RedString("✗"), bold(c.service))
+	fmt.Fprintf(&b, "      This systemd service conflicts with LINSTOR Gateway.\n")
+	fmt.Fprintf(&b, "      Execute %s to disable and stop the service.\n", bold("systemctl disable --now %s", c.service))
+	return b.String()
+}
+
 type checkFileExists struct {
 	filename    string
 	packageName string

@@ -52,10 +52,10 @@
   tags:
     - testimage
 
-- name: Enable nfs server
+- name: Disable nfs server
   service:
     name: nfs-server
-    state: started
-    enabled: yes
+    state: stopped
+    enabled: no
   tags:
     - preload

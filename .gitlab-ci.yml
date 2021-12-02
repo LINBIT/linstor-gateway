@@ -97,14 +97,9 @@ base-image:
       ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
     - |
       virter image rm gateway-base-image
-      virter image build centos-8 \
-        --provision virter/provision-base.toml \
-        --set values.DRBDRepoBaseURL=$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/drbd-9/x86_64 \
-        --set values.PacemakerRepoBaseURL=$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/pacemaker-2/x86_64 \
-        --set values.CIRepoBaseURL=$LINBIT_REGISTRY_URL/repository/rhel8 \
-        gateway-base-image
-      virter image push gateway-base-image $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8
-      virter image rm gateway-base-image
+      cd integration-tests
+      make BASE_IMAGE=$LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8 base_image
+      virter image push $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8
 
 publish-docker:
   stage: package
@@ -115,8 +110,8 @@ publish-docker:
   script:
     - |
       cd integration-tests
-      docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest .
-      docker push $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
+      docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA .
+      docker push $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA
 
 test:
   stage: test
@@ -147,16 +142,10 @@ test-e2e:
       ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
       ci_fetch_binary vmshed vmshed-$VMSHED_VERSION https://github.com/LINBIT/vmshed/releases/download/$VMSHED_VERSION/vmshed-linux-amd64
     - virter image pull centos-8-gateway $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:centos-8
+    - docker pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
     - |
-      docker pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
-      vmshed                                                                    \
-        --out-dir "$(readlink -f tests-out)"                                    \
-        --startvm 20                                                            \
-        --nvms 12                                                               \
-        --vms virter/vms.toml                                                   \
-        --tests virter/tests.toml                                               \
-        --set values.TestSuiteImage=$LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest \
-        --set values.LinstorGatewayVersion=0.0.0.$CI_COMMIT_SHA
+      cd integration-tests
+      make LINSTOR_GATEWAY_VERSION=0.0.0.$CI_COMMIT_SHA TEST_SUITE_IMAGE=$LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA run
   needs:
     - package
     - publish-docker

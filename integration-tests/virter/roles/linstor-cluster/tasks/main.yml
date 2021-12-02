@@ -104,6 +104,17 @@
   tags:
     - preload
 
+- name: Configure satellite
+  copy:
+    src: linstor_satellite.toml
+    dest: /etc/linstor/linstor_satellite.toml
+    owner: root
+    mode: 0644
+  notify:
+    - Restart satellite
+  tags:
+    - preload
+
 - name: Enable satellite
   service:
     name: linstor-satellite

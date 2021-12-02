@@ -41,6 +41,7 @@
   yum:
     pkg:
       - nvme-cli
+      - nvmetcli
   tags:
     - preload
 

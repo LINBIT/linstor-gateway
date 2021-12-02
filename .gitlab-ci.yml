@@ -88,6 +88,7 @@ base-image:
   # avoid blocking the pipeline with a manual job
   allow_failure: true
   script:
+    - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
     - |
       curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
       mv build-helpers-* build-helpers
@@ -108,6 +109,7 @@ publish-docker:
   tags:
     - shell
   script:
+    - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
     - |
       cd integration-tests
       docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA .
@@ -133,6 +135,7 @@ test-e2e:
   tags:
     - libvirt
   script:
+    - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
     - |
       curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN https://gitlab.at.linbit.com/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
       mv build-helpers-* build-helpers

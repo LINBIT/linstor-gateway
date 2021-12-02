@@ -2,6 +2,7 @@
 LinstorGatewayVersion = "*"
 LinstorDevicePath = "/dev/sda"
 TestSuiteImage = "linstor-gateway-e2e"
+OutDir = ""
 
 [[steps]]
 [steps.docker]
@@ -20,3 +21,6 @@ ANSIBLE_PIPELINING="yes"
 [[steps]]
 [steps.docker]
 image = "{{.TestSuiteImage}}"
+[steps.docker.copy]
+source = "/log"
+dest = "{{.OutDir}}"

@@ -14,5 +14,4 @@ for target in $sorted_targets; do
 	nodes+=( "$host" )
 done
 
-tests/${TEST_NAME}.py ${nodes[@]}
-
+tests/${TEST_NAME}.py --logdir /log ${nodes[@]}

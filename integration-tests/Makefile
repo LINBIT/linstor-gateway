@@ -1,17 +1,19 @@
 TEST_SUITE_IMAGE ?= linstor-gateway-e2e:latest
 BASE_IMAGE ?= linstor-gateway-tests/base:centos-8
 LINSTOR_GATEWAY_VERSION ?= 0.0.0.$$CI_COMMIT_SHA
+TORUN ?= all
 
 run:
 	mkdir -p tests-out
 	vmshed																		\
-            --out-dir "$(shell readlink -f tests-out)"                          \
-            --startvm 20                                                        \
-            --nvms 12                                                           \
-            --vms virter/vms.toml                                               \
-            --tests virter/tests.toml                                           \
-            --set values.TestSuiteImage=$(TEST_SUITE_IMAGE) \
-            --set values.LinstorGatewayVersion=$(LINSTOR_GATEWAY_VERSION)
+			--out-dir "$(shell readlink -f tests-out)"                          \
+			--startvm 20                                                        \
+			--nvms 12                                                           \
+			--vms virter/vms.toml                                               \
+			--tests virter/tests.toml                                           \
+			--set values.TestSuiteImage=$(TEST_SUITE_IMAGE) 					\
+			--torun $(TORUN) \
+			--set values.LinstorGatewayVersion=$(LINSTOR_GATEWAY_VERSION)
 
 base_image:
 	virter image build centos-8 \

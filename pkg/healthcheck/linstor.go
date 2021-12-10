@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const satelliteConfigFile = "/etc/linstor/linstor_satellite.toml"
+
 type checkLinstor struct {
 	controllers []string
 }
@@ -46,7 +48,7 @@ type checkFileWhitelist struct {
 }
 
 func (c *checkFileWhitelist) check() error {
-	f, err := os.Open("/etc/linstor/linstor_satellite.toml")
+	f, err := os.Open(satelliteConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
@@ -75,6 +77,9 @@ func (c *checkFileWhitelist) format(err error) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "    %s The LINSTOR satellite is not configured correctly on this node\n", color.RedString("✗"))
 	fmt.Fprintf(&b, "      %s\n", err.Error())
-	fmt.Fprintf(&b, "      Whitelist the correct file paths\n")
+	fmt.Fprintf(&b, "      Edit the LINSTOR satellite configuration file (%s) to include the following:\n\n", bold(satelliteConfigFile))
+	fmt.Fprintf(&b, "      [files]\n")
+	fmt.Fprintf(&b, `        allowExtFiles = ["/etc/systemd/system", "/etc/systemd/system/linstor-satellite.d", "/etc/drbd-reactor.d"]`+"\n\n")
+	fmt.Fprintf(&b, "      and execute %s.\n", bold("systemctl restart linstor-satellite.service"))
 	return b.String()
 }

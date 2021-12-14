@@ -57,6 +57,40 @@ func (r *ResourceConfig) ID() string {
 	return fmt.Sprintf(IDFormat, r.NQN.Subsystem())
 }
 
+func parseIP(startEntries []reactor.StartEntry, index int) (common.IpCidr, error) {
+	ipAgent, ok := startEntries[index].(*reactor.ResourceAgent)
+	if !ok {
+		return common.IpCidr{}, fmt.Errorf("expected a resource agent at index %d, got a systemd service", index)
+	}
+	if ipAgent.Type != "ocf:heartbeat:IPaddr2" {
+		return common.IpCidr{}, fmt.Errorf("expected 'ocf:heartbeat:IPaddr2' agent, got '%s' instead", ipAgent.Type)
+	}
+
+	ip := net.ParseIP(ipAgent.Attributes["ip"])
+	if ip == nil {
+		return common.IpCidr{}, fmt.Errorf("malformed ip %s", ipAgent.Attributes["ip"])
+	}
+
+	prefixLength, err := strconv.Atoi(ipAgent.Attributes["cidr_netmask"])
+	if err != nil {
+		return common.IpCidr{}, fmt.Errorf("failed to parse service ip prefix")
+	}
+
+	return common.ServiceIPFromParts(ip, prefixLength), nil
+}
+
+func parseNQN(startEntries []reactor.StartEntry, index int) (Nqn, error) {
+	subsysAgent, ok := startEntries[index].(*reactor.ResourceAgent)
+	if !ok {
+		return Nqn{}, fmt.Errorf("expected a resource agent at index %d, got a systemd service", index)
+	}
+	if subsysAgent.Type != "ocf:heartbeat:nvmet-subsystem" {
+		return Nqn{}, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:nvmet-subsystem' agent, got '%s' instead", subsysAgent.Type))
+	}
+
+	return NewNqn(subsysAgent.Attributes["nqn"])
+}
+
 func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefinition, volumeDefinition []client.VolumeDefinition) (*ResourceConfig, error) {
 	r := &ResourceConfig{}
 	var nqn string
@@ -80,33 +114,15 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 		return nil, errors.New(fmt.Sprintf("config has to few agent entries, expected at least 3, got %d", len(rscCfg.Start)))
 	}
 
-	ipAgent := &rscCfg.Start[0]
-	if ipAgent.Type != "ocf:heartbeat:IPaddr2" {
-		return nil, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:IPaddr2' agent, got '%s' instead", ipAgent.Type))
-	}
-
-	ip := net.ParseIP(ipAgent.Attributes["ip"])
-	if ip == nil {
-		return nil, fmt.Errorf("malformed ip %s", ipAgent.Attributes["ip"])
-	}
-
-	prefixLength, err := strconv.Atoi(ipAgent.Attributes["cidr_netmask"])
+	r.ServiceIP, err = parseIP(rscCfg.Start, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse service ip prefix")
+		return nil, fmt.Errorf("failed to parse service IP: %w", err)
 	}
 
-	r.ServiceIP = common.ServiceIPFromParts(ip, prefixLength)
-
-	subsysAgent := &rscCfg.Start[1]
-	if subsysAgent.Type != "ocf:heartbeat:nvmet-subsystem" {
-		return nil, errors.New(fmt.Sprintf("expected 'ocf:heartbeat:nvmet-subsystem' agent, got '%s' instead", subsysAgent.Type))
-	}
-
-	r.NQN, err = NewNqn(subsysAgent.Attributes["nqn"])
+	r.NQN, err = parseNQN(rscCfg.Start, 1)
 	if err != nil {
-		return nil, fmt.Errorf("got malformed nqn: %w", err)
+		return nil, fmt.Errorf("failed to parse NQN: %w", err)
 	}
-
 	for _, vd := range volumeDefinition {
 		r.Volumes = append(r.Volumes, common.VolumeConfig{
 			Number:  int(vd.VolumeNumber),
@@ -127,9 +143,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 
 	uuidNS := uuid.NewSHA1(UUIDNVMeoF, []byte(deployment[0].Uuid))
 
-	agents := []reactor.ResourceAgent{
-		{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}},
-		{Type: "ocf:heartbeat:nvmet-subsystem", Name: "subsys", Attributes: map[string]string{"nqn": r.NQN.String(), "serial": serial}},
+	agents := []reactor.StartEntry{
+		&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}},
+		&reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-subsystem", Name: "subsys", Attributes: map[string]string{"nqn": r.NQN.String(), "serial": serial}},
 	}
 
 	for i, vol := range deployment[0].Volumes {
@@ -151,7 +167,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			}
 		}
 
-		agents = append(agents, reactor.ResourceAgent{
+		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:nvmet-namespace",
 			Name: fmt.Sprintf("ns_%d", vol.VolumeNumber),
 			Attributes: map[string]string{
@@ -165,7 +181,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		})
 	}
 
-	agents = append(agents, reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-port", Name: "port", Attributes: map[string]string{"nqns": r.NQN.String(), "addr": r.ServiceIP.IP().String(), "type": "tcp"}})
+	agents = append(agents, &reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-port", Name: "port", Attributes: map[string]string{"nqns": r.NQN.String(), "addr": r.ServiceIP.IP().String(), "type": "tcp"}})
 
 	return &reactor.PromoterConfig{
 		ID: r.ID(),

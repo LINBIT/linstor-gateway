@@ -60,46 +60,51 @@ func parsePromoterConfig(cfg *reactor.PromoterConfig) (*ResourceConfig, error) {
 	}
 
 	var numPortblocks, numPortunblocks int
-	for _, agent := range rscCfg.Start {
-		switch agent.Type {
-		case agentTypePortblock:
-			switch agent.Attributes["action"] {
-			case "block":
-				numPortblocks++
-			case "unblock":
-				numPortunblocks++
-			}
-		case agentTypeIPaddr2:
-			ip := net.ParseIP(agent.Attributes["ip"])
-			if ip == nil {
-				return nil, fmt.Errorf("malformed ip %s", agent.Attributes["ip"])
-			}
+	for _, entry := range rscCfg.Start {
+		switch agent := entry.(type) {
+		case *reactor.ResourceAgent:
+			switch agent.Type {
+			case agentTypePortblock:
+				switch agent.Attributes["action"] {
+				case "block":
+					numPortblocks++
+				case "unblock":
+					numPortunblocks++
+				}
+			case agentTypeIPaddr2:
+				ip := net.ParseIP(agent.Attributes["ip"])
+				if ip == nil {
+					return nil, fmt.Errorf("malformed ip %s", agent.Attributes["ip"])
+				}
 
-			prefixLength, err := strconv.Atoi(agent.Attributes["cidr_netmask"])
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse service ip prefix")
-			}
+				prefixLength, err := strconv.Atoi(agent.Attributes["cidr_netmask"])
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse service ip prefix")
+				}
 
-			r.ServiceIPs = append(r.ServiceIPs, common.ServiceIPFromParts(ip, prefixLength))
-		case agentTypeISCSITarget:
-			r.IQN, err = NewIqn(agent.Attributes["iqn"])
-			if err != nil {
-				return nil, fmt.Errorf("got malformed iqn: %w", err)
-			}
+				r.ServiceIPs = append(r.ServiceIPs, common.ServiceIPFromParts(ip, prefixLength))
+			case agentTypeISCSITarget:
+				r.IQN, err = NewIqn(agent.Attributes["iqn"])
+				if err != nil {
+					return nil, fmt.Errorf("got malformed iqn: %w", err)
+				}
 
-			r.Username = agent.Attributes["incoming_username"]
-			r.Password = agent.Attributes["incoming_password"]
+				r.Username = agent.Attributes["incoming_username"]
+				r.Password = agent.Attributes["incoming_password"]
 
-			rawAllowed := agent.Attributes["allowed_initiators"]
-			if rawAllowed != "" {
-				for _, allowed := range strings.Split(rawAllowed, " ") {
-					iqn, err := NewIqn(allowed)
-					if err != nil {
-						return nil, fmt.Errorf("got malformed iqn %s for allowed initiators: %w", allowed, err)
+				rawAllowed := agent.Attributes["allowed_initiators"]
+				if rawAllowed != "" {
+					for _, allowed := range strings.Split(rawAllowed, " ") {
+						iqn, err := NewIqn(allowed)
+						if err != nil {
+							return nil, fmt.Errorf("got malformed iqn %s for allowed initiators: %w", allowed, err)
+						}
+						r.AllowedInitiators = append(r.AllowedInitiators, iqn)
 					}
-					r.AllowedInitiators = append(r.AllowedInitiators, iqn)
 				}
 			}
+		case *reactor.SystemdService:
+			// ignore systemd services for now
 		}
 	}
 
@@ -261,9 +266,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		allowedInitiatorStrings = append(allowedInitiatorStrings, r.AllowedInitiators[i].String())
 	}
 
-	var agents []reactor.ResourceAgent
+	var agents []reactor.StartEntry
 	for i, ip := range r.ServiceIPs {
-		agents = append(agents, reactor.ResourceAgent{
+		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:portblock",
 			Name: fmt.Sprintf("pblock%d", i),
 			Attributes: map[string]string{
@@ -276,7 +281,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	for i, ip := range r.ServiceIPs {
-		agents = append(agents, reactor.ResourceAgent{
+		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:IPaddr2",
 			Name: fmt.Sprintf("service_ip%d", i),
 			Attributes: map[string]string{
@@ -286,7 +291,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		})
 	}
 
-	agents = append(agents, reactor.ResourceAgent{
+	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:iSCSITarget",
 		Name: "target",
 		Attributes: map[string]string{
@@ -315,7 +320,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			}
 		}
 
-		agents = append(agents, reactor.ResourceAgent{
+		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:iSCSILogicalUnit",
 			Name: fmt.Sprintf("lu%d", vol.VolumeNumber),
 			Attributes: map[string]string{
@@ -328,7 +333,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	for i, ip := range r.ServiceIPs {
-		agents = append(agents, reactor.ResourceAgent{
+		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:portblock",
 			Name: fmt.Sprintf("portunblock%d", i),
 			Attributes: map[string]string{

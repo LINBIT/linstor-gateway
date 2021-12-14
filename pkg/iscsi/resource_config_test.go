@@ -30,12 +30,12 @@ func TestParsePromoterConfig(t *testing.T) {
 				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
-						Start: []reactor.ResourceAgent{
-							{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
-							{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
-							{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
 						},
 					},
 				},
@@ -66,8 +66,8 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "too few agent entries",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
-				Resources: map[string]reactor.PromoterResourceConfig{"target1": {Start: []reactor.ResourceAgent{}}},
+				ID:        "iscsi-target1",
+				Resources: map[string]reactor.PromoterResourceConfig{"target1": {Start: []reactor.StartEntry{}}},
 			},
 			wantErr: true,
 		},
@@ -77,11 +77,11 @@ func TestParsePromoterConfig(t *testing.T) {
 				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
-						Start: []reactor.ResourceAgent{
-							{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
-							{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
-							{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
 						},
 					},
 				},
@@ -94,11 +94,11 @@ func TestParsePromoterConfig(t *testing.T) {
 				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
-						Start: []reactor.ResourceAgent{
-							{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
-							{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
 						},
 					},
 				},
@@ -111,18 +111,18 @@ func TestParsePromoterConfig(t *testing.T) {
 				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
-						Start: []reactor.ResourceAgent{
-							{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:portblock", Name: "pblock1", Attributes: map[string]string{"action": "block", "ip": "2.2.2.2", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:portblock", Name: "pblock2", Attributes: map[string]string{"action": "block", "ip": "3.3.3.3", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
-							{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip1", Attributes: map[string]string{"cidr_netmask": "16", "ip": "2.2.2.2"}},
-							{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip2", Attributes: map[string]string{"cidr_netmask": "16", "ip": "3.3.3.3"}},
-							{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
-							{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock1", Attributes: map[string]string{"action": "unblock", "ip": "2.2.2.2", "portno": "3260", "protocol": "tcp"}},
-							{Type: "ocf:heartbeat:portblock", Name: "punblock2", Attributes: map[string]string{"action": "unblock", "ip": "3.3.3.3", "portno": "3260", "protocol": "tcp"}},
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock1", Attributes: map[string]string{"action": "block", "ip": "2.2.2.2", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock2", Attributes: map[string]string{"action": "block", "ip": "3.3.3.3", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip1", Attributes: map[string]string{"cidr_netmask": "16", "ip": "2.2.2.2"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip2", Attributes: map[string]string{"cidr_netmask": "16", "ip": "3.3.3.3"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock1", Attributes: map[string]string{"action": "unblock", "ip": "2.2.2.2", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock2", Attributes: map[string]string{"action": "unblock", "ip": "3.3.3.3", "portno": "3260", "protocol": "tcp"}},
 						},
 					},
 				},

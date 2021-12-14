@@ -57,13 +57,74 @@ func (p *PromoterConfig) DeployedResources(ctx context.Context, cli *client.Clie
 	return &rd, vds, resources, nil
 }
 
+type StartEntry interface {
+	toml.TextMarshaler
+	toml.TextUnmarshaler
+}
+
 // PromoterResourceConfig is the configuration of a single promotable resource used by drbd-reactor's promoter.
 type PromoterResourceConfig struct {
-	Start               []ResourceAgent `toml:"start,omitempty"`
-	Runner              string          `toml:"runner,omitempty"`
-	OnDrbdDemoteFailure string          `toml:"on-drbd-demote-failure,omitempty"`
-	StopServicesOnExit  bool            `toml:"stop-services-on-exit,omitempty"`
-	TargetAs            string          `toml:"target-as,omitempty"`
+	Start               []StartEntry `toml:"start,omitempty"`
+	Runner              string       `toml:"runner,omitempty"`
+	OnDrbdDemoteFailure string       `toml:"on-drbd-demote-failure,omitempty"`
+	StopServicesOnExit  bool         `toml:"stop-services-on-exit,omitempty"`
+	TargetAs            string       `toml:"target-as,omitempty"`
+}
+
+func (c *PromoterResourceConfig) UnmarshalTOML(data interface{}) error {
+	d, _ := data.(map[string]interface{})
+	if val, ok := d["start"]; ok {
+		start, startOk := val.([]interface{})
+		if !startOk {
+			return fmt.Errorf("could not convert value %v to slice (is type %T)", val, val)
+		}
+		for _, entry := range start {
+			text, ok := entry.(string)
+			if !ok {
+				return fmt.Errorf("could not convert value %v to string (is type %T)", entry, entry)
+			}
+			if strings.HasPrefix(text, "ocf:") {
+				var a ResourceAgent
+				err := a.UnmarshalText([]byte(text))
+				if err != nil {
+					return fmt.Errorf("invalid start entry: %w", err)
+				}
+				c.Start = append(c.Start, &a)
+			} else {
+				var s SystemdService
+				err := s.UnmarshalText([]byte(text))
+				if err != nil {
+					return fmt.Errorf("invalid start entry: %w", err)
+				}
+				c.Start = append(c.Start, &s)
+			}
+		}
+	}
+	if val, ok := d["runner"]; ok {
+		c.Runner, ok = val.(string)
+		if !ok {
+			return fmt.Errorf("could not convert value %v to string (is type %T)", val, val)
+		}
+	}
+	if val, ok := d["on-drbd-demote-failure"]; ok {
+		c.OnDrbdDemoteFailure, ok = val.(string)
+		if !ok {
+			return fmt.Errorf("could not convert value %v to string (is type %T)", val, val)
+		}
+	}
+	if val, ok := d["stop-services-on-exit"]; ok {
+		c.StopServicesOnExit, ok = val.(bool)
+		if !ok {
+			return fmt.Errorf("could not convert value %v to bool (is type %T)", val, val)
+		}
+	}
+	if val, ok := d["target-as"]; ok {
+		c.TargetAs, ok = val.(string)
+		if !ok {
+			return fmt.Errorf("could not convert value %v to string (is type %T)", val, val)
+		}
+	}
+	return nil
 }
 
 // EnsureConfig ensures the given config is registered in LINSTOR and up-to-date.

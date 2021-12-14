@@ -86,100 +86,103 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	}
 
 	var numPortblocks, numPortunblocks int
-	for i := range rscCfg.Start[:len(rscCfg.Start)] {
-		agent := &rscCfg.Start[i]
-
-		switch agent.Type {
-		case "ocf:heartbeat:portblock":
-			switch agent.Attributes["action"] {
-			case "block":
-				numPortblocks++
-			case "unblock":
-				numPortunblocks++
-			}
-		case "ocf:heartbeat:Filesystem":
-			dir := agent.Attributes["directory"]
-
-			var vol *client.VolumeDefinition
-			var volNr int
-			if agent.Name == "fs_cluster_private" {
-				volNr = 0
-			} else {
-				n, err = fmt.Sscanf(agent.Name, fsAgentName, &volNr)
-				if n == 0 {
-					return nil, fmt.Errorf("agent %s doesn't have expected name: %w", agent.Name, err)
+	for _, entry := range rscCfg.Start {
+		switch agent := entry.(type) {
+		case *reactor.ResourceAgent:
+			switch agent.Type {
+			case "ocf:heartbeat:portblock":
+				switch agent.Attributes["action"] {
+				case "block":
+					numPortblocks++
+				case "unblock":
+					numPortunblocks++
 				}
-			}
+			case "ocf:heartbeat:Filesystem":
+				dir := agent.Attributes["directory"]
 
-			for i := range volumeDefinition {
-				if int(volumeDefinition[i].VolumeNumber) == volNr {
-					vol = &volumeDefinition[i]
-					break
-				}
-			}
-
-			if vol == nil {
-				return nil, fmt.Errorf("no volume definition for volume number %d (agent %s)", volNr, agent.Name)
-			}
-
-			var exportPath string
-			if agent.Name == "fs_cluster_private" {
-				exportPath = ""
-			} else {
-				dirPrefix := filepath.Join(ExportBasePath, r.Name)
-				if !strings.HasPrefix(dir, dirPrefix) {
-					return nil, errors.New(fmt.Sprintf("export path %s not rooted in expected export path %s", dir, dirPrefix))
+				var vol *client.VolumeDefinition
+				var volNr int
+				if agent.Name == "fs_cluster_private" {
+					volNr = 0
+				} else {
+					n, err = fmt.Sscanf(agent.Name, fsAgentName, &volNr)
+					if n == 0 {
+						return nil, fmt.Errorf("agent %s doesn't have expected name: %w", agent.Name, err)
+					}
 				}
 
-				exportPath = dir[len(dirPrefix):]
-			}
-
-			var filesystem string
-			if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/Type"]; ok {
-				filesystem = val
-			}
-
-			r.Volumes = append(r.Volumes, VolumeConfig{
-				VolumeConfig: common.VolumeConfig{
-					Number:     volNr,
-					SizeKiB:    vol.SizeKib,
-					FileSystem: filesystem,
-				},
-				ExportPath: rootedPath(exportPath),
-			})
-		case "ocf:heartbeat:exportfs":
-			cidr, err := cidrFromNfs(agent.Attributes["clientspec"])
-			if err != nil {
-				return nil, err
-			}
-
-			exists := false
-			for i := range r.AllowedIPs {
-				if r.AllowedIPs[i].String() == cidr.String() {
-					exists = true
-					break
+				for i := range volumeDefinition {
+					if int(volumeDefinition[i].VolumeNumber) == volNr {
+						vol = &volumeDefinition[i]
+						break
+					}
 				}
-			}
 
-			if !exists {
-				r.AllowedIPs = append(r.AllowedIPs, cidr)
-			}
-		case "ocf:heartbeat:nfsserver":
-			break
-		case "ocf:heartbeat:IPaddr2":
-			ip := net.ParseIP(agent.Attributes["ip"])
-			if ip == nil {
-				return nil, fmt.Errorf("malformed ip %s", agent.Attributes["ip"])
-			}
+				if vol == nil {
+					return nil, fmt.Errorf("no volume definition for volume number %d (agent %s)", volNr, agent.Name)
+				}
 
-			prefixLength, err := strconv.Atoi(agent.Attributes["cidr_netmask"])
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse service ip prefix")
-			}
+				var exportPath string
+				if agent.Name == "fs_cluster_private" {
+					exportPath = ""
+				} else {
+					dirPrefix := filepath.Join(ExportBasePath, r.Name)
+					if !strings.HasPrefix(dir, dirPrefix) {
+						return nil, errors.New(fmt.Sprintf("export path %s not rooted in expected export path %s", dir, dirPrefix))
+					}
 
-			r.ServiceIP = common.ServiceIPFromParts(ip, prefixLength)
-		default:
-			return nil, errors.New(fmt.Sprintf("unexpected resource agent: %s", agent.Type))
+					exportPath = dir[len(dirPrefix):]
+				}
+
+				var filesystem string
+				if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/Type"]; ok {
+					filesystem = val
+				}
+
+				r.Volumes = append(r.Volumes, VolumeConfig{
+					VolumeConfig: common.VolumeConfig{
+						Number:     volNr,
+						SizeKiB:    vol.SizeKib,
+						FileSystem: filesystem,
+					},
+					ExportPath: rootedPath(exportPath),
+				})
+			case "ocf:heartbeat:exportfs":
+				cidr, err := cidrFromNfs(agent.Attributes["clientspec"])
+				if err != nil {
+					return nil, err
+				}
+
+				exists := false
+				for i := range r.AllowedIPs {
+					if r.AllowedIPs[i].String() == cidr.String() {
+						exists = true
+						break
+					}
+				}
+
+				if !exists {
+					r.AllowedIPs = append(r.AllowedIPs, cidr)
+				}
+			case "ocf:heartbeat:nfsserver":
+				break
+			case "ocf:heartbeat:IPaddr2":
+				ip := net.ParseIP(agent.Attributes["ip"])
+				if ip == nil {
+					return nil, fmt.Errorf("malformed ip %s", agent.Attributes["ip"])
+				}
+
+				prefixLength, err := strconv.Atoi(agent.Attributes["cidr_netmask"])
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse service ip prefix")
+				}
+
+				r.ServiceIP = common.ServiceIPFromParts(ip, prefixLength)
+			default:
+				return nil, errors.New(fmt.Sprintf("unexpected resource agent: %s", agent.Type))
+			}
+		case *reactor.SystemdService:
+			// ignore systemd services for now
 		}
 	}
 
@@ -348,12 +351,12 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		return nil, errors.New("resource config is missing deployment information")
 	}
 	deployedRes := deployment[0]
-	var agents []reactor.ResourceAgent
+	var agents []reactor.StartEntry
 	resUuid := uuid.NewSHA1(UuidNFS, []byte(deployedRes.Uuid))
 
 	log.Debugf("volumes: %+v", deployedRes.Volumes)
 
-	agents = append(agents, reactor.ResourceAgent{
+	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:portblock",
 		Name: "portblock",
 		Attributes: map[string]string{
@@ -367,7 +370,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	// "cluster private" volume
 	clusterPrivateVol := deployedRes.Volumes[0]
 	agents = append(agents,
-		reactor.ResourceAgent{
+		&reactor.ResourceAgent{
 			Type: "ocf:heartbeat:Filesystem",
 			Name: "fs_cluster_private",
 			Attributes: map[string]string{
@@ -388,7 +391,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		dirPath := ExportPath(r, &r.Volumes[i-1])
 
 		agents = append(agents,
-			reactor.ResourceAgent{
+			&reactor.ResourceAgent{
 				Type: "ocf:heartbeat:Filesystem",
 				Name: fmt.Sprintf(fsAgentName, vol.VolumeNumber),
 				Attributes: map[string]string{
@@ -401,7 +404,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		)
 	}
 
-	agents = append(agents, reactor.ResourceAgent{
+	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:nfsserver",
 		Name: "nfsserver",
 		Attributes: map[string]string{
@@ -422,7 +425,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		dirPath := ExportPath(r, &r.Volumes[i-1])
 
 		for j := range r.AllowedIPs {
-			agents = append(agents, reactor.ResourceAgent{
+			agents = append(agents, &reactor.ResourceAgent{
 				Type: "ocf:heartbeat:exportfs",
 				Name: fmt.Sprintf(exportAgentName, vol.VolumeNumber, j),
 				Attributes: map[string]string{
@@ -435,9 +438,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		}
 	}
 
-	agents = append(agents, reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}})
+	agents = append(agents, &reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}})
 
-	agents = append(agents, reactor.ResourceAgent{
+	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:portblock",
 		Name: "portunblock",
 		Attributes: map[string]string{

@@ -73,9 +73,11 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 			continue
 		}
 		for _, r := range c.Resources {
-			for _, a := range r.Start {
-				if a.Type == "ocf:heartbeat:nfsserver" {
-					return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", c.ID)
+			for _, s := range r.Start {
+				if agent, ok := s.(*reactor.ResourceAgent); ok {
+					if agent.Type == "ocf:heartbeat:nfsserver" {
+						return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", c.ID)
+					}
 				}
 			}
 		}

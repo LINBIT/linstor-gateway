@@ -2,10 +2,6 @@
 
 Delete existing NVMe-oF targets
 
-### Synopsis
-
-Delete existing NVMe-oF targets
-
 ```
 linstor-gateway nvme delete NQN... [flags]
 ```

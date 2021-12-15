@@ -2,10 +2,6 @@
 
 list configured NVMe-oF targets
 
-### Synopsis
-
-list configured NVMe-oF targets
-
 ```
 linstor-gateway nvme list [flags]
 ```

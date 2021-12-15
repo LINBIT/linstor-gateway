@@ -2,10 +2,6 @@
 
 Generate linstor-gateway documentation
 
-### Synopsis
-
-Generate linstor-gateway documentation
-
 ```
 linstor-gateway docs [flags]
 ```

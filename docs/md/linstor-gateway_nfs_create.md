@@ -24,12 +24,12 @@ linstor-gateway nfs create --resource=example --service-ip=192.168.211.122/24 --
 
 ```
       --allowed-ips ip-cidr     Set the IP address mask of clients that are allowed access (default ::1/64)
-  -p, --export-path string      Set the export path (default "/")
+  -p, --export-path string      Set the export path, relative to /srv/gateway-exports (default "/")
   -h, --help                    help for create
   -r, --resource string         Set the resource name (required)
   -g, --resource-group string   Set the LINSTOR resource group name
       --service-ip ip-cidr      Set the service IP and netmask of the target (required) (default ::1/64)
-      --size unit               Set a size (e.g, 1TiB) (default 1G)
+      --size unit               Set a size (e.g, 1TiB) (default 1GiB)
 ```
 
 ### Options inherited from parent commands

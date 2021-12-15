@@ -2,10 +2,6 @@
 
 Create a new NVMe-oF target
 
-### Synopsis
-
-Create a new NVMe-oF target
-
 ```
 linstor-gateway nvme create NQN SERVICE_IP [VOLUME_SIZE]... [flags]
 ```

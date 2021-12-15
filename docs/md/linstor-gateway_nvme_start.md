@@ -2,10 +2,6 @@
 
 Start a stopped NVMe-oF target
 
-### Synopsis
-
-Start a stopped NVMe-oF target
-
 ```
 linstor-gateway nvme start NQN... [flags]
 ```

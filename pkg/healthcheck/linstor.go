@@ -3,9 +3,9 @@ package healthcheck
 import (
 	"context"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/fatih/color"
-	"github.com/pelletier/go-toml"
 	"github.com/spf13/viper"
 	"os"
 	"strings"
@@ -59,7 +59,7 @@ func (c *checkFileWhitelist) check() error {
 			AllowExtFiles []string `toml:"allowExtFiles"`
 		} `toml:"files"`
 	}
-	err = toml.NewDecoder(f).Decode(&satelliteConfig)
+	_, err = toml.DecodeReader(f, &satelliteConfig)
 	if err != nil {
 		return fmt.Errorf("failed to decode satellite config: %w", err)
 	}

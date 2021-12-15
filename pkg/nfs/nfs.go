@@ -16,7 +16,6 @@ import (
 )
 
 const IDFormat = "nfs-%s"
-const clusterPrivateVolumeSizeKiB = 64 * 1024 // 64MiB
 
 type NFS struct {
 	cli *linstorcontrol.Linstor
@@ -110,21 +109,15 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return deployedCfg, nil
 	}
 
-	volumes := make([]common.VolumeConfig, len(rsc.Volumes)+1) // +1 for the "cluster private" volume
-	volumes[0] = common.VolumeConfig{
-		Number:     0,
-		SizeKiB:    clusterPrivateVolumeSizeKiB,
-		FileSystem: "ext4",
-	}
+	volumes := make([]common.VolumeConfig, len(rsc.Volumes))
 	for i := range rsc.Volumes {
-		volumes[i+1] = rsc.Volumes[i].VolumeConfig
+		volumes[i] = rsc.Volumes[i].VolumeConfig
 	}
 
 	resourceDefinition, deployment, err := n.cli.EnsureResource(ctx, linstorcontrol.Resource{
 		Name:          rsc.Name,
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       volumes,
-		FileSystem:    "ext4",
 	}, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)

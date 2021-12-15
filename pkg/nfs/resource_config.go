@@ -21,6 +21,10 @@ import (
 const (
 	ExportBasePath = "/srv/gateway-exports"
 	DefaultNFSPort = 2049
+
+	clusterPrivateVolumeSizeKiB    = 64 * 1024 // 64MiB
+	clusterPrivateVolumeExportPath = "/srv/ha/internal"
+	clusterPrivateVolumeAgentName  = "fs_cluster_private"
 )
 
 var (
@@ -45,6 +49,18 @@ func rootedPath(path string) string {
 // ExportPath returns the full path under which the resource is exported.
 func ExportPath(rsc *ResourceConfig, vol *VolumeConfig) string {
 	return filepath.Join(ExportBasePath, rsc.Name, vol.ExportPath)
+}
+
+func ClusterPrivateVolume(resourceName string) VolumeConfig {
+	return VolumeConfig{
+		VolumeConfig: common.VolumeConfig{
+			Number:              0,
+			SizeKiB:             clusterPrivateVolumeSizeKiB,
+			FileSystem:          "ext4",
+			FileSystemRootOwner: common.UidGid{Uid: 0, Gid: 0},
+		},
+		ExportPath: filepath.Join(clusterPrivateVolumeExportPath, resourceName),
+	}
 }
 
 type ResourceConfig struct {
@@ -98,55 +114,12 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 					numPortunblocks++
 				}
 			case "ocf:heartbeat:Filesystem":
-				dir := agent.Attributes["directory"]
-
-				var vol *client.VolumeDefinition
-				var volNr int
-				if agent.Name == "fs_cluster_private" {
-					volNr = 0
-				} else {
-					n, err = fmt.Sscanf(agent.Name, fsAgentName, &volNr)
-					if n == 0 {
-						return nil, fmt.Errorf("agent %s doesn't have expected name: %w", agent.Name, err)
-					}
+				vol, err := parseVolume(agent, volumeDefinition, r.Name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid ocf:heartbeat:Filesystem entry: %w", err)
 				}
 
-				for i := range volumeDefinition {
-					if int(volumeDefinition[i].VolumeNumber) == volNr {
-						vol = &volumeDefinition[i]
-						break
-					}
-				}
-
-				if vol == nil {
-					return nil, fmt.Errorf("no volume definition for volume number %d (agent %s)", volNr, agent.Name)
-				}
-
-				var exportPath string
-				if agent.Name == "fs_cluster_private" {
-					exportPath = ""
-				} else {
-					dirPrefix := filepath.Join(ExportBasePath, r.Name)
-					if !strings.HasPrefix(dir, dirPrefix) {
-						return nil, errors.New(fmt.Sprintf("export path %s not rooted in expected export path %s", dir, dirPrefix))
-					}
-
-					exportPath = dir[len(dirPrefix):]
-				}
-
-				var filesystem string
-				if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/Type"]; ok {
-					filesystem = val
-				}
-
-				r.Volumes = append(r.Volumes, VolumeConfig{
-					VolumeConfig: common.VolumeConfig{
-						Number:     volNr,
-						SizeKiB:    vol.SizeKib,
-						FileSystem: filesystem,
-					},
-					ExportPath: rootedPath(exportPath),
-				})
+				r.Volumes = append(r.Volumes, *vol)
 			case "ocf:heartbeat:exportfs":
 				cidr, err := cidrFromNfs(agent.Attributes["clientspec"])
 				if err != nil {
@@ -197,6 +170,98 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	return r, nil
 }
 
+// parseVolume converts a resource agent of the type "ocf:heartbeat:Filesystem"
+// to a VolumeConfig.
+// It associates the agent to a specific volume via its name (for details see
+// findFilesystemAgentVolume). It also reconstructs the export path.
+// Similarly to findFilesystemAgentVolume, it treats the agent name
+// "fs_cluster_private" specially; this corresponds to the reserved cluster
+// private volume with volume number 0.
+func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition, resName string) (*VolumeConfig, error) {
+	vol, err := findFilesystemAgentVolume(volumes, agent)
+	if err != nil {
+		return nil, err
+	}
+	if vol == nil {
+		return nil, fmt.Errorf("no volume definition found for resource agent %s", agent.Name)
+	}
+
+	dir := agent.Attributes["directory"]
+	var exportPath string
+	if agent.Name == clusterPrivateVolumeAgentName {
+		exportPath = "/srv/ha/internal/" + resName
+	} else {
+		dirPrefix := filepath.Join(ExportBasePath, resName)
+		if !strings.HasPrefix(dir, dirPrefix) {
+			return nil, errors.New(fmt.Sprintf("export path %s not rooted in expected export path %s", dir, dirPrefix))
+		}
+
+		exportPath = dir[len(dirPrefix):]
+	}
+
+	var filesystem string
+	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/Type"]; ok {
+		filesystem = val
+	}
+	var rootOwner common.UidGid
+	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/MkfsParams"]; ok {
+		var u common.UidGid
+		scanned, err := fmt.Sscanf(val, "-E root_owner=%d:%d", &u.Uid, &u.Gid)
+		if scanned != 2 || err != nil {
+			log.WithFields(log.Fields{
+				"err":      err,
+				"scanned":  scanned,
+				"volume":   vol.VolumeNumber,
+				"resource": resName,
+			}).Warnf("invalid MkfsParams for volume: %q", val)
+		}
+		filesystem = val
+	}
+	return &VolumeConfig{
+		VolumeConfig: common.VolumeConfig{
+			Number:              int(vol.VolumeNumber),
+			SizeKiB:             vol.SizeKib,
+			FileSystem:          filesystem,
+			FileSystemRootOwner: rootOwner,
+		},
+		ExportPath: rootedPath(exportPath),
+	}, nil
+}
+
+// findFilesystemAgentVolume searches "volumes" for the volume that is described
+// by the ocf:heartbeat:Filesystem resource agent "agent". It does this by
+// parsing the predefined agent name format (for example, fs_4 would correspond
+// to volume ID 4).
+// The agent name "fs_cluster_private" is handled specially, it always returns
+// the reserved volume with the ID 0.
+// If a parsing error occurs, an error is returned.
+// If the volume is not found, a nil VolumeDefinition is returned.
+func findFilesystemAgentVolume(volumes []client.VolumeDefinition, agent *reactor.ResourceAgent) (*client.VolumeDefinition, error) {
+	var vol *client.VolumeDefinition
+
+	if agent == nil || agent.Type != "ocf:heartbeat:Filesystem" {
+		return nil, fmt.Errorf("invalid agent: %v", agent)
+	}
+
+	var volNr int
+	if agent.Name == clusterPrivateVolumeAgentName {
+		volNr = 0
+	} else {
+		n, err := fmt.Sscanf(agent.Name, fsAgentName, &volNr)
+		if n == 0 {
+			return nil, fmt.Errorf("agent %s doesn't have expected name: %w", agent.Name, err)
+		}
+	}
+
+	for i := range volumes {
+		if int(volumes[i].VolumeNumber) == volNr {
+			vol = &volumes[i]
+			break
+		}
+	}
+	return vol, nil
+}
+
 func (r *ResourceConfig) VolumeConfig(number int) *common.Volume {
 	var result *common.Volume
 
@@ -229,10 +294,6 @@ func (r *ResourceConfig) FillDefaults() {
 	}
 
 	for i := range r.Volumes {
-		if r.Volumes[i].Number == 0 {
-			r.Volumes[i].Number = i + 1
-		}
-
 		r.Volumes[i].ExportPath = rootedPath(r.Volumes[i].ExportPath)
 	}
 
@@ -367,16 +428,17 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		},
 	})
 
-	// "cluster private" volume
-	clusterPrivateVol := deployedRes.Volumes[0]
+	// volume 0 is reserved as the "cluster private" volume
+	clusterPrivateVol := r.Volumes[0]
+	deployedClusterPrivateVol := deployedRes.Volumes[0]
 	agents = append(agents,
 		&reactor.ResourceAgent{
 			Type: "ocf:heartbeat:Filesystem",
-			Name: "fs_cluster_private",
+			Name: clusterPrivateVolumeAgentName,
 			Attributes: map[string]string{
-				"device":    devicePath(clusterPrivateVol),
-				"directory": fmt.Sprintf("/srv/ha/internal/%s", deployedRes.Name),
-				"fstype":    "ext4",
+				"device":    devicePath(deployedClusterPrivateVol),
+				"directory": clusterPrivateVol.ExportPath,
+				"fstype":    clusterPrivateVol.FileSystem,
 				"run_fsck":  "no",
 			},
 		},
@@ -384,11 +446,12 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 
 	for i := 1; i < len(deployedRes.Volumes); i++ {
 		vol := deployedRes.Volumes[i]
-		if int(vol.VolumeNumber) != r.Volumes[i-1].Number {
-			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, r.Volumes[i].Number)
+		resVol := r.Volumes[i]
+		if int(vol.VolumeNumber) != resVol.Number {
+			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, resVol.Number)
 		}
 
-		dirPath := ExportPath(r, &r.Volumes[i-1])
+		dirPath := ExportPath(r, &resVol)
 
 		agents = append(agents,
 			&reactor.ResourceAgent{
@@ -397,7 +460,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				Attributes: map[string]string{
 					"device":    devicePath(vol),
 					"directory": dirPath,
-					"fstype":    "ext4",
+					"fstype":    resVol.FileSystem,
 					"run_fsck":  "no",
 				},
 			},
@@ -416,13 +479,14 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 
 	for i := 1; i < len(deployedRes.Volumes); i++ {
 		vol := deployedRes.Volumes[i]
-		if int(vol.VolumeNumber) != r.Volumes[i-1].Number {
-			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, r.Volumes[i].Number)
+		resVol := r.Volumes[i]
+		if int(vol.VolumeNumber) != resVol.Number {
+			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, resVol.Number)
 		}
 
 		fsid := uuid.NewSHA1(resUuid, []byte(vol.Uuid))
 
-		dirPath := ExportPath(r, &r.Volumes[i-1])
+		dirPath := ExportPath(r, &resVol)
 
 		for j := range r.AllowedIPs {
 			agents = append(agents, &reactor.ResourceAgent{

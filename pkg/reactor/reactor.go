@@ -174,13 +174,10 @@ func DetachConfig(ctx context.Context, cli *client.Client, cfg *PromoterConfig) 
 	return nil
 }
 
-// ListConfigs fetches all promoter configurations registered with LINSTOR.
-func ListConfigs(ctx context.Context, cli *client.Client) ([]PromoterConfig, []string, error) {
-	files, err := cli.Controller.GetExternalFiles(ctx, &client.ListOpts{Content: true})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch file list: %w", err)
-	}
-
+// filterConfigs takes a list of external files in the LINSTOR cluster and
+// extracts all drbd-reactor promoter configuration files that were created by
+// LINSTOR Gateway.
+func filterConfigs(files []client.ExternalFile) ([]PromoterConfig, []string, error) {
 	result := make([]PromoterConfig, 0, len(files))
 	paths := make([]string, 0, len(files))
 
@@ -202,6 +199,15 @@ func ListConfigs(ctx context.Context, cli *client.Client) ([]PromoterConfig, []s
 	}
 
 	return result, paths, nil
+}
+
+// ListConfigs fetches all promoter configurations registered with LINSTOR.
+func ListConfigs(ctx context.Context, cli *client.Client) ([]PromoterConfig, []string, error) {
+	files, err := cli.Controller.GetExternalFiles(ctx, &client.ListOpts{Content: true})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch file list: %w", err)
+	}
+	return filterConfigs(files)
 }
 
 // FindConfig fetches the promoter config with the given id.

@@ -108,6 +108,11 @@ func Default(controllers []string) (*Linstor, error) {
 }
 
 // EnsureResource creates or updates the given resource.
+// It returns three values:
+// - The newly created resource definition
+// - A slice of all resources that have been spawned from this resource
+//   definition on the respective nodes
+// - An error if one occurred, or nil
 func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, []client.ResourceWithVolumes, error) {
 	logger := log.WithField("resource", res.Name)
 
@@ -130,7 +135,6 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 	// it back to "no" once the resource is created.
 	// This will change in a future version, remove this hack then.
 	if res.FileSystem != "" {
-		props[apiconsts.NamespcFilesystem+"/Type"] = "ext4"
 		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "yes"
 	} else {
 		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "no"
@@ -158,6 +162,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		volProps := map[string]string{}
 		if vol.FileSystem != "" {
 			volProps[apiconsts.NamespcFilesystem+"/Type"] = vol.FileSystem
+			volProps[apiconsts.NamespcFilesystem+"/MkfsParams"] = "-E root_owner=" + vol.FileSystemRootOwner.String()
 		}
 		err := l.ResourceDefinitions.CreateVolumeDefinition(ctx, res.Name, client.VolumeDefinitionCreate{
 			VolumeDefinition: client.VolumeDefinition{

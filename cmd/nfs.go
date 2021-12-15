@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net"
 	"os"
 
@@ -61,10 +62,14 @@ export.`,
 				ServiceIP:     serviceIPCIDR,
 				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
 				Volumes: []nfs.VolumeConfig{
+					nfs.ClusterPrivateVolume(resourceName),
 					{
 						ExportPath: exportPath,
 						VolumeConfig: common.VolumeConfig{
-							SizeKiB: uint64(sz.Value / unit.K),
+							Number:              1,
+							SizeKiB:             uint64(sz.Value / unit.K),
+							FileSystem:          "ext4",
+							FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
 						},
 					},
 				},
@@ -86,7 +91,7 @@ export.`,
 
 	createCmd.Flags().StringVarP(&resourceGroupName, "resource-group", "g", "", "Set the LINSTOR resource group name")
 	createCmd.Flags().StringVarP(&resourceName, "resource", "r", "", "Set the resource name (required)")
-	createCmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, "Set the export path")
+	createCmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, fmt.Sprintf("Set the export path, relative to %s", nfs.ExportBasePath))
 	createCmd.Flags().VarP(&serviceIPCIDR, "service-ip", "", "Set the service IP and netmask of the target (required)")
 	createCmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 
@@ -164,11 +169,18 @@ about the existing LINSTOR resources and service status.`,
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
 			for _, resource := range list {
-				for _, vol := range resource.Volumes {
+				for i, vol := range resource.Volumes {
 					withStatus := resource.VolumeConfig(vol.Number)
 					if withStatus == nil {
 						withStatus = &common.Volume{Status: common.VolumeState{State: common.Unknown}}
 					}
+
+					if i == 0 {
+						log.Debugf("not displaying cluster private volume: %+v", vol)
+						continue
+					}
+
+					log.Debugf("listing volume: %+v", vol)
 
 					table.Rich([]string{
 						resource.Name,

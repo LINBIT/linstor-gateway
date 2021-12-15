@@ -10,10 +10,20 @@ import (
 	"github.com/LINBIT/golinstor/client"
 )
 
+type UidGid struct {
+	Uid int
+	Gid int
+}
+
+func (u *UidGid) String() string {
+	return fmt.Sprintf("%d:%d", u.Uid, u.Gid)
+}
+
 type VolumeConfig struct {
-	Number     int    `json:"number"`
-	SizeKiB    uint64 `json:"size_kib"`
-	FileSystem string `json:"file_system,omitempty"`
+	Number              int    `json:"number"`
+	SizeKiB             uint64 `json:"size_kib"`
+	FileSystem          string `json:"file_system,omitempty"`
+	FileSystemRootOwner UidGid `json:"file_system_root_owner,omitempty"`
 }
 
 type ResourceStatus struct {

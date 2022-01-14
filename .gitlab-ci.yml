@@ -1,5 +1,5 @@
 variables:
-  BUILD_HELPERS_VERSION: 49fa9154fc0ef50be501a9fbe63d5359b8a594ec
+  BUILD_HELPERS_VERSION: 6959b310000055d1e941f948aeba00b30a4e3b73
   VIRTER_VERSION: v0.17.0
   VMSHED_VERSION: v0.14.4
   # we have to change the way GitLab CI clones the repository.

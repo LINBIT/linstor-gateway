@@ -19,7 +19,7 @@ var (
 
 	// This format is mandated by LINSTOR. Since we use the unique part
 	// directly for LINSTOR resource names, it needs to be compliant.
-	regexResourceName = `[[:alpha:]][[:alnum:]]+`
+	regexResourceName = `[[:alpha:]_][[:alnum:]_-]+`
 
 	regexWWN = regexp.MustCompile(`^(` + regexIQN + `):(` + regexResourceName + `)$`)
 )

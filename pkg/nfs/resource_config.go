@@ -21,10 +21,6 @@ import (
 const (
 	ExportBasePath = "/srv/gateway-exports"
 	DefaultNFSPort = 2049
-
-	clusterPrivateVolumeSizeKiB    = 64 * 1024 // 64MiB
-	clusterPrivateVolumeExportPath = "/srv/ha/internal"
-	clusterPrivateVolumeAgentName  = "fs_cluster_private"
 )
 
 var (
@@ -49,18 +45,6 @@ func rootedPath(path string) string {
 // ExportPath returns the full path under which the resource is exported.
 func ExportPath(rsc *ResourceConfig, vol *VolumeConfig) string {
 	return filepath.Join(ExportBasePath, rsc.Name, vol.ExportPath)
-}
-
-func ClusterPrivateVolume(resourceName string) VolumeConfig {
-	return VolumeConfig{
-		VolumeConfig: common.VolumeConfig{
-			Number:              0,
-			SizeKiB:             clusterPrivateVolumeSizeKiB,
-			FileSystem:          "ext4",
-			FileSystemRootOwner: common.UidGid{Uid: 0, Gid: 0},
-		},
-		ExportPath: filepath.Join(clusterPrivateVolumeExportPath, resourceName),
-	}
 }
 
 type ResourceConfig struct {
@@ -188,15 +172,14 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 
 	dir := agent.Attributes["directory"]
 	var exportPath string
-	if agent.Name == clusterPrivateVolumeAgentName {
-		exportPath = "/srv/ha/internal/" + resName
-	} else {
+	// the cluster private volume has no export path because it is not exported
+	if agent.Name != common.ClusterPrivateVolumeAgentName {
 		dirPrefix := filepath.Join(ExportBasePath, resName)
 		if !strings.HasPrefix(dir, dirPrefix) {
 			return nil, errors.New(fmt.Sprintf("export path %s not rooted in expected export path %s", dir, dirPrefix))
 		}
 
-		exportPath = dir[len(dirPrefix):]
+		exportPath = rootedPath(dir[len(dirPrefix):])
 	}
 
 	var filesystem string
@@ -224,7 +207,7 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 			FileSystem:          filesystem,
 			FileSystemRootOwner: rootOwner,
 		},
-		ExportPath: rootedPath(exportPath),
+		ExportPath: exportPath,
 	}, nil
 }
 
@@ -244,7 +227,7 @@ func findFilesystemAgentVolume(volumes []client.VolumeDefinition, agent *reactor
 	}
 
 	var volNr int
-	if agent.Name == clusterPrivateVolumeAgentName {
+	if agent.Name == common.ClusterPrivateVolumeAgentName {
 		volNr = 0
 	} else {
 		n, err := fmt.Sscanf(agent.Name, fsAgentName, &volNr)
@@ -294,6 +277,10 @@ func (r *ResourceConfig) FillDefaults() {
 	}
 
 	for i := range r.Volumes {
+		if r.Volumes[i].Number == 0 {
+			// cluster private volume is supposed to have an empty export path
+			continue
+		}
 		r.Volumes[i].ExportPath = rootedPath(r.Volumes[i].ExportPath)
 	}
 
@@ -392,21 +379,6 @@ func (r *ResourceConfig) ID() string {
 	return fmt.Sprintf(IDFormat, r.Name)
 }
 
-func devicePath(vol client.Volume) string {
-	devPath := vol.DevicePath
-	for k, v := range vol.Props {
-		if strings.HasPrefix(k, "Satellite/Device/Symlinks/") {
-			devPath = v
-		}
-
-		// Prefer the "by-res" symlinks
-		if strings.Contains(v, "/by-res/") {
-			break
-		}
-	}
-	return devPath
-}
-
 func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*reactor.PromoterConfig, error) {
 	if len(deployment) == 0 {
 		return nil, errors.New("resource config is missing deployment information")
@@ -431,18 +403,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	// volume 0 is reserved as the "cluster private" volume
 	clusterPrivateVol := r.Volumes[0]
 	deployedClusterPrivateVol := deployedRes.Volumes[0]
-	agents = append(agents,
-		&reactor.ResourceAgent{
-			Type: "ocf:heartbeat:Filesystem",
-			Name: clusterPrivateVolumeAgentName,
-			Attributes: map[string]string{
-				"device":    devicePath(deployedClusterPrivateVol),
-				"directory": clusterPrivateVol.ExportPath,
-				"fstype":    clusterPrivateVol.FileSystem,
-				"run_fsck":  "no",
-			},
-		},
-	)
+	agents = append(agents, common.ClusterPrivateVolumeAgent(clusterPrivateVol.VolumeConfig, deployedClusterPrivateVol, r.Name))
 
 	for i := 1; i < len(deployedRes.Volumes); i++ {
 		vol := deployedRes.Volumes[i]
@@ -458,7 +419,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				Type: "ocf:heartbeat:Filesystem",
 				Name: fmt.Sprintf(fsAgentName, vol.VolumeNumber),
 				Attributes: map[string]string{
-					"device":    devicePath(vol),
+					"device":    common.DevicePath(vol),
 					"directory": dirPath,
 					"fstype":    resVol.FileSystem,
 					"run_fsck":  "no",
@@ -472,7 +433,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		Name: "nfsserver",
 		Attributes: map[string]string{
 			"nfs_ip":             r.ServiceIP.IP().String(),
-			"nfs_shared_infodir": fmt.Sprintf("/srv/ha/internal/%s/nfs", deployedRes.Name),
+			"nfs_shared_infodir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name, "nfs"),
 			"nfs_server_scope":   r.ServiceIP.IP().String(),
 		},
 	})
@@ -512,7 +473,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			"portno":     strconv.Itoa(DefaultNFSPort),
 			"action":     "unblock",
 			"protocol":   "tcp",
-			"tickle_dir": fmt.Sprintf("/srv/ha/internal/%s", deployedRes.Name),
+			"tickle_dir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name),
 		},
 	})
 

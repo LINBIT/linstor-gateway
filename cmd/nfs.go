@@ -62,7 +62,7 @@ export.`,
 				ServiceIP:     serviceIPCIDR,
 				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
 				Volumes: []nfs.VolumeConfig{
-					nfs.ClusterPrivateVolume(resourceName),
+					{VolumeConfig: common.ClusterPrivateVolume()},
 					{
 						ExportPath: exportPath,
 						VolumeConfig: common.VolumeConfig{

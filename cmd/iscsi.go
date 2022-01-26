@@ -78,11 +78,12 @@ high availability primitives.`,
 			}
 
 			_, err = i.Create(ctx, &iscsi.ResourceConfig{
-				IQN:       iqn,
-				Username:  username,
-				Password:  password,
+				IQN:        iqn,
+				Username:   username,
+				Password:   password,
 				ServiceIPs: serviceIps,
 				Volumes: []common.VolumeConfig{
+					common.ClusterPrivateVolume(),
 					{Number: lun, SizeKiB: uint64(sz.Value / unit.K)},
 				},
 			})

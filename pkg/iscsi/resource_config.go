@@ -3,7 +3,9 @@ package iscsi
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -166,12 +168,6 @@ func (r *ResourceConfig) FillDefaults() {
 	if r.ResourceGroup == "" {
 		r.ResourceGroup = "DfltRscGrp"
 	}
-
-	for i := range r.Volumes {
-		if r.Volumes[i].Number == 0 {
-			r.Volumes[i].Number = i + 1
-		}
-	}
 }
 
 func (r *ResourceConfig) Valid() error {
@@ -188,7 +184,9 @@ func (r *ResourceConfig) Valid() error {
 	})
 
 	for i := range r.Volumes {
-		if r.Volumes[i].Number < 1 {
+		log.Debugf("volume: %+v", r.Volumes[i])
+		if i != 0 && r.Volumes[i].Number < 1 {
+			// the "cluster private volume" (volume 0) is excluded from this check
 			return common.ValidationError("volume numbers must start at 1")
 		}
 
@@ -260,6 +258,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	if len(deployment) == 0 {
 		return nil, errors.New("resource config is missing deployment information")
 	}
+	deployedRes := deployment[0]
 
 	allowedInitiatorStrings := make([]string, 0, len(r.AllowedInitiators))
 	for i := range r.AllowedInitiators {
@@ -267,6 +266,12 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	var agents []reactor.StartEntry
+
+	// volume 0 is reserved as the "cluster private" volume
+	clusterPrivateVol := r.Volumes[0]
+	deployedClusterPrivateVol := deployedRes.Volumes[0]
+	agents = append(agents, common.ClusterPrivateVolumeAgent(clusterPrivateVol, deployedClusterPrivateVol, r.IQN.WWN()))
+
 	for i, ip := range r.ServiceIPs {
 		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:portblock",
@@ -303,7 +308,8 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		},
 	})
 
-	for i, vol := range deployment[0].Volumes {
+	for i := 1; i < len(deployedRes.Volumes); i++ {
+		vol := deployedRes.Volumes[i]
 		if int(vol.VolumeNumber) != r.Volumes[i].Number {
 			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, r.Volumes[i].Number)
 		}
@@ -337,10 +343,11 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			Type: "ocf:heartbeat:portblock",
 			Name: fmt.Sprintf("portunblock%d", i),
 			Attributes: map[string]string{
-				"ip":       ip.IP().String(),
-				"portno":   strconv.Itoa(DefaultISCSIPort),
-				"action":   "unblock",
-				"protocol": "tcp",
+				"ip":         ip.IP().String(),
+				"portno":     strconv.Itoa(DefaultISCSIPort),
+				"action":     "unblock",
+				"protocol":   "tcp",
+				"tickle_dir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name),
 			},
 		})
 	}

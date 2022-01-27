@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 	"strings"
@@ -151,7 +152,12 @@ about the existing drbd-reactor and linstor parts.`,
 				for i := range cfg.ServiceIPs {
 					serviceIpStrings[i] = cfg.ServiceIPs[i].String()
 				}
-				for _, vol := range cfg.Status.Volumes {
+				for i, vol := range cfg.Status.Volumes {
+					if i == 0 {
+						log.Debugf("not displaying cluster private volume: %+v", vol)
+						continue
+					}
+
 					table.Rich(
 						[]string{cfg.IQN.String(), strings.Join(serviceIpStrings, ", "), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},

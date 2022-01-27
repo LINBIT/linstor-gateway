@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 )
 
 const IDFormat = "nvmeof-%s"
+const DefaultPort = 4420
 
 type ResourceConfig struct {
 	NQN           Nqn                   `json:"nqn"`
@@ -110,16 +112,16 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 		rscCfg = v
 	}
 
-	if len(rscCfg.Start) < 3 {
-		return nil, errors.New(fmt.Sprintf("config has to few agent entries, expected at least 3, got %d", len(rscCfg.Start)))
+	if len(rscCfg.Start) < 5 {
+		return nil, errors.New(fmt.Sprintf("config has too few agent entries, expected at least 3, got %d", len(rscCfg.Start)))
 	}
 
-	r.ServiceIP, err = parseIP(rscCfg.Start, 0)
+	r.ServiceIP, err = parseIP(rscCfg.Start, 2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse service IP: %w", err)
 	}
 
-	r.NQN, err = parseNQN(rscCfg.Start, 1)
+	r.NQN, err = parseNQN(rscCfg.Start, 3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse NQN: %w", err)
 	}
@@ -137,18 +139,49 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	if len(deployment) == 0 {
 		return nil, errors.New("resource config is missing deployment information")
 	}
+	deployedRes := deployment[0]
 
 	digest := sha256.Sum256([]byte(r.NQN.String()))
 	serial := hex.EncodeToString(digest[:8])
 
-	uuidNS := uuid.NewSHA1(UUIDNVMeoF, []byte(deployment[0].Uuid))
+	uuidNS := uuid.NewSHA1(UUIDNVMeoF, []byte(deployedRes.Uuid))
+
+	// volume 0 is reserved as the "cluster private" volume
+	clusterPrivateVol := r.Volumes[0]
+	deployedClusterPrivateVol := deployedRes.Volumes[0]
 
 	agents := []reactor.StartEntry{
-		&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}},
-		&reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-subsystem", Name: "subsys", Attributes: map[string]string{"nqn": r.NQN.String(), "serial": serial}},
+		&reactor.ResourceAgent{
+			Type: "ocf:heartbeat:portblock",
+			Name: fmt.Sprintf("portblock"),
+			Attributes: map[string]string{
+				"ip":       r.ServiceIP.IP().String(),
+				"portno":   strconv.Itoa(DefaultPort),
+				"action":   "block",
+				"protocol": "tcp",
+			},
+		},
+		common.ClusterPrivateVolumeAgent(clusterPrivateVol, deployedClusterPrivateVol, r.NQN.Subsystem()),
+		&reactor.ResourceAgent{
+			Type: "ocf:heartbeat:IPaddr2",
+			Name: "service_ip",
+			Attributes: map[string]string{
+				"ip":           r.ServiceIP.IP().String(),
+				"cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix()),
+			},
+		},
+		&reactor.ResourceAgent{
+			Type: "ocf:heartbeat:nvmet-subsystem",
+			Name: "subsys",
+			Attributes: map[string]string{
+				"nqn":    r.NQN.String(),
+				"serial": serial,
+			},
+		},
 	}
 
-	for i, vol := range deployment[0].Volumes {
+	for i := 1; i < len(deployedRes.Volumes); i++ {
+		vol := deployedRes.Volumes[i]
 		if int(vol.VolumeNumber) != r.Volumes[i].Number {
 			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, r.Volumes[i].Number)
 		}
@@ -182,6 +215,18 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	agents = append(agents, &reactor.ResourceAgent{Type: "ocf:heartbeat:nvmet-port", Name: "port", Attributes: map[string]string{"nqns": r.NQN.String(), "addr": r.ServiceIP.IP().String(), "type": "tcp"}})
+
+	agents = append(agents, &reactor.ResourceAgent{
+		Type: "ocf:heartbeat:portblock",
+		Name: "portunblock",
+		Attributes: map[string]string{
+			"ip":         r.ServiceIP.IP().String(),
+			"portno":     strconv.Itoa(DefaultPort),
+			"action":     "unblock",
+			"protocol":   "tcp",
+			"tickle_dir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name),
+		},
+	})
 
 	return &reactor.PromoterConfig{
 		ID: r.ID(),
@@ -257,7 +302,8 @@ func (r *ResourceConfig) Valid() error {
 	})
 
 	for i := range r.Volumes {
-		if r.Volumes[i].Number <= 0 {
+		if i != 0 && r.Volumes[i].Number <= 0 {
+			// the "cluster private volume" (volume 0) is excluded from this check
 			return common.ValidationError("volume numbers must start at 1")
 		}
 

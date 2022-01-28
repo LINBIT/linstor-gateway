@@ -22,6 +22,13 @@ func (s *server) NVMeoFDelete(all bool) func(http.ResponseWriter, *http.Request)
 		}
 
 		if all {
+			deployed, err := s.nvmeof.Get(ctx, nqn)
+			if err != nil {
+				MustError(http.StatusInternalServerError, writer, "failed to query target: %v", err)
+			}
+			if deployed == nil {
+				MustError(http.StatusNotFound, writer, "no resource found for nqn %s", nqn)
+			}
 			err = s.nvmeof.Delete(ctx, nqn)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "nvmeof delete failed: %v", err)

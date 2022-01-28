@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/LINBIT/linstor-gateway/client"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 	"strings"
@@ -43,11 +45,7 @@ func listNVMECommand() *cobra.Command {
 		Short: "list configured NVMe-oF targets",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
-			cfgs, err := n.List(context.Background())
+			cfgs, err := cli.NvmeOf.GetAll(context.Background())
 			if err != nil {
 				return err
 			}
@@ -57,7 +55,11 @@ func listNVMECommand() *cobra.Command {
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
 			for _, cfg := range cfgs {
-				for _, vol := range cfg.Status.Volumes {
+				for i, vol := range cfg.Status.Volumes {
+					if i == 0 {
+						log.Debugf("not displaying cluster private volume: %+v", vol)
+						continue
+					}
 					table.Rich(
 						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
@@ -78,18 +80,15 @@ func createNVMECommand() *cobra.Command {
 	resourceGroup := "DfltRscGrp"
 
 	cmd := &cobra.Command{
-		Use:   "create NQN SERVICE_IP [VOLUME_SIZE]...",
-		Short: "Create a new NVMe-oF target",
-		Args:  cobra.MinimumNArgs(2),
+		Use:     "create NQN SERVICE_IP VOLUME_SIZE [VOLUME_SIZE]...",
+		Short:   "Create a new NVMe-oF target",
+		Long:    `Create a new NVMe-oF target. The NQN consists of <vendor>:nvme:<subsystem>.`,
+		Example: `linstor-gateway nvme create linbit:nvme:example`,
+		Args:    cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nqn, err := nvmeof.NewNqn(args[0])
 			if err != nil {
 				return err
-			}
-
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
 			}
 
 			serviceIP, err := common.ServiceIPFromString(args[1])
@@ -100,16 +99,18 @@ func createNVMECommand() *cobra.Command {
 			volumes := []common.VolumeConfig{
 				common.ClusterPrivateVolume(),
 			}
-			for _, rawvalue := range args[2:] {
+			for i, rawvalue := range args[2:] {
 				val, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(rawvalue)
 				if err != nil {
 					return err
 				}
 
-				volumes = append(volumes, common.VolumeConfig{SizeKiB: uint64(val.Value / unit.K)})
+				volumes = append(volumes, common.VolumeConfig{
+					Number:  i + 1,
+					SizeKiB: uint64(val.Value / unit.K)})
 			}
 
-			_, err = n.Create(context.Background(), &nvmeof.ResourceConfig{
+			_, err = cli.NvmeOf.Create(context.Background(), &nvmeof.ResourceConfig{
 				NQN:           nqn,
 				ServiceIP:     serviceIP,
 				ResourceGroup: resourceGroup,
@@ -135,10 +136,6 @@ func deleteNVMECommand() *cobra.Command {
 		Short: "Delete existing NVMe-oF targets",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -147,7 +144,11 @@ func deleteNVMECommand() *cobra.Command {
 					continue
 				}
 
-				err = n.Delete(context.Background(), nqn)
+				err = cli.NvmeOf.Delete(context.Background(), nqn)
+				if err == client.NotFoundError {
+					allErrs = append(allErrs, noTarget(nqn))
+					continue
+				}
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -167,10 +168,6 @@ func startNVMECommand() *cobra.Command {
 		Short: "Start a stopped NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -179,14 +176,13 @@ func startNVMECommand() *cobra.Command {
 					continue
 				}
 
-				cfg, err := n.Start(context.Background(), nqn)
-				if err != nil {
-					allErrs = append(allErrs, err)
+				_, err = cli.NvmeOf.Start(context.Background(), nqn)
+				if err == client.NotFoundError {
+					allErrs = append(allErrs, noTarget(nqn))
 					continue
 				}
-
-				if cfg == nil {
-					allErrs = append(allErrs, noTarget(nqn))
+				if err != nil {
+					allErrs = append(allErrs, err)
 					continue
 				}
 
@@ -204,10 +200,6 @@ func stopNVMECommand() *cobra.Command {
 		Short: "Stop a started NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
 			var allErrs multiError
 			for _, rawnqn := range args {
 				nqn, err := nvmeof.NewNqn(rawnqn)
@@ -216,14 +208,13 @@ func stopNVMECommand() *cobra.Command {
 					continue
 				}
 
-				cfg, err := n.Stop(context.Background(), nqn)
-				if err != nil {
-					allErrs = append(allErrs, err)
+				_, err = cli.NvmeOf.Stop(context.Background(), nqn)
+				if err == client.NotFoundError {
+					allErrs = append(allErrs, noTarget(nqn))
 					continue
 				}
-
-				if cfg == nil {
-					allErrs = append(allErrs, noTarget(nqn))
+				if err != nil {
+					allErrs = append(allErrs, err)
 					continue
 				}
 
@@ -246,10 +237,6 @@ func addVolumeNVMECommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
 
 			volNr, err := strconv.Atoi(args[1])
 			if err != nil {
@@ -261,13 +248,12 @@ func addVolumeNVMECommand() *cobra.Command {
 				return err
 			}
 
-			cfg, err := n.AddVolume(context.Background(), nqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
+			_, err = cli.NvmeOf.AddVolume(context.Background(), nqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
+			if err == client.NotFoundError {
+				return noTarget(nqn)
+			}
 			if err != nil {
 				return err
-			}
-
-			if cfg == nil {
-				return noTarget(nqn)
 			}
 
 			fmt.Printf("Added volume to \"%s\"\n", nqn)
@@ -287,23 +273,18 @@ func deleteVolumeNVMECommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			n, err := nvmeof.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize NVMe-oF: %w", err)
-			}
 
 			volNr, err := strconv.Atoi(args[1])
 			if err != nil {
 				return err
 			}
 
-			cfg, err := n.DeleteVolume(context.Background(), nqn, volNr)
+			err = cli.NvmeOf.DeleteVolume(context.Background(), nqn, volNr)
 			if err != nil {
+				if err == client.NotFoundError {
+					return noTarget(nqn)
+				}
 				return err
-			}
-
-			if cfg == nil {
-				return noTarget(nqn)
 			}
 
 			fmt.Printf("Deleted volume %d of \"%s\"\n", volNr, nqn)

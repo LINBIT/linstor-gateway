@@ -1,26 +1,19 @@
-## linstor-gateway nfs list
+## linstor-gateway iscsi delete-volume
 
-Lists NFS resources
+Delete a logical unit of an existing iSCSI target
 
 ### Synopsis
 
-Lists the NFS resources created with this tool and provides an
-overview about the existing LINSTOR resources and service status.
+Delete a logical unit of an existing iSCSI target. The target needs to be stopped.
 
 ```
-linstor-gateway nfs list [flags]
-```
-
-### Examples
-
-```
-linstor-gateway nfs list
+linstor-gateway iscsi delete-volume IQN LU_NR [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for delete-volume
 ```
 
 ### Options inherited from parent commands
@@ -33,5 +26,5 @@ linstor-gateway nfs list
 
 ### SEE ALSO
 
-* [linstor-gateway nfs](linstor-gateway_nfs.md)	 - Manages Highly-Available NFS exports
+* [linstor-gateway iscsi](linstor-gateway_iscsi.md)	 - Manages Highly-Available iSCSI targets
 

@@ -11,33 +11,32 @@ After that it creates a drbd-reactor configuration to bring up a highly availabl
 export.
 
 ```
-linstor-gateway nfs create [flags]
+linstor-gateway nfs create NAME SERVICE_IP SIZE [flags]
 ```
 
 ### Examples
 
 ```
-linstor-gateway nfs create --resource=example --service-ip=192.168.211.122/24 --allowed-ips=192.168.0.0/16 --resource-group=ssd_thin_2way --size=2G
+linstor-gateway nfs create example 192.168.211.122/24 2G
+linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
+
 ```
 
 ### Options
 
 ```
-      --allowed-ips ip-cidr     Set the IP address mask of clients that are allowed access (default ::1/64)
+      --allowed-ips ip-cidr     Set the IP address mask of clients that are allowed access (default 0.0.0.0/0)
   -p, --export-path string      Set the export path, relative to /srv/gateway-exports (default "/")
   -h, --help                    help for create
-  -r, --resource string         Set the resource name (required)
-  -g, --resource-group string   Set the LINSTOR resource group name
-      --service-ip ip-cidr      Set the service IP and netmask of the target (required) (default ::1/64)
-      --size unit               Set a size (e.g, 1TiB) (default 1GiB)
+  -r, --resource-group string   LINSTOR resource group to use (default "DfltRscGrp")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
-      --loglevel string       Set the log level (as defined by logrus) (default "info")
+      --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+      --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

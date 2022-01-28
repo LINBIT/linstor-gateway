@@ -35,7 +35,7 @@ func (s *server) NFSGet(all bool) http.HandlerFunc {
 		} else {
 			id, err := strconv.Atoi(mux.Vars(r)["id"])
 			if err != nil {
-				MustError(http.StatusBadRequest, w, "invalid LUN: %v", err)
+				MustError(http.StatusBadRequest, w, "invalid volume number %q: %v", mux.Vars(r)["id"], err)
 				return
 			}
 

@@ -30,36 +30,46 @@ as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`
 	rootCmd.AddCommand(createNFSCommand())
 	rootCmd.AddCommand(deleteNFSCommand())
 	rootCmd.AddCommand(listNFSCommand())
-	rootCmd.AddCommand(serverCommand())
 
 	return rootCmd
 
 }
 
 func createNFSCommand() *cobra.Command {
-	var resourceGroupName string
-	var resourceName string
-	serviceIPCIDR := common.ServiceIPFromParts(net.IPv6loopback, 64)
-	allowedIPsCIDR := common.ServiceIPFromParts(net.IPv6loopback, 64)
+	resourceGroup := "DfltRscGrp"
+	allowedIPsCIDR := common.ServiceIPFromParts(net.IPv4zero, 0)
 	exportPath := "/"
 
-	var sz *unit.Value
-
-	var createCmd = &cobra.Command{
-		Use:   "create",
+	cmd := &cobra.Command{
+		Use:   "create NAME SERVICE_IP SIZE",
 		Short: "Creates an NFS export",
 		Long: `Creates a highly available NFS export based on LINSTOR and drbd-reactor.
 At first it creates a new resource within the LINSTOR system under the
 specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS 
 export.`,
-		Example: "linstor-gateway nfs create --resource=example --service-ip=192.168.211.122/24 --allowed-ips=192.168.0.0/16 --resource-group=ssd_thin_2way --size=2G",
-		Args:    cobra.NoArgs,
+		Example: `linstor-gateway nfs create example 192.168.211.122/24 2G
+linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
+`,
+		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
+			resource := args[0]
+			serviceIP, err := common.ServiceIPFromString(args[1])
+			if err != nil {
+				return err
+			}
+
+			size, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(args[2])
+			if err != nil {
+				return err
+			}
+
 			rsc := &nfs.ResourceConfig{
-				Name:          resourceName,
-				ResourceGroup: resourceGroupName,
-				ServiceIP:     serviceIPCIDR,
+				Name:          resource,
+				ResourceGroup: resourceGroup,
+				ServiceIP:     serviceIP,
 				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
 				Volumes: []nfs.VolumeConfig{
 					{VolumeConfig: common.ClusterPrivateVolume()},
@@ -67,68 +77,42 @@ export.`,
 						ExportPath: exportPath,
 						VolumeConfig: common.VolumeConfig{
 							Number:              1,
-							SizeKiB:             uint64(sz.Value / unit.K),
+							SizeKiB:             uint64(size.Value / unit.K),
 							FileSystem:          "ext4",
 							FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
 						},
 					},
 				},
 			}
-			n, err := nfs.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize nfs: %w", err)
-			}
-
-			_, err = n.Create(context.Background(), rsc)
+			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("Created export '%s' at %s:%s\n", resourceName, serviceIPCIDR.IP().String(), nfs.ExportPath(rsc, &rsc.Volumes[0]))
+			fmt.Printf("Created export '%s' at %s:%s\n", resource, serviceIP.IP().String(), nfs.ExportPath(rsc, &rsc.Volumes[0]))
 			return nil
 		},
 	}
 
-	createCmd.Flags().StringVarP(&resourceGroupName, "resource-group", "g", "", "Set the LINSTOR resource group name")
-	createCmd.Flags().StringVarP(&resourceName, "resource", "r", "", "Set the resource name (required)")
-	createCmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, fmt.Sprintf("Set the export path, relative to %s", nfs.ExportBasePath))
-	createCmd.Flags().VarP(&serviceIPCIDR, "service-ip", "", "Set the service IP and netmask of the target (required)")
-	createCmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
+	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "LINSTOR resource group to use")
+	cmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, fmt.Sprintf("Set the export path, relative to %s", nfs.ExportBasePath))
+	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 
-	units := unit.DefaultUnits
-	units["KiB"] = units["K"]
-	units["MiB"] = units["M"]
-	units["GiB"] = units["G"]
-	units["TiB"] = units["T"]
-	units["PiB"] = units["P"]
-	units["EiB"] = units["E"]
-	u := unit.MustNewUnit(units)
-	sz = u.MustNewValue(1*units["G"], unit.None)
-	createCmd.Flags().Var(sz, "size", "Set a size (e.g, 1TiB)")
-
-	createCmd.MarkFlagRequired("resource")
-	createCmd.MarkFlagRequired("service-ip")
-	createCmd.MarkFlagRequired("allowed-ips")
-
-	return createCmd
+	return cmd
 }
 
 func deleteNFSCommand() *cobra.Command {
-	var resourceName string
-
-	var deleteCmd = &cobra.Command{
-		Use:   "delete",
+	return &cobra.Command{
+		Use:   "delete NAME",
 		Short: "Deletes an NFS export",
 		Long: `Deletes an NFS export by stopping and deleting the drbd-reactor config
 and removing the LINSTOR resources.`,
-		Example: "linstor-gateway nfs delete --resource=example",
-		Args:    cobra.NoArgs,
+		Example: "linstor-gateway nfs delete example",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nfs.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize nfs: %w", err)
-			}
-			err = n.Delete(context.Background(), resourceName)
+			ctx := context.Background()
+			resourceName := args[0]
+			err := cli.Nfs.Delete(ctx, resourceName)
 			if err != nil {
 				return err
 			}
@@ -137,29 +121,19 @@ and removing the LINSTOR resources.`,
 			return nil
 		},
 	}
-
-	deleteCmd.Flags().StringVarP(&resourceName, "resource", "r", "", "Set the resource name (required)")
-
-	deleteCmd.MarkFlagRequired("resource")
-
-	return deleteCmd
 }
 
 func listNFSCommand() *cobra.Command {
-	var controller net.IP
-	var listCmd = &cobra.Command{
+	return &cobra.Command{
 		Use:   "list",
 		Short: "Lists NFS resources",
-		Long: `Lists the NFS resources created with this tool and provides an overview
-about the existing LINSTOR resources and service status.`,
+		Long: `Lists the NFS resources created with this tool and provides an
+overview about the existing LINSTOR resources and service status.`,
 		Example: "linstor-gateway nfs list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := nfs.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize nfs: %w", err)
-			}
-			list, err := n.List(context.Background())
+			ctx := context.Background()
+			list, err := cli.Nfs.GetAll(ctx)
 			if err != nil {
 				return err
 			}
@@ -206,7 +180,4 @@ about the existing LINSTOR resources and service status.`,
 			return nil
 		},
 	}
-
-	listCmd.Flags().IPVarP(&controller, "controller", "c", net.IPv4(127, 0, 0, 1), "Set the IP of the linstor controller node")
-	return listCmd
 }

@@ -4,33 +4,30 @@ Starts an iSCSI target
 
 ### Synopsis
 
-Sets the target role attribute of a Pacemaker primitive to started.
-In case it does not start use your favourite pacemaker tools to analyze
-the root cause.
+Makes an iSCSI target available by starting it.
 
 ```
-linstor-gateway iscsi start [flags]
+linstor-gateway iscsi start IQN... [flags]
 ```
 
 ### Examples
 
 ```
-linstor-gateway iscsi start --iqn=iqn.2019-08.com.linbit:example
+linstor-gateway iscsi start iqn.2019-08.com.linbit:example
 ```
 
 ### Options
 
 ```
-  -h, --help      help for start
-  -i, --iqn iqn   Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (default :)
+  -h, --help   help for start
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
-      --loglevel string       Set the log level (as defined by logrus) (default "info")
+      --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+      --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

@@ -1,26 +1,19 @@
-## linstor-gateway nfs list
+## linstor-gateway iscsi add-volume
 
-Lists NFS resources
+Add a new logical unit to an existing iSCSI target
 
 ### Synopsis
 
-Lists the NFS resources created with this tool and provides an
-overview about the existing LINSTOR resources and service status.
+Add a new logical unit to an existing iSCSI target. The target needs to be stopped.
 
 ```
-linstor-gateway nfs list [flags]
-```
-
-### Examples
-
-```
-linstor-gateway nfs list
+linstor-gateway iscsi add-volume IQN LU_NR LU_SIZE [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for add-volume
 ```
 
 ### Options inherited from parent commands
@@ -33,5 +26,5 @@ linstor-gateway nfs list
 
 ### SEE ALSO
 
-* [linstor-gateway nfs](linstor-gateway_nfs.md)	 - Manages Highly-Available NFS exports
+* [linstor-gateway iscsi](linstor-gateway_iscsi.md)	 - Manages Highly-Available iSCSI targets
 

@@ -4,29 +4,30 @@ Stops an iSCSI target
 
 ### Synopsis
 
-Sets the target role attribute of a Pacemaker primitive to stopped.
-This causes pacemaker to stop the components of an iSCSI target.
-
-For example:
-linstor-gateway iscsi stop --iqn=iqn.2019-08.com.linbit:example
+Disables an iSCSI target, making it unavailable to initiators while not deleting it.
 
 ```
-linstor-gateway iscsi stop [flags]
+linstor-gateway iscsi stop IQN [flags]
+```
+
+### Examples
+
+```
+linstor-gateway iscsi stop iqn.2019-08.com.linbit:example
 ```
 
 ### Options
 
 ```
-  -h, --help      help for stop
-  -i, --iqn iqn   Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required) (default :)
+  -h, --help   help for stop
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
-      --loglevel string       Set the log level (as defined by logrus) (default "info")
+      --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+      --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

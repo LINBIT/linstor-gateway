@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -17,7 +16,6 @@ import (
 )
 
 func iscsiCommands() *cobra.Command {
-
 	var rootCmd = &cobra.Command{
 		Use:     "iscsi",
 		Version: version,
@@ -33,60 +31,66 @@ as well as drbd-reactor is a prerequisite to use this tool.`,
 	rootCmd.AddCommand(createISCSICommand())
 	rootCmd.AddCommand(deleteISCSICommand())
 	rootCmd.AddCommand(listISCSICommand())
-	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(startISCSICommand())
 	rootCmd.AddCommand(stopISCSICommand())
+	rootCmd.AddCommand(addVolumeISCSICommand())
+	rootCmd.AddCommand(deleteVolumeISCSICommand())
 
 	return rootCmd
 }
 
 func createISCSICommand() *cobra.Command {
-	var username, password, portals, group string
-	var iqn iscsi.Iqn
-
-	var lun int
-
-	var sz *unit.Value
-	var serviceIpStrings []string
+	var username, password, group string
 	var serviceIps []common.IpCidr
 
-	var createCmd = &cobra.Command{
-		Use:   "create",
+	cmd := &cobra.Command{
+		Use:   "create IQN SERVICE_IPS [VOLUME_SIZE]...",
 		Short: "Creates an iSCSI target",
 		Long: `Creates a highly available iSCSI target based on LINSTOR and drbd-reactor.
 At first it creates a new resource within the LINSTOR system, using the
 specified resource group. The name of the linstor resources is derived
-from the IQN's World Wide Name, which must be unique'.
+from the IQN's World Wide Name, which must be unique.
 After that it creates a configuration for drbd-reactor to manage the
 high availability primitives.`,
-		Example: "linstor-gateway iscsi create --iqn=iqn.2019-08.com.linbit:example --ip=192.168.122.181/24 --username=foo --lun=1 --password=bar --resource-group=ssd_thin_2way --size=2G",
-		Args:    cobra.NoArgs,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			for _, str := range serviceIpStrings {
-				ip, err := common.ServiceIPFromString(str)
+		Example: `linstor-gateway iscsi create iqn.2019-08.com.linbit:example 192.168.122.181/24 2G`,
+		Args:    cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
+			iqn, err := iscsi.NewIqn(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid IQN '%s': %w", args[0], err)
+			}
+
+			for _, ipString := range strings.Split(args[1], ",") {
+				ip, err := common.ServiceIPFromString(ipString)
 				if err != nil {
-					return fmt.Errorf("failed to parse service IP '%s': %w", str, err)
+					return fmt.Errorf("invalid service IP '%s': %w", ipString, err)
 				}
 				serviceIps = append(serviceIps, ip)
 			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			i, err := iscsi.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize iscsi: %w", err)
+
+			volumes := []common.VolumeConfig{
+				common.ClusterPrivateVolume(),
+			}
+			for i, rawvalue := range args[2:] {
+				val, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(rawvalue)
+				if err != nil {
+					return err
+				}
+
+				volumes = append(volumes, common.VolumeConfig{
+					Number:  i + 1,
+					SizeKiB: uint64(val.Value / unit.K),
+				})
 			}
 
-			_, err = i.Create(ctx, &iscsi.ResourceConfig{
+			_, err = cli.Iscsi.Create(ctx, &iscsi.ResourceConfig{
 				IQN:        iqn,
 				Username:   username,
 				Password:   password,
 				ServiceIPs: serviceIps,
-				Volumes: []common.VolumeConfig{
-					common.ClusterPrivateVolume(),
-					{Number: lun, SizeKiB: uint64(sz.Value / unit.K)},
-				},
+				Volumes:    volumes,
 			})
 			if err != nil {
 				return err
@@ -98,31 +102,11 @@ high availability primitives.`,
 		},
 	}
 
-	createCmd.Flags().StringSliceVar(&serviceIpStrings, "ip", nil, "Set the service IP and netmask of the target. Can be supplied multiple times to create multiple portals")
-	createCmd.Flags().VarP(&iqn, "iqn", "i", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique)")
-	createCmd.Flags().IntVarP(&lun, "lun", "l", 1, "Set the LUN")
-	createCmd.Flags().StringVar(&portals, "portals", "", "Set up portals, if unset, the service ip and default port")
-	createCmd.Flags().StringVarP(&username, "username", "u", "", "Set the username to use for CHAP authentication")
-	createCmd.Flags().StringVarP(&password, "password", "p", "", "Set the password to use for CHAP authentication")
+	cmd.Flags().StringVarP(&username, "username", "u", "", "Set the username to use for CHAP authentication")
+	cmd.Flags().StringVarP(&password, "password", "p", "", "Set the password to use for CHAP authentication")
+	cmd.Flags().StringVarP(&group, "resource-group", "g", "DfltRscGrp", "Set the LINSTOR resource group")
 
-	units := unit.DefaultUnits
-	units["KiB"] = units["K"]
-	units["MiB"] = units["M"]
-	units["GiB"] = units["G"]
-	units["TiB"] = units["T"]
-	units["PiB"] = units["P"]
-	units["EiB"] = units["E"]
-	u := unit.MustNewUnit(units)
-	sz = u.MustNewValue(1*units["G"], unit.None)
-	createCmd.Flags().Var(sz, "size", "Set a size (e.g, 1TiB)")
-
-	createCmd.Flags().StringVarP(&group, "resource-group", "g", "DfltRscGrp", "Set the LINSTOR resource-group")
-
-	createCmd.MarkFlagRequired("ip")
-	createCmd.MarkFlagRequired("iqn")
-	createCmd.MarkFlagRequired("size")
-
-	return createCmd
+	return cmd
 }
 
 func listISCSICommand() *cobra.Command {
@@ -134,11 +118,7 @@ about the existing drbd-reactor and linstor parts.`,
 		Example: "linstor-gateway iscsi list",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			i, err := iscsi.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize iscsi: %w", err)
-			}
-			cfgs, err := i.List(context.Background())
+			cfgs, err := cli.Iscsi.GetAll(context.TODO())
 			if err != nil {
 				return err
 			}
@@ -175,127 +155,154 @@ about the existing drbd-reactor and linstor parts.`,
 }
 
 func startISCSICommand() *cobra.Command {
-	var iqn iscsi.Iqn
-
-	var startCmd = &cobra.Command{
-		Use:   "start",
-		Short: "Starts an iSCSI target",
-		Long: `Sets the target role attribute of a Pacemaker primitive to started.
-In case it does not start use your favourite pacemaker tools to analyze
-the root cause.`,
-		Example: "linstor-gateway iscsi start --iqn=iqn.2019-08.com.linbit:example",
-		Args:    cobra.NoArgs,
+	return &cobra.Command{
+		Use:     "start IQN...",
+		Short:   "Starts an iSCSI target",
+		Long:    `Makes an iSCSI target available by starting it.`,
+		Example: "linstor-gateway iscsi start iqn.2019-08.com.linbit:example",
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			i, err := iscsi.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize iscsi: %w", err)
-			}
-			cfg, err := i.Start(context.Background(), iqn)
-			if err != nil {
-				return err
+			var allErrs multiError
+			for _, rawiqn := range args {
+				iqn, err := iscsi.NewIqn(rawiqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				_, err = cli.Iscsi.Start(context.Background(), iqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				fmt.Printf("Started target \"%s\"\n", iqn)
 			}
 
-			if cfg == nil {
-				return errors.New(fmt.Sprintf("Unknown target %s", iqn))
-			}
-
-			fmt.Printf("Started target %s\n", iqn)
-
-			return nil
+			return allErrs.Err()
 		},
 	}
-
-	startCmd.Flags().VarP(&iqn, "iqn", "i", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique)")
-
-	startCmd.MarkFlagRequired("iqn")
-
-	return startCmd
 }
 
 func stopISCSICommand() *cobra.Command {
-	var iqn iscsi.Iqn
-
-	var stopCmd = &cobra.Command{
-		Use:   "stop",
-		Short: "Stops an iSCSI target",
-		Long: `Sets the target role attribute of a Pacemaker primitive to stopped.
-This causes pacemaker to stop the components of an iSCSI target.
-
-For example:
-linstor-gateway iscsi stop --iqn=iqn.2019-08.com.linbit:example`,
-		Args: cobra.NoArgs,
+	return &cobra.Command{
+		Use:     "stop IQN",
+		Short:   "Stops an iSCSI target",
+		Long:    `Disables an iSCSI target, making it unavailable to initiators while not deleting it.`,
+		Example: `linstor-gateway iscsi stop iqn.2019-08.com.linbit:example`,
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			i, err := iscsi.New(controllers)
-			if err != nil {
-				return fmt.Errorf("failed to initialize iscsi: %w", err)
+			var allErrs multiError
+			for _, rawiqn := range args {
+				iqn, err := iscsi.NewIqn(rawiqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				_, err = cli.Iscsi.Stop(context.Background(), iqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				fmt.Printf("Stopped target \"%s\"\n", iqn)
 			}
-			cfg, err := i.Stop(context.Background(), iqn)
+
+			return allErrs.Err()
+		},
+	}
+}
+
+func deleteISCSICommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete IQN...",
+		Short: "Deletes an iSCSI target",
+		Long: `Deletes an iSCSI target by stopping and deleting the corresponding
+drbd-reactor configuration and removing the LINSTOR resources. All logical units
+of the target will be deleted.`,
+		Example: "linstor-gateway iscsi delete iqn.2019-08.com.linbit:example",
+		Args:    cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var allErrs multiError
+			for _, rawiqn := range args {
+				iqn, err := iscsi.NewIqn(rawiqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				err = cli.Iscsi.Delete(context.Background(), iqn)
+				if err != nil {
+					allErrs = append(allErrs, err)
+					continue
+				}
+
+				fmt.Printf("Deleted target \"%s\"\n", iqn)
+			}
+
+			return allErrs.Err()
+		},
+	}
+}
+
+func addVolumeISCSICommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "add-volume IQN LU_NR LU_SIZE",
+		Short: "Add a new logical unit to an existing iSCSI target",
+		Long:  "Add a new logical unit to an existing iSCSI target. The target needs to be stopped.",
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			iqn, err := iscsi.NewIqn(args[0])
 			if err != nil {
 				return err
 			}
 
-			if cfg == nil {
-				return errors.New(fmt.Sprintf("Unknown target %s", iqn))
+			volNr, err := strconv.Atoi(args[1])
+			if err != nil {
+				return err
 			}
 
-			fmt.Printf("Stopped target %s\n", iqn)
+			size, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(args[2])
+			if err != nil {
+				return err
+			}
 
+			_, err = cli.Iscsi.AddLogicalUnit(context.Background(), iqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Added volume to \"%s\"\n", iqn)
 			return nil
 		},
 	}
-
-	stopCmd.Flags().VarP(&iqn, "iqn", "i", "Set the iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) (required)")
-
-	stopCmd.MarkFlagRequired("iqn")
-
-	return stopCmd
 }
 
-func deleteISCSICommand() *cobra.Command {
-	var iqn iscsi.Iqn
-	var lun int
-
-	var deleteCmd = &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes an iSCSI target",
-		Long: `Deletes an iSCSI target by stopping and deleting the pacemaker resource
-primitives and removing the linstor resources.`,
-		Example: "linstor-gateway iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=1",
-		Args:    cobra.NoArgs,
+func deleteVolumeISCSICommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete-volume IQN LU_NR",
+		Short: "Delete a logical unit of an existing iSCSI target",
+		Long:  "Delete a logical unit of an existing iSCSI target. The target needs to be stopped.",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			i, err := iscsi.New(controllers)
+			iqn, err := iscsi.NewIqn(args[0])
 			if err != nil {
-				return fmt.Errorf("failed to initialize iscsi: %w", err)
-			}
-			if cmd.Flags().Changed("lun") {
-				cfg, err := i.DeleteVolume(ctx, iqn, lun)
-				if err != nil {
-					return err
-				}
-
-				if cfg == nil {
-					return errors.New(fmt.Sprintf("Unknown target %s\n", iqn))
-				} else {
-					fmt.Printf("Deleted LU %d for target %s\n", lun, iqn)
-				}
-			} else {
-				err := i.Delete(ctx, iqn)
-				if err != nil {
-					return err
-				}
-
-				fmt.Printf("Deleted target %s\n", iqn)
+				return err
 			}
 
+			volNr, err := strconv.Atoi(args[1])
+			if err != nil {
+				return err
+			}
+
+			err = cli.Iscsi.DeleteLogicalUnit(context.Background(), iqn, volNr)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Deleted volume %d of \"%s\"\n", volNr, iqn)
 			return nil
 		},
 	}
-
-	deleteCmd.Flags().VarP(&iqn, "iqn", "i", "The iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) of the target to delete.")
-	deleteCmd.Flags().IntVarP(&lun, "lun", "l", -1, "Set the LUN")
-
-	deleteCmd.MarkFlagRequired("iqn")
-
-	return deleteCmd
 }

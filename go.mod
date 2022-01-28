@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-runewidth v0.0.10 // indirect
+	github.com/moul/http2curl v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rck/unit v0.0.3
 	github.com/sirupsen/logrus v1.8.1

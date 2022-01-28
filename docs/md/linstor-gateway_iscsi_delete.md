@@ -4,33 +4,32 @@ Deletes an iSCSI target
 
 ### Synopsis
 
-Deletes an iSCSI target by stopping and deleting the pacemaker resource
-primitives and removing the linstor resources.
+Deletes an iSCSI target by stopping and deleting the corresponding
+drbd-reactor configuration and removing the LINSTOR resources. All logical units
+of the target will be deleted.
 
 ```
-linstor-gateway iscsi delete [flags]
+linstor-gateway iscsi delete IQN... [flags]
 ```
 
 ### Examples
 
 ```
-linstor-gateway iscsi delete --iqn=iqn.2019-08.com.linbit:example --lun=1
+linstor-gateway iscsi delete iqn.2019-08.com.linbit:example
 ```
 
 ### Options
 
 ```
-  -h, --help      help for delete
-  -i, --iqn iqn   The iSCSI Qualified Name (e.g., iqn.2019-08.com.linbit:unique) of the target to delete. (default :)
-  -l, --lun int   Set the LUN (default -1)
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
-      --loglevel string       Set the log level (as defined by logrus) (default "info")
+      --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+      --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

@@ -2,8 +2,18 @@
 
 Create a new NVMe-oF target
 
+### Synopsis
+
+Create a new NVMe-oF target. The NQN consists of <vendor>:nvme:<subsystem>.
+
 ```
-linstor-gateway nvme create NQN SERVICE_IP [VOLUME_SIZE]... [flags]
+linstor-gateway nvme create NQN SERVICE_IP VOLUME_SIZE [VOLUME_SIZE]... [flags]
+```
+
+### Examples
+
+```
+linstor-gateway nvme create linbit:nvme:example
 ```
 
 ### Options
@@ -16,9 +26,9 @@ linstor-gateway nvme create NQN SERVICE_IP [VOLUME_SIZE]... [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string         Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-      --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
-      --loglevel string       Set the log level (as defined by logrus) (default "info")
+      --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+      --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 
 ### SEE ALSO

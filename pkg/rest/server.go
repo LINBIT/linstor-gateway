@@ -29,6 +29,10 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+func (e Error) Error() string {
+	return e.Message
+}
+
 // Errorf takes a StatusCode, a ResponseWriter and a format string.
 // It sets up the REST response and writes it to the ResponseWriter
 // It also sets the according error code.

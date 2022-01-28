@@ -276,12 +276,6 @@ func (r *ResourceConfig) FillDefaults() {
 	if r.ResourceGroup == "" {
 		r.ResourceGroup = "DfltRscGrp"
 	}
-
-	for i := range r.Volumes {
-		if r.Volumes[i].Number == 0 {
-			r.Volumes[i].Number = i + 1
-		}
-	}
 }
 
 func (r *ResourceConfig) Valid() error {

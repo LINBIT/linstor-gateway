@@ -1,16 +1,17 @@
 #! /usr/bin/env python3
 
 import argparse
-import errno
 import os
 import pipes
 import re
 import socket
 import subprocess
+from io import StringIO
+from threading import Thread
+
+import errno
 import sys
 import time
-from io import StringIO
-
 from lbpytest.controlmaster import SSH
 
 # stream to write output to
@@ -53,6 +54,10 @@ class Nodes(list):
     def run(self, command):
         return [n.run(command) for n in self]
 
+    def cleanup(self):
+        for n in self:
+            n.cleanup()
+
 
 class Node:
     def __init__(self, name, addr=None):
@@ -62,8 +67,25 @@ class Node:
         except:
             raise RuntimeError('Could not determine IP for host %s' % name)
         self.ssh = SSH(self.addr)
-
         self.hostname = self.run(['hostname', '-f'], return_stdout=True)
+        self.server_process = None
+
+    def cleanup(self):
+        self.stop_server()
+        self.ssh.close()
+
+    def start_server(self):
+        def server(n: Node):
+            p = n.ssh.Popen('linstor-gateway --loglevel=trace server')
+            n.server_process = p
+            n.ssh.pipeIO(p, stdout=logstream, stderr=logstream)
+
+        thread = Thread(target=server, args=(self,))
+        thread.start()
+
+    def stop_server(self):
+        if self.server_process:
+            self.server_process.terminate()
 
     def run(self, cmd, quote=True, catch=False, return_stdout=False, stdin=None, stdout=None,
             stderr=None, env=None):

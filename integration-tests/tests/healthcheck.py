@@ -5,4 +5,7 @@ import gatewaytest
 nodes = gatewaytest.setup()
 
 first = nodes[0]
-print(first.run(['linstor-gateway', 'check-health']))
+first.start_server()
+first.run(['linstor-gateway', 'check-health'])
+
+nodes.cleanup()

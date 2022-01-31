@@ -5,3 +5,5 @@ import gatewaytest
 nodes = gatewaytest.setup()
 
 print(nodes)
+
+nodes.cleanup()

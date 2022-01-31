@@ -152,3 +152,12 @@ test-e2e:
   needs:
     - package
     - publish-docker
+  artifacts:
+    # provide a convenient name so that the downloaded artifacts can be identified
+    name: $CI_PROJECT_NAME-$CI_JOB_ID
+    paths:
+      - integration-tests/tests-out/
+    when: always
+    reports:
+      junit: integration-tests/tests-out/test-results/*.xml
+    expire_in: 1 week

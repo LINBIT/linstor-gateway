@@ -1,5 +1,5 @@
 TEST_SUITE_IMAGE ?= linstor-gateway-e2e:latest
-BASE_IMAGE ?= linstor-gateway-tests/base:centos-8
+BASE_IMAGE ?= $$LINBIT_DOCKER_REGSITRY/linstor-gateway-tests/base:alma-8
 LINSTOR_GATEWAY_VERSION ?= 0.0.0.$$CI_COMMIT_SHA
 TORUN ?= all
 
@@ -16,7 +16,7 @@ run:
 			--set values.LinstorGatewayVersion=$(LINSTOR_GATEWAY_VERSION)
 
 base_image:
-	virter image build centos-8 \
+	virter image build alma-8 \
 			--provision virter/provision-base.toml \
 			--set values.DRBDRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/drbd-9/x86_64 \
 			--set values.PacemakerRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/pacemaker-2/x86_64 \

@@ -82,6 +82,9 @@ class Node:
 
         thread = Thread(target=server, args=(self,))
         thread.start()
+        # sleep for 1 second so that the server is definitely ready
+        # TODO: literally any other solution would be better, so think of one...
+        time.sleep(1)
 
     def stop_server(self):
         if self.server_process:

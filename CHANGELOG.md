@@ -2,7 +2,12 @@
 
 ## Unreleased
 
+## 0.11.0-rc.1 - 2022-01-31
+
 * Add a new `check-health` command that checks whether all dependencies and requirements are met for LINSTOR Gateway
+* Implement best practices for NFS and for failover scenarios
+* Change architecture: the CLI is now exclusively a client for the server
+* [REST API v2.0.0](https://app.swaggerhub.com/apis/Linstor/linstor-gateway/2.0.0)
 
 ## 0.10.0 - 2021-11-24
 

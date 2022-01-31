@@ -42,7 +42,6 @@ build:
 
         set -x
 
-        dummy-release.sh linstor-gateway $version $release linstor-gateway.spec
         make VERSION=$version FORCE=1 debrelease
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$version.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
         lbbuildctl build linstor-gateway --ci \
@@ -65,12 +64,15 @@ package:
     - if [ -n "$CI_COMMIT_TAG" ]; then
     - VERSION=$(echo $CI_COMMIT_TAG | tr -d 'v')
     - RELEASE=1
-    - elif [ "$CI_COMMIT_BRANCH" = "master" ]; then
+    - else
+    - if [ "$CI_COMMIT_BRANCH" = "master" ]; then
     - VERSION=0.0.0.latest
     - RELEASE=$(git rev-list --count "origin/$CI_COMMIT_BRANCH")
     - else
     - VERSION=0.0.0.$CI_COMMIT_SHA
     - RELEASE=1
+    - fi
+    - dummy-release.sh linstor-gateway $VERSION $RELEASE linstor-gateway.spec
     - fi
     - gateway_build $VERSION $RELEASE
   dependencies:

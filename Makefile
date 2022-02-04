@@ -1,5 +1,7 @@
+PROG := linstor-gateway
 GITHASH=$(shell git describe --abbrev=0 --always)
 GOSOURCES=$(shell find . -type f -name '*.go')
+DESTDIR =
 
 ifndef VERSION
 # default to latest git tag
@@ -16,6 +18,12 @@ linstor-gateway: $(GOSOURCES)
 		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(VERSION) \
 		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
 		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"
+
+.PHONY: install
+install:
+	install -D -m 0750 $(PROG) $(DESTDIR)/usr/sbin/$(PROG)
+	install -d -m 0750 $(DESTDIR)/etc/linstor-gateway
+	install -D -m 0644 $(PROG).service $(DESTDIR)/usr/lib/systemd/system/$(PROG).service
 
 .PHONY: release
 release:
@@ -65,4 +73,4 @@ endif
 
 
 clean:
-	rm linstor-gateway
+	rm -f linstor-gateway

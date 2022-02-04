@@ -1,44 +1,50 @@
+linstor-gateway (0.11.0~rc.2-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Tue, 08 Feb 2022 12:45:02 +0100
+
 linstor-gateway (0.11.0~rc.1-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Mon, 31 Jan 2022 13:43:23 +0100
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Mon, 31 Jan 2022 13:43:23 +0100
 
 linstor-gateway (0.10.0-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Wed, 24 Nov 2021 16:19:23 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Wed, 24 Nov 2021 16:19:23 +0200
 
 linstor-gateway (0.10.0~rc.1-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Wed, 17 Nov 2021 17:26:53 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Wed, 17 Nov 2021 17:26:53 +0200
 
 linstor-gateway (0.9.0-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Tue, 28 Sep 2021 17:11:07 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Tue, 28 Sep 2021 17:11:07 +0200
 
 linstor-gateway (0.9.0~rc.3-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Thu, 23 Sep 2021 12:45:11 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Thu, 23 Sep 2021 12:45:11 +0200
 
 linstor-gateway (0.9.0~rc.2-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Wed, 15 Sep 2021 13:22:31 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Wed, 15 Sep 2021 13:22:31 +0200
 
 linstor-gateway (0.9.0~rc.1-1) unstable; urgency=medium
 
   * New upstream release
 
- -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com> Wed, 1 Sep 2021 14:45:34 +0200
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Wed, 1 Sep 2021 14:45:34 +0200
 
 linstor-gateway (0.8.0-1) unstable; urgency=medium
 

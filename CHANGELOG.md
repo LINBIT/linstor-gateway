@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.11.0-rc.2 - 2022-02-08
+
+* Also add a cluster private volume for direct REST API calls
+* Disallow underscores ("_") in iSCSI IQNs
+* Add missing `--allowed-initiators` flag to iSCSI create command
+
 ## 0.11.0-rc.1 - 2022-01-31
 
 * Add a new `check-health` command that checks whether all dependencies and requirements are met for LINSTOR Gateway

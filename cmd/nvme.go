@@ -322,11 +322,3 @@ func (m multiError) Err() error {
 
 	return m
 }
-
-func volumeString(vols []common.VolumeConfig) string {
-	names := make([]string, 0, len(vols))
-	for _, vol := range vols {
-		names = append(names, strconv.Itoa(vol.Number))
-	}
-	return strings.Join(names, ",")
-}

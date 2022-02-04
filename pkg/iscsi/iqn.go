@@ -19,7 +19,9 @@ var (
 
 	// This format is mandated by LINSTOR. Since we use the unique part
 	// directly for LINSTOR resource names, it needs to be compliant.
-	regexResourceName = `[[:alpha:]_][[:alnum:]_-]+`
+	// Note: while LINSTOR does allow underscores, rtslib-fb does not. See
+	// the GitHub link above: it checks for `not re.search('_', wwn)`
+	regexResourceName = `[[:alpha:]][[:alnum:]-]+`
 
 	regexWWN = regexp.MustCompile(`^(` + regexIQN + `):(` + regexResourceName + `)$`)
 )

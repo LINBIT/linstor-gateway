@@ -1,1 +1,2 @@
 linstor-gateway usr/sbin/
+linstor-gateway.service usr/lib/systemd/system/

@@ -55,8 +55,14 @@ func (n *NVMeoF) Get(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 	return deployedCfg, nil
 }
 
+// Create creates an NVMe-oF target according to the resource configuration
+// described in rsc. It automatically prepends a "cluster private volume" to the
+// list of volumes, so volume numbers must start at 1.
 func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 	rsc.FillDefaults()
+
+	// prepend cluster private volume; it should always be the first volume and have number 0
+	rsc.Volumes = append([]common.VolumeConfig{common.ClusterPrivateVolume()}, rsc.Volumes...)
 
 	err := rsc.Valid()
 	if err != nil {

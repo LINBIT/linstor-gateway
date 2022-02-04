@@ -55,8 +55,14 @@ func (i *ISCSI) Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 	return deployedCfg, nil
 }
 
+// Create creates an iSCSI target according to the resource configuration
+// described in rsc. It automatically prepends a "cluster private volume" to the
+// list of volumes, so volume numbers must start at 1.
 func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 	rsc.FillDefaults()
+
+	// prepend cluster private volume; it should always be the first volume and have number 0
+	rsc.Volumes = append([]common.VolumeConfig{common.ClusterPrivateVolume()}, rsc.Volumes...)
 
 	err := rsc.Valid()
 	if err != nil {

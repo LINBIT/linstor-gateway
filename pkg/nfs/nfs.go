@@ -54,8 +54,14 @@ func (n *NFS) Get(ctx context.Context, name string) (*ResourceConfig, error) {
 	return deployedCfg, nil
 }
 
+// Create creates an NFS export according to the resource configuration
+// described in rsc. It automatically prepends a "cluster private volume" to the
+// list of volumes, so volume numbers must start at 1.
 func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig, error) {
 	rsc.FillDefaults()
+
+	// prepend cluster private volume; it should always be the first volume and have number 0
+	rsc.Volumes = append([]VolumeConfig{{VolumeConfig: common.ClusterPrivateVolume()}}, rsc.Volumes...)
 
 	err := rsc.Valid()
 	if err != nil {

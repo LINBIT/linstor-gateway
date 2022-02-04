@@ -71,18 +71,15 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 				ResourceGroup: resourceGroup,
 				ServiceIP:     serviceIP,
 				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
-				Volumes: []nfs.VolumeConfig{
-					{VolumeConfig: common.ClusterPrivateVolume()},
-					{
-						ExportPath: exportPath,
-						VolumeConfig: common.VolumeConfig{
-							Number:              1,
-							SizeKiB:             uint64(size.Value / unit.K),
-							FileSystem:          "ext4",
-							FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
-						},
+				Volumes: []nfs.VolumeConfig{{
+					ExportPath: exportPath,
+					VolumeConfig: common.VolumeConfig{
+						Number:              1,
+						SizeKiB:             uint64(size.Value / unit.K),
+						FileSystem:          "ext4",
+						FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
 					},
-				},
+				}},
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {

@@ -96,9 +96,7 @@ func createNVMECommand() *cobra.Command {
 				return err
 			}
 
-			volumes := []common.VolumeConfig{
-				common.ClusterPrivateVolume(),
-			}
+			var volumes []common.VolumeConfig
 			for i, rawvalue := range args[2:] {
 				val, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(rawvalue)
 				if err != nil {

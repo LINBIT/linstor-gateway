@@ -42,6 +42,7 @@ as well as drbd-reactor is a prerequisite to use this tool.`,
 func createISCSICommand() *cobra.Command {
 	var username, password, group string
 	var serviceIps []common.IpCidr
+	var allowedInitiators []string
 
 	cmd := &cobra.Command{
 		Use:   "create IQN SERVICE_IPS [VOLUME_SIZE]...",
@@ -83,12 +84,23 @@ high availability primitives.`,
 				})
 			}
 
+			var allowedInitiatorIqns []iscsi.Iqn
+			for _, i := range allowedInitiators {
+				iqn, err := iscsi.NewIqn(i)
+				if err != nil {
+					log.WithField("error", err).WithField("iqn", i).Warnf("Invalid IQN for allowed initiator, ignoring")
+					continue
+				}
+				allowedInitiatorIqns = append(allowedInitiatorIqns, iqn)
+			}
+
 			_, err = cli.Iscsi.Create(ctx, &iscsi.ResourceConfig{
-				IQN:        iqn,
-				Username:   username,
-				Password:   password,
-				ServiceIPs: serviceIps,
-				Volumes:    volumes,
+				IQN:               iqn,
+				Username:          username,
+				Password:          password,
+				ServiceIPs:        serviceIps,
+				Volumes:           volumes,
+				AllowedInitiators: allowedInitiatorIqns,
 			})
 			if err != nil {
 				return err
@@ -103,6 +115,7 @@ high availability primitives.`,
 	cmd.Flags().StringVarP(&username, "username", "u", "", "Set the username to use for CHAP authentication")
 	cmd.Flags().StringVarP(&password, "password", "p", "", "Set the password to use for CHAP authentication")
 	cmd.Flags().StringVarP(&group, "resource-group", "g", "DfltRscGrp", "Set the LINSTOR resource group")
+	cmd.Flags().StringSliceVar(&allowedInitiators, "allowed-initiators", []string{}, "Restrict which initiator IQNs are allowed to connect to the target")
 
 	return cmd
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.11.0 - 2022-02-14
+
+* No changes over rc2
+
 ## 0.11.0-rc.2 - 2022-02-08
 
 * Also add a cluster private volume for direct REST API calls

@@ -11,6 +11,8 @@ func (s *server) routes() {
 		})
 	})
 
+	apiv2.HandleFunc("/status", s.APIStatus()).Methods("GET")
+
 	iscsiv2 := apiv2.PathPrefix("/iscsi").Subrouter()
 	iscsiv2.HandleFunc("", s.ISCSIList()).Methods("GET")
 	iscsiv2.HandleFunc("", s.ISCSICreate()).Methods("POST")
@@ -22,8 +24,6 @@ func (s *server) routes() {
 	iscsiv2.HandleFunc("/{iqn}/{lun}", s.ISCSIAddVolume()).Methods("PUT")
 	iscsiv2.HandleFunc("/{iqn}/{lun}", s.ISCSIDelete(false)).Methods("DELETE")
 
-
-
 	nfsv2 := apiv2.PathPrefix("/nfs").Subrouter()
 	nfsv2.HandleFunc("", s.NFSList()).Methods("GET")
 	nfsv2.HandleFunc("", s.NFSCreate()).Methods("POST")
@@ -34,7 +34,6 @@ func (s *server) routes() {
 	nfsv2.HandleFunc("/{resource}/{id}", s.NFSGet(false)).Methods("GET")
 	// No add volume: LINSTOR refuses to create a filesystem on volume that are added after the resource is deployed.
 	nfsv2.HandleFunc("/{resource}/{id}", s.NFSDelete(false)).Methods("DELETE")
-
 
 	nvmeofv2 := apiv2.PathPrefix("/nvme-of").Subrouter()
 	nvmeofv2.HandleFunc("", s.NVMeoFList()).Methods("GET")

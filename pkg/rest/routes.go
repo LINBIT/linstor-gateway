@@ -7,6 +7,15 @@ func (s *server) routes() {
 	apiv2.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
+
+			// enable CORS
+			w.Header().Add("Vary", "Origin")
+			w.Header().Add("Vary", "Access-Control-Request-Method")
+
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 			handler.ServeHTTP(w, r)
 		})
 	})

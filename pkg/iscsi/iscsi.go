@@ -40,7 +40,7 @@ func (i *ISCSI) Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
+	resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 	}
@@ -50,7 +50,7 @@ func (i *ISCSI) Get(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("unknown existing reactor config: %w", err)
 	}
 
-	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 	return deployedCfg, nil
 }
@@ -75,7 +75,7 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 	}
 
 	if cfg != nil {
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
+		resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 		}
@@ -89,12 +89,12 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 			return nil, errors.New("resource already exists with incompatible config")
 		}
 
-		deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+		deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 		return deployedCfg, nil
 	}
 
-	resourceDefinition, deployment, err := i.cli.EnsureResource(ctx, linstorcontrol.Resource{
+	resourceDefinition, resourceGroup, deployment, err := i.cli.EnsureResource(ctx, linstorcontrol.Resource{
 		Name:          rsc.IQN.WWN(),
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       rsc.Volumes,
@@ -118,7 +118,7 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
 
-	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, deployment)
+	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, deployment)
 
 	return rsc, nil
 }
@@ -193,7 +193,7 @@ func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
 			continue
 		}
 
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
+		resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 		if err != nil {
 			log.WithError(err).Warn("failed to fetch deployed resources")
 		}
@@ -204,7 +204,7 @@ func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
 			continue
 		}
 
-		parsed.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+		parsed.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 		result = append(result, parsed)
 	}
@@ -244,7 +244,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
+	resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 	}
@@ -267,7 +267,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 	}
 
 	if !exists {
-		status := linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+		status := linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 		if status.Service == common.ServiceStateStarted {
 			return nil, errors.New("cannot add volume while service is running")
 		}
@@ -283,7 +283,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 			return nil, fmt.Errorf("validation failed: %w", err)
 		}
 
-		resourceDefinition, resources, err = i.cli.EnsureResource(ctx, linstorcontrol.Resource{
+		resourceDefinition, resourceGroup, resources, err = i.cli.EnsureResource(ctx, linstorcontrol.Resource{
 			Name:          deployedCfg.IQN.WWN(),
 			ResourceGroup: deployedCfg.ResourceGroup,
 			Volumes:       deployedCfg.Volumes,
@@ -303,7 +303,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 		return nil, fmt.Errorf("failed to update config: %w", err)
 	}
 
-	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 	return deployedCfg, nil
 }
@@ -318,7 +318,7 @@ func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceCo
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinition, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
+	resourceDefinition, resourceGroup, volumeDefinition, resources, err := cfg.DeployedResources(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch deployed resources: %w", err)
 	}
@@ -328,7 +328,7 @@ func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceCo
 		return nil, fmt.Errorf("failed to convert volume definition to resource: %w", err)
 	}
 
-	status := linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+	status := linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 	if status.Service == common.ServiceStateStarted {
 		return nil, errors.New("cannot delete volume while service is running")
 	}

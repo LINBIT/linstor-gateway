@@ -39,7 +39,7 @@ func (n *NFS) Get(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+	resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 	}
@@ -49,7 +49,7 @@ func (n *NFS) Get(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("unknown existing reactor config: %w", err)
 	}
 
-	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 	return deployedCfg, nil
 }
@@ -94,7 +94,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 	}
 
 	if cfg != nil {
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+		resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
 		}
@@ -110,7 +110,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 			return nil, errors.New("resource already exists with incompatible config")
 		}
 
-		deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+		deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 		return deployedCfg, nil
 	}
@@ -120,7 +120,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		volumes[i] = rsc.Volumes[i].VolumeConfig
 	}
 
-	resourceDefinition, deployment, err := n.cli.EnsureResource(ctx, linstorcontrol.Resource{
+	resourceDefinition, resourceGroup, deployment, err := n.cli.EnsureResource(ctx, linstorcontrol.Resource{
 		Name:          rsc.Name,
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       volumes,
@@ -144,7 +144,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
 
-	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, deployment)
+	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, deployment)
 
 	return rsc, nil
 }
@@ -219,7 +219,7 @@ func (n *NFS) List(ctx context.Context) ([]*ResourceConfig, error) {
 			continue
 		}
 
-		resourceDefinition, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+		resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
 		if err != nil {
 			log.WithError(err).Warn("failed to fetch deployed resources")
 		}
@@ -230,7 +230,7 @@ func (n *NFS) List(ctx context.Context) ([]*ResourceConfig, error) {
 			continue
 		}
 
-		parsed.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+		parsed.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 
 		result = append(result, parsed)
 	}
@@ -270,7 +270,7 @@ func (n *NFS) DeleteVolume(ctx context.Context, name string, lun int) (*Resource
 		return nil, nil
 	}
 
-	resourceDefinition, volumeDefinition, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+	resourceDefinition, resourceGroup, volumeDefinition, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch deployed resources: %w", err)
 	}
@@ -280,7 +280,7 @@ func (n *NFS) DeleteVolume(ctx context.Context, name string, lun int) (*Resource
 		return nil, fmt.Errorf("failed to convert volume definition to resource: %w", err)
 	}
 
-	status := linstorcontrol.StatusFromResources(path, resourceDefinition, resources)
+	status := linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
 	if status.Service == common.ServiceStateStarted {
 		return nil, errors.New("cannot delete volume while service is running")
 	}

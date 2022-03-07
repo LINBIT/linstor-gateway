@@ -30,32 +30,37 @@ type PromoterConfig struct {
 }
 
 // DeployedResources fetches the current state of the resources referenced in the promoter config.
-func (p *PromoterConfig) DeployedResources(ctx context.Context, cli *client.Client) (*client.ResourceDefinition, []client.VolumeDefinition, []client.ResourceWithVolumes, error) {
+func (p *PromoterConfig) DeployedResources(ctx context.Context, cli *client.Client) (*client.ResourceDefinition, *client.ResourceGroup, []client.VolumeDefinition, []client.ResourceWithVolumes, error) {
 	var rscNames []string
 	for k := range p.Resources {
 		rscNames = append(rscNames, k)
 	}
 
 	if len(rscNames) != 1 {
-		return nil, nil, nil, errors.New(fmt.Sprintf("expected exactly 1 resource, got %d", len(rscNames)))
+		return nil, nil, nil, nil, errors.New(fmt.Sprintf("expected exactly 1 resource, got %d", len(rscNames)))
 	}
 
 	rd, err := cli.ResourceDefinitions.Get(ctx, rscNames[0])
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to fetch resource definition: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to fetch resource definition: %w", err)
+	}
+
+	rg, err := cli.ResourceGroups.Get(ctx, rd.ResourceGroupName)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to fetch resource group: %w", err)
 	}
 
 	vds, err := cli.ResourceDefinitions.GetVolumeDefinitions(ctx, rscNames[0])
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to fetch volume definition: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to fetch volume definition: %w", err)
 	}
 
 	resources, err := cli.Resources.GetResourceView(ctx, &client.ListOpts{Resource: rscNames})
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to fetch deployed resources: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to fetch deployed resources: %w", err)
 	}
 
-	return &rd, vds, resources, nil
+	return &rd, &rg, vds, resources, nil
 }
 
 type StartEntry interface {

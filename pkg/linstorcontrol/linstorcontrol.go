@@ -36,7 +36,7 @@ type CreateResult struct {
 	StorageNodes []string
 }
 
-func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefinition, resources []client.ResourceWithVolumes) common.ResourceStatus {
+func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefinition, group *client.ResourceGroup, resources []client.ResourceWithVolumes) common.ResourceStatus {
 	resourceState := common.Unknown
 	service := common.ServiceStateStopped
 	primary := ""
@@ -62,18 +62,28 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 	volumes := make([]common.VolumeState, 0, len(volumeByNumber))
 	for nr, deployedVols := range volumeByNumber {
 		upToDate := 0
+		diskful := 0
 		for _, vol := range deployedVols {
+			if vol.State.DiskState == "UpToDate" {
+				diskful++
+			}
 			if vol.State.DiskState == "UpToDate" || vol.State.DiskState == "Diskless" {
 				upToDate++
 			}
 		}
 
 		aggregateState := common.ResourceStateBad
-		if upToDate == len(deployedVols) {
+		if upToDate == len(deployedVols) && diskful >= int(group.SelectFilter.PlaceCount) {
 			aggregateState = common.ResourceStateOK
 		} else if upToDate > 0 {
 			aggregateState = common.ResourceStateDegraded
 		}
+
+		log.WithFields(log.Fields{
+			"resource":       definition.Name,
+			"wantPlaceCount": group.SelectFilter.PlaceCount,
+			"haveDiskful":    diskful,
+		}).Tracef("deciding aggregateState %s", aggregateState)
 
 		volumes = append(volumes, common.VolumeState{
 			Number: nr,
@@ -113,7 +123,7 @@ func Default(controllers []string) (*Linstor, error) {
 // - A slice of all resources that have been spawned from this resource
 //   definition on the respective nodes
 // - An error if one occurred, or nil
-func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, []client.ResourceWithVolumes, error) {
+func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, *client.ResourceGroup, []client.ResourceWithVolumes, error) {
 	logger := log.WithField("resource", res.Name)
 
 	logger.Trace("ensure resource group exists")
@@ -122,7 +132,12 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		Name: res.ResourceGroup,
 	})
 	if err != nil && !isErrAlreadyExists(err) {
-		return nil, nil, fmt.Errorf("failed to create resource group: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to create resource group: %w", err)
+	}
+
+	rgroup, err := l.ResourceGroups.Get(ctx, res.ResourceGroup)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get resource group: %w", err)
 	}
 
 	logger.Trace("ensure resource definition exists")
@@ -152,7 +167,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 	})
 	if err != nil {
 		if (!mayExist && isErrAlreadyExists(err)) || !isErrAlreadyExists(err) {
-			return nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
 		}
 	}
 
@@ -172,7 +187,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 			},
 		})
 		if err != nil && !isErrAlreadyExists(err) {
-			return nil, nil, fmt.Errorf("failed to ensure volume definition: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to ensure volume definition: %w", err)
 		}
 	}
 
@@ -180,7 +195,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 
 	err = l.Resources.Autoplace(ctx, res.Name, client.AutoPlaceRequest{})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to autoplace resources: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to autoplace resources: %w", err)
 	}
 
 	// XXX: remove this when LINSTOR supports this (see comment above).
@@ -191,7 +206,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 			},
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update properties of resource definition '%s': %w", res.Name, err)
+			return nil, nil, nil, fmt.Errorf("failed to update properties of resource definition '%s': %w", res.Name, err)
 		}
 	}
 
@@ -199,18 +214,18 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 
 	rdef, err := l.ResourceDefinitions.Get(ctx, res.Name)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch existing resource definition: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to fetch existing resource definition: %w", err)
 	}
 
 	logger.Trace("fetch existing resources")
 
 	view, err := l.Resources.GetResourceView(ctx, &client.ListOpts{Resource: []string{res.Name}})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch resource view: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to fetch resource view: %w", err)
 	}
 
 	if len(view) == 0 {
-		return nil, nil, errors.New(fmt.Sprintf("failed to fetch resource '%s'", res.Name))
+		return nil, nil, nil, errors.New(fmt.Sprintf("failed to fetch resource '%s'", res.Name))
 	}
 
 	for _, existingVol := range view[0].Volumes {
@@ -226,12 +241,12 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		if !expected {
 			err := l.ResourceDefinitions.DeleteVolumeDefinition(ctx, res.Name, int(existingVol.VolumeNumber))
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to delete unexpected volume definition: %w", err)
+				return nil, nil, nil, fmt.Errorf("failed to delete unexpected volume definition: %w", err)
 			}
 		}
 	}
 
-	return &rdef, view, nil
+	return &rdef, &rgroup, view, nil
 }
 
 func isErrAlreadyExists(err error) bool {

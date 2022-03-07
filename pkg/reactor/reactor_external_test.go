@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
@@ -222,7 +222,7 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 					},
 				},
 			},
-			expected: "[[promoter]]\n  id = \"empty-agents\"\n",
+			expected: "\n[[promoter]]\n  id = \"empty-agents\"\n",
 		},
 		{
 			name: "with-resources",
@@ -237,14 +237,18 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 					},
 				},
 			},
-			expected: `[[promoter]]
+			expected: `
+[[promoter]]
   id = "with-resources"
+
   [promoter.resources]
+
     [promoter.resources.rsc1]
-      runner = "shell"
       on-drbd-demote-failure = "log"
+      runner = "shell"
       stop-services-on-exit = true
       target-as = "BindsTo"
+
     [promoter.resources.rsc2]
 `,
 		},
@@ -266,9 +270,12 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 					},
 				},
 			},
-			expected: `[[promoter]]
+			expected: `
+[[promoter]]
   id = "resource-agents"
+
   [promoter.resources]
+
     [promoter.resources.rsc1]
       start = ["type1 name1 k1=val1", "type2 name2", "type3 name3 k3-2=val3-2 k3=val3"]
 `,

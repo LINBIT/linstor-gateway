@@ -1,11 +1,11 @@
 package nfs
 
 import (
-	"github.com/BurntSushi/toml"
 	apiconsts "github.com/LINBIT/golinstor"
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
+	"github.com/pelletier/go-toml"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"net"

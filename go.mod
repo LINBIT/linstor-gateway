@@ -2,7 +2,6 @@ module github.com/LINBIT/linstor-gateway
 
 require (
 	bitbucket.org/creachadair/shell v0.0.7
-	github.com/BurntSushi/toml v0.4.1
 	github.com/LINBIT/golinstor v0.38.0
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/fatih/color v1.13.0
@@ -12,6 +11,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/moul/http2curl v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/pelletier/go-toml v1.9.4
 	github.com/rck/unit v0.0.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0

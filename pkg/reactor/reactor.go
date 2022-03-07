@@ -2,12 +2,13 @@ package reactor
 
 import (
 	"context"
+	"encoding"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/LINBIT/golinstor/client"
+	"github.com/pelletier/go-toml"
 )
 
 const (
@@ -58,8 +59,8 @@ func (p *PromoterConfig) DeployedResources(ctx context.Context, cli *client.Clie
 }
 
 type StartEntry interface {
-	toml.TextMarshaler
-	toml.TextUnmarshaler
+	encoding.TextMarshaler
+	encoding.TextUnmarshaler
 }
 
 // PromoterResourceConfig is the configuration of a single promotable resource used by drbd-reactor's promoter.
@@ -130,7 +131,7 @@ func (c *PromoterResourceConfig) UnmarshalTOML(data interface{}) error {
 // EnsureConfig ensures the given config is registered in LINSTOR and up-to-date.
 func EnsureConfig(ctx context.Context, cli *client.Client, cfg *PromoterConfig) error {
 	buffer := strings.Builder{}
-	encoder := toml.NewEncoder(&buffer)
+	encoder := toml.NewEncoder(&buffer).ArraysWithOneElementPerLine(true)
 
 	err := encoder.Encode(&Config{Promoter: []PromoterConfig{*cfg}})
 	if err != nil {

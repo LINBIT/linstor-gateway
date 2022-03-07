@@ -139,6 +139,7 @@ overview about the existing LINSTOR resources and service status.`,
 			table.SetHeader([]string{"Resource", "Service IP", "Service state", "NFS export", "LINSTOR state"})
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
+			degradedResources := 0
 			for _, resource := range list {
 				for i, vol := range resource.Volumes {
 					withStatus := resource.VolumeConfig(vol.Number)
@@ -166,6 +167,9 @@ overview about the existing LINSTOR resources and service status.`,
 						{},
 						ResourceStateColor(withStatus.Status.State),
 					})
+					if withStatus.Status.State != common.ResourceStateOK {
+						degradedResources++
+					}
 				}
 			}
 
@@ -173,6 +177,10 @@ overview about the existing LINSTOR resources and service status.`,
 			table.SetAutoFormatHeaders(false)
 
 			table.Render() // Send output
+
+			if degradedResources > 0 {
+				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))
+			}
 
 			return nil
 		},

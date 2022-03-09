@@ -1,2 +1,2 @@
 [files]
-  allowExtFiles = ["/etc/systemd/system", "/etc/systemd/system/linstor-satellite.d", "/etc/drbd-reactor.d"]
+allowExtFiles = ["/etc/systemd/system", "/etc/systemd/system/linstor-satellite.service.d", "/etc/drbd-reactor.d"]

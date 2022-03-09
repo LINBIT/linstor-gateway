@@ -65,7 +65,7 @@ func (c *checkFileWhitelist) check() error {
 	}
 
 	expect := []string{
-		"/etc/systemd/system", "/etc/systemd/system/linstor-satellite.d", "/etc/drbd-reactor.d",
+		"/etc/systemd/system", "/etc/systemd/system/linstor-satellite.service.d", "/etc/drbd-reactor.d",
 	}
 	if !containsAll(satelliteConfig.Files.AllowExtFiles, expect) {
 		return fmt.Errorf("unexpected allowExtFiles value")
@@ -79,7 +79,7 @@ func (c *checkFileWhitelist) format(err error) string {
 	fmt.Fprintf(&b, "      %s\n", err.Error())
 	fmt.Fprintf(&b, "      Edit the LINSTOR satellite configuration file (%s) to include the following:\n\n", bold(satelliteConfigFile))
 	fmt.Fprintf(&b, "      [files]\n")
-	fmt.Fprintf(&b, `        allowExtFiles = ["/etc/systemd/system", "/etc/systemd/system/linstor-satellite.d", "/etc/drbd-reactor.d"]`+"\n\n")
+	fmt.Fprintf(&b, `        allowExtFiles = ["/etc/systemd/system", "/etc/systemd/system/linstor-satellite.service.d", "/etc/drbd-reactor.d"]`+"\n\n")
 	fmt.Fprintf(&b, "      and execute %s.\n", bold("systemctl restart linstor-satellite.service"))
 	return b.String()
 }

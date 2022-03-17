@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.12.0-rc.1 - 2022-03-17
+
+### Features
+
+* Add a new endpoint, `/v2/status`, to query the status of the server
+* Support CORS for the REST API
+* Generate more readable toml files (`start` entries are on separate lines)
+* Mark LINSTOR resources as degraded if the actual place count is lower than desired
+* Point users to `linstor advise resource` if any resources are degraded
+
+### Fixes
+
+* Healthcheck: fix the path of the LINSTOR Satellite systemd override directory
+
+### Miscellaneous
+
+* Update Go dependencies
+
 ## 0.11.0 - 2022-02-14
 
 * No changes over rc2

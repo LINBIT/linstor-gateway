@@ -51,8 +51,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
-github.com/LINBIT/golinstor v0.41.2 h1:OR7Uxt3D42MmPq7D3IqVsb4b9UFjwkzDmBN78HNHzy8=
-github.com/LINBIT/golinstor v0.41.2/go.mod h1:tWZXFWaCkHd8WgBSemrMFz7O3Ywtjag0sy5sBN50Nbg=
+github.com/LINBIT/golinstor v0.41.3 h1:7ihZt3xWWjNF+RO1cAx/DDNOldf5J3tyrmZm+o22f9w=
+github.com/LINBIT/golinstor v0.41.3/go.mod h1:tWZXFWaCkHd8WgBSemrMFz7O3Ywtjag0sy5sBN50Nbg=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

@@ -1,6 +1,7 @@
 package iscsi
 
 import (
+	"crypto/md5"
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -326,6 +327,13 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			}
 		}
 
+		// do the same thing as the ocf resource agent:
+		//   To have a reasonably unique default SCSI SN, use the first 8 bytes
+		//   of an MD5 hash of $OCF_RESOURCE_INSTANCE.
+		// except instead of using $OCF_RESOURCE_INSTANCE, we use the IQN.
+		serial := fmt.Sprintf("%.4x", md5.Sum([]byte(r.IQN.String())))
+		log.WithField("iqn", r.IQN.String()).Tracef("Setting scsi serial number to %s", serial)
+
 		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:iSCSILogicalUnit",
 			Name: fmt.Sprintf("lu%d", vol.VolumeNumber),
@@ -334,6 +342,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				"lun":        strconv.Itoa(int(vol.VolumeNumber)),
 				"path":       fmt.Sprintf(devPath),
 				"product_id": "LINSTOR iSCSI",
+				"scsi_sn":    serial,
 			},
 		})
 	}

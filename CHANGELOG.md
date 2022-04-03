@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.12.0 - 2022-04-03
+
+### Fixes
+
+* Set the SCSI serial number to a value that is guaranteed to be (reasonably) unique
+
 ## 0.12.0-rc.1 - 2022-03-17
 
 ### Features

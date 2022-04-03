@@ -1,3 +1,9 @@
+linstor-gateway (0.12.0-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Christoph Böhmwalder <christoph.boehmwalder@linbit.com>  Sun, 03 Apr 2022 02:03:21 +0200
+
 linstor-gateway (0.12.0~rc.1-1) unstable; urgency=medium
 
   * New upstream release

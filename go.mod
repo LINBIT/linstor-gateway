@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/moul/http2curl v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pelletier/go-toml v1.9.4
+	github.com/pelletier/go-toml v1.9.5
 	github.com/rck/unit v0.0.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0

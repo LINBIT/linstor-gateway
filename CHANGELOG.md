@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.12.1 - 2022-05-03
+
+### Fixes
+
+* Make sure `iscsi create` respects the `--resource-group` argument
+* Work around a size calculation bug for LINSTOR affecting thick LVM volumes
+
+### Miscellaneous
+
+* Update Go dependencies
+
 ## 0.12.0 - 2022-04-03
 
 ### Fixes

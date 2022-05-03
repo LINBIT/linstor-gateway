@@ -104,6 +104,7 @@ high availability primitives.`,
 				ServiceIPs:        serviceIps,
 				Volumes:           volumes,
 				AllowedInitiators: allowedInitiatorIqns,
+				ResourceGroup:     group,
 			})
 			if err != nil {
 				return err

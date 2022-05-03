@@ -41,7 +41,7 @@ install -D -m 644 %{name}.xml %{buildroot}%{_firewalldir}/services/%{name}.xml
 %systemd_preun %{name}.service
 
 %postun
-%systemd_postun
+%systemd_postun %{name}.service
 
 %files
 %defattr(-,root,root)

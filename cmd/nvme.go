@@ -85,6 +85,7 @@ func listNVMECommand() *cobra.Command {
 
 func createNVMECommand() *cobra.Command {
 	resourceGroup := "DfltRscGrp"
+	grossSize := false
 
 	cmd := &cobra.Command{
 		Use:     "create NQN SERVICE_IP VOLUME_SIZE [VOLUME_SIZE]...",
@@ -120,6 +121,7 @@ func createNVMECommand() *cobra.Command {
 				ServiceIP:     serviceIP,
 				ResourceGroup: resourceGroup,
 				Volumes:       volumes,
+				GrossSize:     grossSize,
 			})
 			if err != nil {
 				return err
@@ -131,6 +133,7 @@ func createNVMECommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "resource group to use.")
+	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 
 	return cmd
 }

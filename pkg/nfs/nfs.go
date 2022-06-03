@@ -124,6 +124,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		Name:          rsc.Name,
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       volumes,
+		GrossSize:     rsc.GrossSize,
 	}, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)

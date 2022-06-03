@@ -30,6 +30,7 @@ type ResourceConfig struct {
 	Password          string                `json:"password,omitempty"`
 	ServiceIPs        []common.IpCidr       `json:"service_ips"`
 	Status            common.ResourceStatus `json:"status"`
+	GrossSize         bool                  `json:"gross_size"`
 }
 
 const (
@@ -129,12 +130,22 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	}
 	r.ResourceGroup = definition.ResourceGroupName
 
+	anyGrossSize := false
+
 	for _, vd := range volumeDefinitions {
+		for _, flag := range vd.Flags {
+			if flag == "GROSS_SIZE" {
+				anyGrossSize = true
+				break
+			}
+		}
 		r.Volumes = append(r.Volumes, common.VolumeConfig{
 			Number:  int(vd.VolumeNumber),
 			SizeKiB: vd.SizeKib,
 		})
 	}
+
+	r.GrossSize = anyGrossSize
 
 	return r, nil
 }

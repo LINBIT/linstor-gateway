@@ -39,6 +39,7 @@ func createNFSCommand() *cobra.Command {
 	resourceGroup := "DfltRscGrp"
 	allowedIPsCIDR := common.ServiceIPFromParts(net.IPv4zero, 0)
 	exportPath := "/"
+	grossSize := false
 
 	cmd := &cobra.Command{
 		Use:   "create NAME SERVICE_IP SIZE",
@@ -80,6 +81,7 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 						FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
 					},
 				}},
+				GrossSize: grossSize,
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
@@ -94,6 +96,7 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "LINSTOR resource group to use")
 	cmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, fmt.Sprintf("Set the export path, relative to %s", nfs.ExportBasePath))
 	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
+	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 
 	return cmd
 }

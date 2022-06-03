@@ -25,6 +25,7 @@ type Resource struct {
 	Volumes       []common.VolumeConfig `json:"volumes,omitempty"`
 	ResourceGroup string                `json:"resource_group_name,omitempty"`
 	FileSystem    string                `json:"file_system,omitempty"`
+	GrossSize     bool                  `json:"gross_size"`
 }
 
 // CreateResult is a struct than is used as the result of a successful create action.
@@ -179,21 +180,16 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 			volProps[apiconsts.NamespcFilesystem+"/Type"] = vol.FileSystem
 			volProps[apiconsts.NamespcFilesystem+"/MkfsParams"] = "-E root_owner=" + vol.FileSystemRootOwner.String()
 		}
+		var volFlags []string
+		if res.GrossSize {
+			volFlags = append(volFlags, "GROSS_SIZE")
+		}
 		err := l.ResourceDefinitions.CreateVolumeDefinition(ctx, res.Name, client.VolumeDefinitionCreate{
 			VolumeDefinition: client.VolumeDefinition{
 				VolumeNumber: int32(vol.Number),
-				// HACK: subtract 4MiB from the volume's size.
-				// There is a bug in LINSTOR which introduces a rounding error
-				// when calculating the sizes. This can cause LVM to round up
-				// the size to the next physical extent (4M), ultimately making
-				// the creation of the volume fail because it is now one extent
-				// too large.
-				// To circumvent this, subtract a full extent from every volume.
-				// In the best case, LVM rounds it up again to the size we
-				// actually requested. Worst case (when the size is already
-				// aligned to a physical extent), 4M go to waste.
-				SizeKib: vol.SizeKiB - 4096,
-				Props:   volProps,
+				SizeKib:      vol.SizeKiB,
+				Props:        volProps,
+				Flags:        volFlags,
 			},
 		})
 		if err != nil && !isErrAlreadyExists(err) {

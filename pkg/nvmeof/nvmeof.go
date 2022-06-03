@@ -98,6 +98,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 		Name:          rsc.NQN.Subsystem(),
 		ResourceGroup: rsc.ResourceGroup,
 		Volumes:       rsc.Volumes,
+		GrossSize:     rsc.GrossSize,
 	}, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)

@@ -27,6 +27,7 @@ type ResourceConfig struct {
 	ResourceGroup string                `json:"resource_group"`
 	Volumes       []common.VolumeConfig `json:"volumes"`
 	Status        common.ResourceStatus `json:"status"`
+	GrossSize     bool                  `json:"gross_size"`
 }
 
 func (r *ResourceConfig) VolumeConfig(number int) *common.Volume {

@@ -54,6 +54,7 @@ type ResourceConfig struct {
 	ResourceGroup string                `json:"resource_group"`
 	Volumes       []VolumeConfig        `json:"volumes"`
 	Status        common.ResourceStatus `json:"status"`
+	GrossSize     bool                  `json:"gross_size"`
 }
 
 const (

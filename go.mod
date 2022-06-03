@@ -2,7 +2,7 @@ module github.com/LINBIT/linstor-gateway
 
 require (
 	bitbucket.org/creachadair/shell v0.0.7
-	github.com/LINBIT/golinstor v0.41.3
+	github.com/LINBIT/golinstor v0.42.0
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.8

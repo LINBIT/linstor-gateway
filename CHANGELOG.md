@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.13.0 - 2022-06-27
+
+### Features
+
+* Add a `--gross` option, which makes the "size" specify the actual space that the
+  volume will occupy on disk instead of the usable net size
+
 ## 0.12.1 - 2022-05-03
 
 ### Fixes

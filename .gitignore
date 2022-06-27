@@ -3,3 +3,5 @@
 /linstor-nfs
 *.tar.gz
 /tests-out/
+*.rpm
+*.deb

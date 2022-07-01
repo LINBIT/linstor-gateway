@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"github.com/icza/gog"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"path/filepath"
@@ -139,8 +140,11 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 				break
 			}
 		}
+		if vd.VolumeNumber == nil {
+			vd.VolumeNumber = gog.Ptr(int32(0))
+		}
 		r.Volumes = append(r.Volumes, common.VolumeConfig{
-			Number:  int(vd.VolumeNumber),
+			Number:  int(*vd.VolumeNumber),
 			SizeKiB: vd.SizeKib,
 		})
 	}

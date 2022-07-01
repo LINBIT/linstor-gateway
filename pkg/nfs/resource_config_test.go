@@ -5,6 +5,7 @@ import (
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
+	"github.com/icza/gog"
 	"github.com/pelletier/go-toml"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -56,8 +57,8 @@ func TestResource_RoundTrip(t *testing.T) {
 				encoded,
 				&client.ResourceDefinition{ResourceGroupName: "rg1"},
 				[]client.VolumeDefinition{
-					{VolumeNumber: 0, SizeKib: 64 * 1024, Props: propsFilesystemExt4},
-					{VolumeNumber: 1, SizeKib: 1024, Props: propsFilesystemExt4},
+					{VolumeNumber: gog.Ptr(int32(0)), SizeKib: 64 * 1024, Props: propsFilesystemExt4},
+					{VolumeNumber: gog.Ptr(int32(1)), SizeKib: 1024, Props: propsFilesystemExt4},
 				},
 			)
 			assert.NoError(t, err)
@@ -77,8 +78,8 @@ func TestResource_RoundTrip(t *testing.T) {
 func TestFindFilesystemAgentVolume(t *testing.T) {
 	t.Parallel()
 	volumes := []client.VolumeDefinition{
-		{VolumeNumber: 0, SizeKib: 1024},
-		{VolumeNumber: 1, SizeKib: 65536},
+		{VolumeNumber: gog.Ptr(int32(0)), SizeKib: 1024},
+		{VolumeNumber: gog.Ptr(int32(1)), SizeKib: 65536},
 	}
 
 	tests := []struct {

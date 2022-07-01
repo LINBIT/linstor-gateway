@@ -13,6 +13,7 @@ import (
 
 	"github.com/LINBIT/golinstor/client"
 	"github.com/google/uuid"
+	"github.com/icza/gog"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
@@ -127,8 +128,11 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 		return nil, fmt.Errorf("failed to parse NQN: %w", err)
 	}
 	for _, vd := range volumeDefinition {
+		if vd.VolumeNumber == nil {
+			vd.VolumeNumber = gog.Ptr(int32(0))
+		}
 		r.Volumes = append(r.Volumes, common.VolumeConfig{
-			Number:  int(vd.VolumeNumber),
+			Number:  int(*vd.VolumeNumber),
 			SizeKiB: vd.SizeKib,
 		})
 	}

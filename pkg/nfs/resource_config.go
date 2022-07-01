@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	apiconsts "github.com/LINBIT/golinstor"
+	"github.com/icza/gog"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"path/filepath"
@@ -201,9 +202,12 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 		}
 		filesystem = val
 	}
+	if vol.VolumeNumber == nil {
+		vol.VolumeNumber = gog.Ptr(int32(0))
+	}
 	return &VolumeConfig{
 		VolumeConfig: common.VolumeConfig{
-			Number:              int(vol.VolumeNumber),
+			Number:              int(*vol.VolumeNumber),
 			SizeKiB:             vol.SizeKib,
 			FileSystem:          filesystem,
 			FileSystemRootOwner: rootOwner,
@@ -238,7 +242,10 @@ func findFilesystemAgentVolume(volumes []client.VolumeDefinition, agent *reactor
 	}
 
 	for i := range volumes {
-		if int(volumes[i].VolumeNumber) == volNr {
+		if volumes[i].VolumeNumber == nil {
+			volumes[i].VolumeNumber = gog.Ptr(int32(0))
+		}
+		if int(*volumes[i].VolumeNumber) == volNr {
 			vol = &volumes[i]
 			break
 		}

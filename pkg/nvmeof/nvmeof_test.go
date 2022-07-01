@@ -1,6 +1,7 @@
 package nvmeof_test
 
 import (
+	"github.com/icza/gog"
 	"net"
 	"testing"
 
@@ -20,8 +21,8 @@ func TestResource_RoundTrip(t *testing.T) {
 			Volumes: []common.VolumeConfig{
 				{Number: 2, SizeKiB: 1024},
 			},
-			ResourceGroup:   "rg1",
-			ServiceIP:       common.ServiceIPFromParts(net.IP{192, 168, 127, 1}, 24),
+			ResourceGroup: "rg1",
+			ServiceIP:     common.ServiceIPFromParts(net.IP{192, 168, 127, 1}, 24),
 		},
 	}
 
@@ -39,7 +40,7 @@ func TestResource_RoundTrip(t *testing.T) {
 				encoded,
 				&client.ResourceDefinition{ResourceGroupName: "rg1"},
 				[]client.VolumeDefinition{
-					{VolumeNumber: 2, SizeKib: 1024},
+					{VolumeNumber: gog.Ptr(int32(2)), SizeKib: 1024},
 				},
 			)
 			assert.NoError(t, err)

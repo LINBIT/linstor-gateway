@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/icza/gog"
 	"sort"
 
 	apiconsts "github.com/LINBIT/golinstor"
@@ -186,7 +187,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		}
 		err := l.ResourceDefinitions.CreateVolumeDefinition(ctx, res.Name, client.VolumeDefinitionCreate{
 			VolumeDefinition: client.VolumeDefinition{
-				VolumeNumber: int32(vol.Number),
+				VolumeNumber: gog.Ptr(int32(vol.Number)),
 				SizeKib:      vol.SizeKiB,
 				Props:        volProps,
 				Flags:        volFlags,

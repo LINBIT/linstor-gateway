@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.13.1 - 2022-07-26
+
+### Fixes
+
+* Fix a bug that occurs when creating a volume with number zero
+
+### Miscellaneous
+
+* Update Go dependencies
+
 ## 0.13.0 - 2022-06-27
 
 ### Features

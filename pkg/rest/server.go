@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type server struct {
@@ -81,5 +82,5 @@ func ListenAndServe(addr string, controllers []string) {
 
 	s.routes()
 
-	log.Fatal(http.ListenAndServe(addr, s.router))
+	log.Fatal(http.ListenAndServe(addr, cors.Default().Handler(s.router)))
 }

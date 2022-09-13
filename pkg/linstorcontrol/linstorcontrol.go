@@ -48,7 +48,7 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 	for _, nodeRsc := range resources {
 		nodes = append(nodes, nodeRsc.NodeName)
 
-		if nodeRsc.State.InUse != nil && *nodeRsc.State.InUse {
+		if nodeRsc.State != nil && nodeRsc.State.InUse != nil && *nodeRsc.State.InUse {
 			primary = nodeRsc.NodeName
 		}
 

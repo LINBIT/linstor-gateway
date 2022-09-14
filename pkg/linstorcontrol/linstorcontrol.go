@@ -67,6 +67,7 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 		diskful := 0
 		for _, vol := range deployedVols {
 			if vol.State.DiskState == "UpToDate" {
+				log.Tracef("vol uptodate: %d", vol.VolumeNumber)
 				diskful++
 			}
 			if vol.State.DiskState == "UpToDate" || vol.State.DiskState == "Diskless" {

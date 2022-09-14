@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/LINBIT/linstor-gateway/client"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
 	"strconv"
 	"strings"
@@ -35,6 +38,7 @@ func nvmeCommands() *cobra.Command {
 	rootCmd.AddCommand(stopNVMECommand())
 	rootCmd.AddCommand(addVolumeNVMECommand())
 	rootCmd.AddCommand(deleteVolumeNVMECommand())
+	rootCmd.AddCommand(upgradeNVMECommand())
 
 	return rootCmd
 }
@@ -299,6 +303,38 @@ func deleteVolumeNVMECommand() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func upgradeNVMECommand() *cobra.Command {
+	var forceYes bool
+	var dryRun bool
+	cmd := &cobra.Command{
+		Use:   "upgrade NQN",
+		Short: "Check existing resources and upgrade their configuration if necessary",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			controllers := viper.GetStringSlice("linstor.controllers")
+			cli, err := linstorcontrol.Default(controllers)
+			if err != nil {
+				return err
+			}
+			nqn, err := nvmeof.NewNqn(args[0])
+			if err != nil {
+				return err
+			}
+			err = upgrade.NvmeOf(cmd.Context(), cli.Client, nqn, forceYes, dryRun)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
+	cmd.Flags().BoolVarP(&forceYes, "yes", "y", false, "Run non-interactively; answer all questions with yes")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Display potential updates without taking any actions")
+	_ = viper.BindPFlag("linstor.controllers", cmd.Flags().Lookup("controllers"))
+
+	return cmd
 }
 
 type noTarget nvmeof.Nqn

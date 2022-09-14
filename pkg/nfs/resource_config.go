@@ -190,8 +190,7 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 	}
 	var rootOwner common.UidGid
 	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/MkfsParams"]; ok {
-		var u common.UidGid
-		scanned, err := fmt.Sscanf(val, "-E root_owner=%d:%d", &u.Uid, &u.Gid)
+		scanned, err := fmt.Sscanf(val, "-E root_owner=%d:%d", &rootOwner.Uid, &rootOwner.Gid)
 		if scanned != 2 || err != nil {
 			log.WithFields(log.Fields{
 				"err":      err,
@@ -200,7 +199,6 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 				"resource": resName,
 			}).Warnf("invalid MkfsParams for volume: %q", val)
 		}
-		filesystem = val
 	}
 	if vol.VolumeNumber == nil {
 		vol.VolumeNumber = gog.Ptr(int32(0))
@@ -409,9 +407,8 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	})
 
 	// volume 0 is reserved as the "cluster private" volume
-	clusterPrivateVol := r.Volumes[0]
 	deployedClusterPrivateVol := deployedRes.Volumes[0]
-	agents = append(agents, common.ClusterPrivateVolumeAgent(clusterPrivateVol.VolumeConfig, deployedClusterPrivateVol, r.Name))
+	agents = append(agents, common.ClusterPrivateVolumeAgent(deployedClusterPrivateVol, r.Name))
 
 	for i := 1; i < len(deployedRes.Volumes); i++ {
 		vol := deployedRes.Volumes[i]

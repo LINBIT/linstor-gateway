@@ -38,14 +38,14 @@ func ClusterPrivateVolume() VolumeConfig {
 	}
 }
 
-func ClusterPrivateVolumeAgent(vol VolumeConfig, deployedVol client.Volume, resource string) *reactor.ResourceAgent {
+func ClusterPrivateVolumeAgent(deployedVol client.Volume, resource string) *reactor.ResourceAgent {
 	return &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:Filesystem",
 		Name: ClusterPrivateVolumeAgentName,
 		Attributes: map[string]string{
 			"device":    DevicePath(deployedVol),
 			"directory": filepath.Join(ClusterPrivateVolumeMountPath, resource),
-			"fstype":    vol.FileSystem,
+			"fstype":    clusterPrivateVolumeFileSystem,
 			"run_fsck":  "no",
 		},
 	}

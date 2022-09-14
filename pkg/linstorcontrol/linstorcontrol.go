@@ -119,6 +119,16 @@ func Default(controllers []string) (*Linstor, error) {
 	return &Linstor{Client: cli}, nil
 }
 
+// DefaultResourceProps returns the default LINSTOR properties for a new resource
+func DefaultResourceProps() map[string]string {
+	return map[string]string{
+		apiconsts.NamespcDrbdResourceOptions + "/auto-promote":                  "no",
+		apiconsts.NamespcDrbdResourceOptions + "/quorum":                        "majority",
+		apiconsts.NamespcDrbdResourceOptions + "/on-suspended-primary-outdated": "force-secondary",
+		apiconsts.NamespcDrbdResourceOptions + "/on-no-quorum":                  "io-error",
+	}
+}
+
 // EnsureResource creates or updates the given resource.
 // It returns three values:
 // - The newly created resource definition
@@ -144,7 +154,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 
 	logger.Trace("ensure resource definition exists")
 
-	props := map[string]string{}
+	props := DefaultResourceProps()
 
 	// XXX: currently, LINSTOR requires auto-promote=yes when a file system is
 	// to be created because it does not try to promote the resource itself.
@@ -153,12 +163,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 	// This will change in a future version, remove this hack then.
 	if res.FileSystem != "" {
 		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "yes"
-	} else {
-		props[apiconsts.NamespcDrbdResourceOptions+"/auto-promote"] = "no"
 	}
-
-	props[apiconsts.NamespcDrbdResourceOptions+"/quorum"] = "majority"
-	props[apiconsts.NamespcDrbdResourceOptions+"/on-no-quorum"] = "io-error"
 
 	err = l.ResourceDefinitions.Create(ctx, client.ResourceDefinitionCreate{
 		ResourceDefinition: client.ResourceDefinition{

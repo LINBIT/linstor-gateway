@@ -284,9 +284,8 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	var agents []reactor.StartEntry
 
 	// volume 0 is reserved as the "cluster private" volume
-	clusterPrivateVol := r.Volumes[0]
 	deployedClusterPrivateVol := deployedRes.Volumes[0]
-	agents = append(agents, common.ClusterPrivateVolumeAgent(clusterPrivateVol, deployedClusterPrivateVol, r.IQN.WWN()))
+	agents = append(agents, common.ClusterPrivateVolumeAgent(deployedClusterPrivateVol, r.IQN.WWN()))
 
 	for i, ip := range r.ServiceIPs {
 		agents = append(agents, &reactor.ResourceAgent{

@@ -13,6 +13,13 @@ import (
 	"testing"
 )
 
+func filesystemProps(vol VolumeConfig) map[string]string {
+	return map[string]string{
+		apiconsts.NamespcFilesystem + "/Type":       vol.FileSystem,
+		apiconsts.NamespcFilesystem + "/MkfsParams": "-E root_owner=" + vol.FileSystemRootOwner.String(),
+	}
+}
+
 func TestResource_RoundTrip(t *testing.T) {
 	t.Parallel()
 	testcases := []ResourceConfig{{
@@ -26,9 +33,10 @@ func TestResource_RoundTrip(t *testing.T) {
 			{VolumeConfig: common.ClusterPrivateVolume()},
 			{
 				VolumeConfig: common.VolumeConfig{
-					Number:     1,
-					SizeKiB:    1024,
-					FileSystem: "ext4",
+					Number:              1,
+					SizeKiB:             1024,
+					FileSystem:          "ext4",
+					FileSystemRootOwner: common.UidGid{Uid: 47, Gid: 11},
 				},
 				ExportPath: "/",
 			},
@@ -36,7 +44,6 @@ func TestResource_RoundTrip(t *testing.T) {
 		Status: common.ResourceStatus{},
 	}}
 
-	propsFilesystemExt4 := map[string]string{apiconsts.NamespcFilesystem + "/Type": "ext4"}
 	for i := range testcases {
 		tcase := &testcases[i]
 		t.Run(tcase.Name, func(t *testing.T) {
@@ -44,21 +51,21 @@ func TestResource_RoundTrip(t *testing.T) {
 
 			encoded, err := tcase.ToPromoter([]client.ResourceWithVolumes{
 				{Volumes: []client.Volume{
-					{VolumeNumber: 0, DevicePath: "/dev/drbd1000", Props: propsFilesystemExt4},
-					{VolumeNumber: 1, DevicePath: "/dev/drbd1001", Props: propsFilesystemExt4},
+					{VolumeNumber: 0, DevicePath: "/dev/drbd1000", Props: filesystemProps(tcase.Volumes[0])},
+					{VolumeNumber: 1, DevicePath: "/dev/drbd1001", Props: filesystemProps(tcase.Volumes[1])},
 				}},
 			})
 			assert.NoError(t, err)
 
-			err = toml.NewEncoder(log.Writer()).Encode(encoded)
+			err = toml.NewEncoder(log.Writer()).ArraysWithOneElementPerLine(true).Encode(encoded)
 			assert.NoError(t, err)
 
 			decoded, err := FromPromoter(
 				encoded,
 				&client.ResourceDefinition{ResourceGroupName: "rg1"},
 				[]client.VolumeDefinition{
-					{VolumeNumber: gog.Ptr(int32(0)), SizeKib: 64 * 1024, Props: propsFilesystemExt4},
-					{VolumeNumber: gog.Ptr(int32(1)), SizeKib: 1024, Props: propsFilesystemExt4},
+					{VolumeNumber: gog.Ptr(int32(0)), SizeKib: 64 * 1024, Props: filesystemProps(tcase.Volumes[0])},
+					{VolumeNumber: gog.Ptr(int32(1)), SizeKib: 1024, Props: filesystemProps(tcase.Volumes[1])},
 				},
 			)
 			assert.NoError(t, err)

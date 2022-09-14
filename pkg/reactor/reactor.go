@@ -207,7 +207,9 @@ func filterConfigs(files []client.ExternalFile) ([]PromoterConfig, []string, err
 	return result, paths, nil
 }
 
-// ListConfigs fetches all promoter configurations registered with LINSTOR.
+// ListConfigs fetches all promoter configurations registered with LINSTOR. It
+// returns a slice of PromoterConfigs as well as a slice of configuration file
+// paths.
 func ListConfigs(ctx context.Context, cli *client.Client) ([]PromoterConfig, []string, error) {
 	files, err := cli.Controller.GetExternalFiles(ctx, &client.ListOpts{Content: true})
 	if err != nil {
@@ -216,9 +218,10 @@ func ListConfigs(ctx context.Context, cli *client.Client) ([]PromoterConfig, []s
 	return filterConfigs(files)
 }
 
-// FindConfig fetches the promoter config with the given id.
+// FindConfig fetches the promoter config with the given id. It returns the
+// corresponding PromoterConfig as well as the path of the configuration file.
 //
-// Returns nil if no config exists.
+// Returns nil and "" if no config exists.
 func FindConfig(ctx context.Context, cli *client.Client, id string) (*PromoterConfig, string, error) {
 	// TODO: replace by directly looking up the config file once LINSTOR is fixed.
 	all, paths, err := ListConfigs(ctx, cli)

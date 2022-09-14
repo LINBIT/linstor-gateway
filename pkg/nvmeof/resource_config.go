@@ -152,7 +152,6 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	uuidNS := uuid.NewSHA1(UUIDNVMeoF, []byte(deployedRes.Uuid))
 
 	// volume 0 is reserved as the "cluster private" volume
-	clusterPrivateVol := r.Volumes[0]
 	deployedClusterPrivateVol := deployedRes.Volumes[0]
 
 	agents := []reactor.StartEntry{
@@ -166,7 +165,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				"protocol": "tcp",
 			},
 		},
-		common.ClusterPrivateVolumeAgent(clusterPrivateVol, deployedClusterPrivateVol, r.NQN.Subsystem()),
+		common.ClusterPrivateVolumeAgent(deployedClusterPrivateVol, r.NQN.Subsystem()),
 		&reactor.ResourceAgent{
 			Type: "ocf:heartbeat:IPaddr2",
 			Name: "service_ip",

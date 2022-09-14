@@ -3,8 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
 	"github.com/fatih/color"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
 	"strconv"
 	"strings"
@@ -38,6 +41,7 @@ as well as drbd-reactor is a prerequisite to use this tool.`,
 	rootCmd.AddCommand(stopISCSICommand())
 	rootCmd.AddCommand(addVolumeISCSICommand())
 	rootCmd.AddCommand(deleteVolumeISCSICommand())
+	rootCmd.AddCommand(upgradeISCSICommand())
 
 	return rootCmd
 }
@@ -331,4 +335,36 @@ func deleteVolumeISCSICommand() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func upgradeISCSICommand() *cobra.Command {
+	var forceYes bool
+	var dryRun bool
+	cmd := &cobra.Command{
+		Use:   "upgrade IQN",
+		Short: "Check existing resources and upgrade their configuration if necessary",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			controllers := viper.GetStringSlice("linstor.controllers")
+			cli, err := linstorcontrol.Default(controllers)
+			if err != nil {
+				return err
+			}
+			iqn, err := iscsi.NewIqn(args[0])
+			if err != nil {
+				return err
+			}
+			err = upgrade.Iscsi(cmd.Context(), cli.Client, iqn, forceYes, dryRun)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
+	cmd.Flags().BoolVarP(&forceYes, "yes", "y", false, "Run non-interactively; answer all questions with yes")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Display potential updates without taking any actions")
+	_ = viper.BindPFlag("linstor.controllers", cmd.Flags().Lookup("controllers"))
+
+	return cmd
 }

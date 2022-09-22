@@ -1,6 +1,6 @@
 PROG := linstor-gateway
 GITHASH=$(shell git describe --abbrev=0 --always)
-GOSOURCES=$(shell find . -type f -name '*.go')
+GOSOURCES=$(shell find . -type f -name "*.go" -not -path "./vendor/*" -printf "%P\n")
 DESTDIR =
 
 ifndef VERSION
@@ -43,19 +43,24 @@ md-doc: linstor-gateway
 
 .PHONY: test
 test:
-	GO111MODULE=on go test ./...
+	go test ./...
 
 .PHONY: prepare-release
 prepare-release: test md-doc
-	GO111MODULE=on go mod tidy
+	go mod tidy
+
+vendor:
+	go mod vendor
 
 .PHONY: debrelease
-debrelease: checkVERSION
-	strip linstor-gateway
+debrelease: vendor checkVERSION
 	dh_clean || true
+	echo "VERSION=$(VERSION)" > version.env
+	echo "GITHASH=$(GITHASH)" >> version.env
 	tar --transform="s,^,linstor-gateway-$(VERSION)/," --owner=0 --group=0 -czf linstor-gateway-$(VERSION).tar.gz \
-		linstor-gateway debian linstor-gateway.spec linstor-gateway.service \
-		linstor-gateway.xml
+		$(GOSOURCES) go.mod go.sum vendor version.env \
+		debian linstor-gateway.spec linstor-gateway.service linstor-gateway.xml
+	rm -f version.env
 
 ifndef VERSION
 checkVERSION:
@@ -65,7 +70,7 @@ checkVERSION:
 ifdef FORCE
 	true
 else
-	test -z "$$(git ls-files -m)"
+	test -z "$$(git ls-files -m)" || $(error Uncommitted changes in working directory)
 	lbvers.py check --base=$(BASE) --build=$(BUILD) --build-nr=$(BUILD_NR) --pkg-nr=$(PKG_NR) \
 		--rpm-spec=linstor-gateway.spec --debian-changelog=debian/changelog --changelog=CHANGELOG.md
 endif

@@ -76,6 +76,7 @@ package:
     - fi
     - dummy-release.sh linstor-gateway $VERSION $RELEASE linstor-gateway.spec
     - fi
+    - touch --no-create vendor # Make sure we don't re-vendor
     - gateway_build $VERSION $RELEASE
   dependencies:
     - build

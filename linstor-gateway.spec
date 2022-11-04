@@ -26,11 +26,7 @@ LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe
 %setup -q -n %{name}-%{tarball_version}
 
 %build
-source ./version.env
-go build -o %{_builddir}/%{name}-%{tarball_version}/%{name} \
-    -ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$VERSION \
-    -X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(LC_ALL=C date --utc)' \
-    -X github.com/LINBIT/linstor-gateway/cmd.githash=$GITHASH"
+make
 
 %install
 install -D -m 755 %{_builddir}/%{name}-%{tarball_version}/%{name} %{buildroot}/%{_sbindir}/%{name}

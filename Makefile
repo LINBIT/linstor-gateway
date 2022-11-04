@@ -1,23 +1,19 @@
 PROG := linstor-gateway
-GITHASH=$(shell git describe --abbrev=0 --always)
+
 GOSOURCES=$(shell find . -type f -name "*.go" -not -path "./vendor/*" -printf "%P\n")
 DESTDIR =
 
-ifndef VERSION
-# default to latest git tag
-VERSION=$(shell git describe --abbrev=0 --tags | tr -d 'v')
-endif
-
 all: linstor-gateway
 
-linstor-gateway: $(GOSOURCES)
+linstor-gateway: $(GOSOURCES) version.env
+	. ./version.env; \
 	NAME="$@"; \
 	[ -n "$(GOOS)" ] && NAME="$${NAME}-$(GOOS)"; \
 	[ -n "$(GOARCH)" ] && NAME="$${NAME}-$(GOARCH)"; \
 	go build -o "$$NAME" \
-		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$(VERSION) \
+		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$${VERSION} \
 		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
-		-X github.com/LINBIT/linstor-gateway/cmd.githash=$(GITHASH)"
+		-X github.com/LINBIT/linstor-gateway/cmd.githash=$${GITHASH}"
 
 .PHONY: install
 install:
@@ -49,18 +45,25 @@ test:
 prepare-release: test md-doc
 	go mod tidy
 
-vendor:
+vendor: go.mod go.sum
 	go mod vendor
 
+version.env:
+	if [ -n "$(VERSION)" ]; then \
+		VERSION="$(VERSION)"; \
+	else \
+		# default to latest git tag \
+		VERSION=$(shell git describe --abbrev=0 --tags | tr -d 'v'); \
+	fi; \
+	echo "VERSION=$${VERSION}" > version.env
+	echo "GITHASH=$(shell git describe --abbrev=0 --always)" >> version.env
+
 .PHONY: debrelease
-debrelease: vendor checkVERSION
+debrelease: clean clean-version vendor version.env checkVERSION
 	dh_clean || true
-	echo "VERSION=$(VERSION)" > version.env
-	echo "GITHASH=$(GITHASH)" >> version.env
 	tar --transform="s,^,linstor-gateway-$(VERSION)/," --owner=0 --group=0 -czf linstor-gateway-$(VERSION).tar.gz \
-		$(GOSOURCES) go.mod go.sum vendor version.env \
+		$(GOSOURCES) go.mod go.sum vendor version.env Makefile \
 		debian linstor-gateway.spec linstor-gateway.service linstor-gateway.xml
-	rm -f version.env
 
 ifndef VERSION
 checkVERSION:
@@ -76,6 +79,10 @@ else
 endif
 endif
 
-
+.PHONY: clean
 clean:
 	rm -f linstor-gateway
+
+.PHONY: clean-version
+clean-version:
+	rm -f version.env

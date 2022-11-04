@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 1.0.0-rc.1 - 2022-11-04
+
+### Fixes
+
+* Properly support CORS on the API endpoints
+* Fix a nil dereference when one or more nodes are offline
+
+### Features
+
+* Add an `upgrade` command which can be used to migrate existing targets to newer
+  versions of LINSTOR Gateway
+
+### Miscellaneous
+
+* Improve packaging process
+* Update Go dependencies
+
 ## 0.13.1 - 2022-07-26
 
 ### Fixes

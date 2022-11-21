@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.0.0 - 2022-11-21
+
+* No changes over rc1
+
 ## 1.0.0-rc.1 - 2022-11-04
 
 ### Fixes

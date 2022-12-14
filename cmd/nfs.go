@@ -22,9 +22,12 @@ func nfsCommands() *cobra.Command {
 		Use:     "nfs",
 		Version: version,
 		Short:   "Manages Highly-Available NFS exports",
-		Long: `linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
-and drbd-reactor. Setting linstor including storage pools and resource groups
-as well as Corosync and Pacemaker's properties a prerequisite to use this tool.`,
+		Long: fmt.Sprintf(`linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
+and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups
+is a prerequisite to use this tool.
+
+%s that, currently, only one NFS export can exist in a cluster.
+See "help nfs create" for more information`, bold("NOTE")),
 		Args: cobra.NoArgs,
 	}
 
@@ -52,7 +55,18 @@ func createNFSCommand() *cobra.Command {
 At first it creates a new resource within the LINSTOR system under the
 specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS 
-export.`,
+export.
+
+!!! NOTE that, currently, only one NFS export can exist in a cluster.
+To create multiple mountable exports, run this command once, then manually create
+subdirectories in the resulting export directory.
+For example:
+$ linstor-gateway nfs create example 192.168.122.222/24 1G
+Created export 'example' at 192.168.122.222:/srv/gateway-exports/example
+$ mkdir /srv/gateway-exports/example/test{1,2}
+
+This can then be mounted separately:
+$ mount -t nfs 192.168.122.222:/srv/gateway-exports/example/test1 /mnt/mynfs/`,
 		Example: `linstor-gateway nfs create example 192.168.211.122/24 2G
 linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
 `,

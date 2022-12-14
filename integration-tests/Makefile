@@ -20,5 +20,5 @@ base_image:
 			--provision virter/provision-base.toml \
 			--set values.DRBDRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/drbd-9/x86_64 \
 			--set values.PacemakerRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com/yum/rhel8/pacemaker-2/x86_64 \
-			--set values.CIRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/rhel8 \
+			--set values.CIRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/ci-yum/rhel8 \
 			$(BASE_IMAGE)

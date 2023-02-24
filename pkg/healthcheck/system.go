@@ -18,31 +18,36 @@ type checkStartedAndEnabled struct {
 	packageName string
 }
 
-func unitStartedAndEnabled(service string) error {
+func unitStatus(service string) (*dbus.UnitStatus, error) {
 	ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
 	defer done()
 	conn, err := dbus.NewSystemConnectionContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to systemd: %w", err)
+		return nil, fmt.Errorf("failed to connect to systemd: %w", err)
 	}
 	defer conn.Close()
 
 	statuses, err := conn.ListUnitsByNamesContext(ctx, []string{service})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(statuses) == 0 {
-		return errNotFound
+		return nil, errNotFound
 	}
-	if statuses[0].ActiveState != "active" {
-		return fmt.Errorf("service %s is not started", service)
-	}
-	return nil
+	s := statuses[0]
+	return &s, nil
 }
 
 func (c *checkStartedAndEnabled) check() error {
-	return unitStartedAndEnabled(c.service)
+	status, err := unitStatus(c.service)
+	if err != nil {
+		return err
+	}
+	if status.ActiveState != "active" {
+		return fmt.Errorf("service %s is not started", c.service)
+	}
+	return nil
 }
 
 func (c *checkStartedAndEnabled) format(err error) string {
@@ -60,22 +65,33 @@ func (c *checkStartedAndEnabled) format(err error) string {
 	return b.String()
 }
 
-type checkNotStarted struct {
+type checkNotStartedButLoaded struct {
 	service string
+	packageName string
 }
 
-func (c *checkNotStarted) check() error {
-	err := unitStartedAndEnabled(c.service)
+func (c *checkNotStartedButLoaded) check() error {
+	status, err := unitStatus(c.service)
 	if err != nil {
 		return nil
 	}
-	return fmt.Errorf("is started")
+	if status.LoadState != "loaded" {
+		return fmt.Errorf("not loaded")
+	}
+	if status.ActiveState != "inactive" {
+		return fmt.Errorf("active state is %s, should be inactive", status.ActiveState)
+	}
+	return nil
 }
 
-func (c *checkNotStarted) format(_ error) string {
+func (c *checkNotStartedButLoaded) format(err error) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "    %s Service %s is started, but it is not supposed to be.\n", color.RedString("✗"), bold(c.service))
+	fmt.Fprintf(&b, "    %s Service %s is in the wrong state (%s).\n", color.RedString("✗"), bold(c.service), err.Error())
 	fmt.Fprintf(&b, "      This systemd service conflicts with LINSTOR Gateway.\n")
+	fmt.Fprintf(&b, "      It needs to be loaded, but %s started.\n", bold("not"))
+	fmt.Fprintf(&b, "      Make sure that:\n")
+	fmt.Fprintf(&b, "      • the %s package is installed\n", bold(c.packageName))
+	fmt.Fprintf(&b, "      • the %s systemd unit is stopped and disabled\n", bold(c.service))
 	fmt.Fprintf(&b, "      Execute %s to disable and stop the service.\n", bold("systemctl disable --now %s", c.service))
 	return b.String()
 }

@@ -95,7 +95,7 @@ func CheckRequirements(controllers []string) error {
 	}
 	err = category(
 		"NFS",
-		&checkNotStarted{"nfs-server.service"},
+		&checkNotStartedButLoaded{"nfs-server.service", "nfs-server"},
 	)
 	if err != nil {
 		errs++

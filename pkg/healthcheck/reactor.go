@@ -12,7 +12,14 @@ type checkReactorAutoReload struct {
 }
 
 func (c *checkReactorAutoReload) check() error {
-	return unitStartedAndEnabled("drbd-reactor-reload.path")
+	status, err := unitStatus("drbd-reactor-reload.path")
+	if err != nil {
+		return err
+	}
+	if status.ActiveState != "active" {
+		return fmt.Errorf("service drbd-reactor-reload.path is not started")
+	}
+	return nil
 }
 
 func guessReactorReloadDir() string {

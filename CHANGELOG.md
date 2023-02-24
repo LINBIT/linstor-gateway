@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 1.1.0 - 2023-02-24
+
+### Features
+
+* Extend the health check for NFS: it is now verified that the `nfs-server` package is actually installed.
+
+### Miscellaneous
+
+* Update Go dependencies
+
 ## 1.0.0 - 2022-11-21
 
 * No changes over rc1

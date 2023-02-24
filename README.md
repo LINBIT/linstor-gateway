@@ -40,6 +40,10 @@ and follow any suggestions that may come up.
 Start by browsing the documentation for the [linstor-gateway](./docs/md/linstor-gateway.md)
 command line utility.
 
+LINSTOR Gateway also takes a configuration file. See its documentation [here](./docs/config.md)
+
+### Internals
+
 The REST API documentation can be found [here](https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway/).
 
 # Building

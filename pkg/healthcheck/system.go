@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strings"
@@ -29,14 +30,19 @@ func unitStatus(service string) (*dbus.UnitStatus, error) {
 
 	statuses, err := conn.ListUnitsByNamesContext(ctx, []string{service})
 	if err != nil {
-		return nil, err
+		log.Debugf("ListUnitsByNames is not implemented in your systemd version (requires at least systemd 230), fallback to ListUnits: %v", err)
+		statuses, err = conn.ListUnitsContext(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if len(statuses) == 0 {
-		return nil, errNotFound
+	for _, s := range statuses {
+		if s.Name == service {
+			return &s, nil
+		}
 	}
-	s := statuses[0]
-	return &s, nil
+	return nil, errNotFound
 }
 
 func (c *checkStartedAndEnabled) check() error {
@@ -56,7 +62,7 @@ func (c *checkStartedAndEnabled) format(err error) string {
 	if errors.Is(err, errNotFound) {
 		what = "installed"
 	} else {
-		what = "running"
+		what = "running (" + err.Error() + ")"
 	}
 	fmt.Fprintf(&b, "    %s Service %s is not %s\n", color.RedString("✗"), bold(c.service), what)
 	fmt.Fprintf(&b, "      Make sure that:\n")
@@ -66,7 +72,7 @@ func (c *checkStartedAndEnabled) format(err error) string {
 }
 
 type checkNotStartedButLoaded struct {
-	service string
+	service     string
 	packageName string
 }
 

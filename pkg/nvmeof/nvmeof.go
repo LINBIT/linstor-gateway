@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"sort"
 	"time"
 
@@ -55,6 +56,32 @@ func (n *NVMeoF) Get(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 	return deployedCfg, nil
 }
 
+// getExistingDeployment returns the ResourceConfig for an existing reactor.PromoterConfig.
+// If the corresponding LINSTOR resource does not exist, it returns nil (but also a nil error).
+// If the LINSTOR resource does exist but is invalid, it returns an error.
+func (n *NVMeoF) getExistingDeployment(ctx context.Context, rsc *ResourceConfig, cfg *reactor.PromoterConfig, path string) (*ResourceConfig, error) {
+	resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+	if err != nil {
+		log.Warnf("Found an existing promoter config but no corresponding LINSTOR resource. Maybe left over from a previous deployment?")
+		log.Warnf("Ignoring and overwriting the existing configuration at %s.", path)
+		return nil, nil
+	}
+
+	deployedCfg, err := FromPromoter(cfg, resourceDefinition, volumeDefinitions)
+	if err != nil {
+		return nil, fmt.Errorf("unknown existing reactor config: %w", err)
+	}
+
+	if !rsc.Matches(deployedCfg) {
+		log.Debugf("existing resource found that does not match config")
+		log.Debugf("diff: %s", cmp.Diff(deployedCfg, rsc))
+		return nil, errors.New("resource already exists with incompatible config")
+	}
+
+	deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
+	return deployedCfg, nil
+}
+
 // Create creates an NVMe-oF target according to the resource configuration
 // described in rsc. It automatically prepends a "cluster private volume" to the
 // list of volumes, so volume numbers must start at 1.
@@ -75,23 +102,13 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 	}
 
 	if cfg != nil {
-		resourceDefinition, resourceGroup, volumeDefinitions, resources, err := cfg.DeployedResources(ctx, n.cli.Client)
+		deployedCfg, err := n.getExistingDeployment(ctx, rsc, cfg, path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch existing deployment: %w", err)
+			return nil, err
 		}
-
-		deployedCfg, err := FromPromoter(cfg, resourceDefinition, volumeDefinitions)
-		if err != nil {
-			return nil, fmt.Errorf("unknown existing reactor config: %w", err)
+		if deployedCfg != nil {
+			return deployedCfg, nil
 		}
-
-		if !rsc.Matches(deployedCfg) {
-			return nil, errors.New("resource already exists with incompatible config")
-		}
-
-		deployedCfg.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
-
-		return deployedCfg, nil
 	}
 
 	resourceDefinition, resourceGroup, deployment, err := n.cli.EnsureResource(ctx, linstorcontrol.Resource{

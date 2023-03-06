@@ -95,7 +95,7 @@ base-image:
   script:
     - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
     - |
-      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
+      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xzf -
       mv build-helpers-* build-helpers
       . build-helpers/gitlab-utils.sh
     - |
@@ -142,7 +142,7 @@ test-e2e:
   script:
     - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
     - |
-      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN https://gitlab.at.linbit.com/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
+      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN https://gitlab.at.linbit.com/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xzf -
       mv build-helpers-* build-helpers
       . build-helpers/gitlab-utils.sh
     - |

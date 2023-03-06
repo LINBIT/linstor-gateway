@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 1.1.1 - 2023-03-06
+
+### Fixes
+
+* Fix NFS healthcheck on older systemd versions (53bbd671)
+* Ignore and overwrite an existing promoter config if its corresponding
+  LINSTOR resource does not exist (137f7560)
+* Fix a `nil` dereference when listing resources with a broken LINSTOR state
+  (df53d0b3)
+
 ## 1.1.0 - 2023-02-24
 
 ### Features

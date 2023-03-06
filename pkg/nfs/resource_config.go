@@ -72,7 +72,9 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	}
 
 	r.Name = res
-	r.ResourceGroup = definition.ResourceGroupName
+	if definition != nil {
+		r.ResourceGroup = definition.ResourceGroupName
+	}
 
 	if len(cfg.Resources) != 1 {
 		return nil, errors.New(fmt.Sprintf("promoter config without exactly 1 resource (has %d)", len(cfg.Resources)))
@@ -102,7 +104,8 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 			case "ocf:heartbeat:Filesystem":
 				vol, err := parseVolume(agent, volumeDefinition, r.Name)
 				if err != nil {
-					return nil, fmt.Errorf("invalid ocf:heartbeat:Filesystem entry: %w", err)
+					log.Warnf("ignoring invalid resource agent: %v", err)
+					continue
 				}
 
 				r.Volumes = append(r.Volumes, *vol)

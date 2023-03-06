@@ -3,18 +3,17 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/olekukonko/tablewriter"
+	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"net"
 	"os"
-
-	"github.com/LINBIT/linstor-gateway/pkg/common"
-	"github.com/LINBIT/linstor-gateway/pkg/nfs"
-	"github.com/olekukonko/tablewriter"
-	"github.com/rck/unit"
-	"github.com/spf13/cobra"
 )
 
 func nfsCommands() *cobra.Command {
@@ -160,7 +159,7 @@ overview about the existing LINSTOR resources and service status.`,
 			table.SetHeader([]string{"Resource", "Service IP", "Service state", "NFS export", "LINSTOR state"})
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
-			degradedResources := 0
+			var degradedResources, badResources []string
 			for _, resource := range list {
 				for i, vol := range resource.Volumes {
 					withStatus := resource.VolumeConfig(vol.Number)
@@ -189,8 +188,15 @@ overview about the existing LINSTOR resources and service status.`,
 						ResourceStateColor(withStatus.Status.State),
 					})
 					if withStatus.Status.State != common.ResourceStateOK {
-						degradedResources++
+						degradedResources = append(degradedResources, resource.Name)
 					}
+				}
+				if len(resource.Volumes) == 0 {
+					table.Rich(
+						[]string{resource.Name, resource.ServiceIP.String(), resource.Status.Service.String(), "", common.ResourceStateBad.String()},
+						[]tablewriter.Colors{{}, {}, ServiceStateColor(resource.Status.Service), {}, ResourceStateColor(common.ResourceStateBad)},
+					)
+					badResources = append(badResources, resource.Name)
 				}
 			}
 
@@ -199,8 +205,18 @@ overview about the existing LINSTOR resources and service status.`,
 
 			table.Render() // Send output
 
-			if degradedResources > 0 {
+			if len(degradedResources) > 0 {
 				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))
+				for _, r := range degradedResources {
+					log.Warnf("- %s", r)
+				}
+			}
+
+			if len(badResources) > 0 {
+				log.Warnf("Some resources are broken. Check %s and verify that these resources are intact:", bold("linstor volume list"))
+				for _, r := range badResources {
+					log.Warnf("- %s", r)
+				}
 			}
 
 			return nil

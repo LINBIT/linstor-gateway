@@ -149,7 +149,7 @@ about the existing drbd-reactor and linstor parts.`,
 			table.SetHeader([]string{"IQN", "Service IP", "Service state", "LUN", "LINSTOR state"})
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
-			degradedResources := 0
+			var degradedResources, badResources []string
 			for _, cfg := range cfgs {
 				serviceIpStrings := make([]string, len(cfg.ServiceIPs))
 				for i := range cfg.ServiceIPs {
@@ -166,8 +166,15 @@ about the existing drbd-reactor and linstor parts.`,
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {
-						degradedResources++
+						degradedResources = append(degradedResources, cfg.IQN.WWN())
 					}
+				}
+				if len(cfg.Status.Volumes) == 0 {
+					table.Rich(
+						[]string{cfg.IQN.String(), strings.Join(serviceIpStrings, ", "), cfg.Status.Service.String(), "", common.ResourceStateBad.String()},
+						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(common.ResourceStateBad)},
+					)
+					badResources = append(badResources, cfg.IQN.WWN())
 				}
 			}
 
@@ -175,8 +182,18 @@ about the existing drbd-reactor and linstor parts.`,
 			table.SetAutoFormatHeaders(false)
 			table.Render()
 
-			if degradedResources > 0 {
+			if len(degradedResources) > 0 {
 				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))
+				for _, r := range degradedResources {
+					log.Warnf("- %s", r)
+				}
+			}
+
+			if len(badResources) > 0 {
+				log.Warnf("Some resources are broken. Check %s and verify that these resources are intact:", bold("linstor volume list"))
+				for _, r := range badResources {
+					log.Warnf("- %s", r)
+				}
 			}
 
 			return nil

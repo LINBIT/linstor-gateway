@@ -58,7 +58,7 @@ func listNVMECommand() *cobra.Command {
 			table.SetHeader([]string{"NQN", "Service IP", "Service state", "Namespace", "LINSTOR state"})
 			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
 
-			degradedResources := 0
+			var degradedResources, badResources []string
 			for _, cfg := range cfgs {
 				for i, vol := range cfg.Status.Volumes {
 					if i == 0 {
@@ -70,16 +70,34 @@ func listNVMECommand() *cobra.Command {
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {
-						degradedResources++
+						degradedResources = append(degradedResources, cfg.NQN.Subsystem())
 					}
+				}
+
+				if len(cfg.Status.Volumes) == 0 {
+					table.Rich(
+						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), cfg.Status.Service.String(), "", common.ResourceStateBad.String()},
+						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(common.ResourceStateBad)},
+					)
+					badResources = append(badResources, cfg.NQN.Subsystem())
 				}
 			}
 
 			table.SetAutoMergeCellsByColumnIndex([]int{0, 1})
 			table.SetAutoFormatHeaders(false)
 			table.Render()
-			if degradedResources > 0 {
+			if len(degradedResources) > 0 {
 				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))
+				for _, r := range degradedResources {
+					log.Warnf("- %s", r)
+				}
+			}
+
+			if len(badResources) > 0 {
+				log.Warnf("Some resources are broken. Check %s and verify that these resources are intact:", bold("linstor volume list"))
+				for _, r := range badResources {
+					log.Warnf("- %s", r)
+				}
 			}
 
 			return nil

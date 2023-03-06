@@ -38,6 +38,13 @@ type CreateResult struct {
 	StorageNodes []string
 }
 
+func rdName(rd *client.ResourceDefinition) string {
+	if rd == nil {
+		return "<nil>"
+	}
+	return rd.Name
+}
+
 func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefinition, group *client.ResourceGroup, resources []client.ResourceWithVolumes) common.ResourceStatus {
 	resourceState := common.Unknown
 	service := common.ServiceStateStopped
@@ -57,7 +64,7 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 		}
 	}
 
-	if definition.Props[fmt.Sprintf("files%s", serviceCfgPath)] == "True" {
+	if definition != nil && definition.Props[fmt.Sprintf("files%s", serviceCfgPath)] == "True" {
 		service = common.ServiceStateStarted
 	}
 
@@ -75,16 +82,20 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 			}
 		}
 
+		var wantPlaceCount int32
+		if group != nil {
+			wantPlaceCount = group.SelectFilter.PlaceCount
+		}
 		aggregateState := common.ResourceStateBad
-		if upToDate == len(deployedVols) && diskful >= int(group.SelectFilter.PlaceCount) {
+		if upToDate > 0 && upToDate == len(deployedVols) && diskful >= int(wantPlaceCount) {
 			aggregateState = common.ResourceStateOK
 		} else if upToDate > 0 {
 			aggregateState = common.ResourceStateDegraded
 		}
 
 		log.WithFields(log.Fields{
-			"resource":       definition.Name,
-			"wantPlaceCount": group.SelectFilter.PlaceCount,
+			"resource":       rdName(definition),
+			"wantPlaceCount": wantPlaceCount,
 			"haveDiskful":    diskful,
 		}).Tracef("deciding aggregateState %s", aggregateState)
 
@@ -132,10 +143,10 @@ func DefaultResourceProps() map[string]string {
 
 // EnsureResource creates or updates the given resource.
 // It returns three values:
-// - The newly created resource definition
-// - A slice of all resources that have been spawned from this resource
-//   definition on the respective nodes
-// - An error if one occurred, or nil
+//   - The newly created resource definition
+//   - A slice of all resources that have been spawned from this resource
+//     definition on the respective nodes
+//   - An error if one occurred, or nil
 func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, *client.ResourceGroup, []client.ResourceWithVolumes, error) {
 	logger := log.WithField("resource", res.Name)
 

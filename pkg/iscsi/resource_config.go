@@ -129,7 +129,9 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse promoter config: %w", err)
 	}
-	r.ResourceGroup = definition.ResourceGroupName
+	if definition != nil {
+		r.ResourceGroup = definition.ResourceGroupName
+	}
 
 	anyGrossSize := false
 

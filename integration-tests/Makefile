@@ -6,6 +6,7 @@ TORUN ?= all
 run:
 	mkdir -p tests-out
 	vmshed																		\
+			--quiet																\
 			--out-dir "$(shell readlink -f tests-out)"                          \
 			--startvm 20                                                        \
 			--nvms 12                                                           \

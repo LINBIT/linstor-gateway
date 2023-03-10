@@ -96,9 +96,28 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, rsc.NQN.Subsystem()))
+	var cfg *reactor.PromoterConfig
+	var path string
+	cfgID := fmt.Sprintf(IDFormat, rsc.NQN.Subsystem())
+	configs, paths, err := reactor.ListConfigs(ctx, n.cli.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check for existing config: %w", err)
+		return nil, fmt.Errorf("failed to retrieve existing configs: %w", err)
+	}
+
+	for i := range configs {
+		c := configs[i]
+		p := paths[i]
+
+		if err := common.CheckIPCollision(c, rsc.ServiceIP.IP()); err != nil {
+			return nil, fmt.Errorf("invalid configuration: %w", err)
+		}
+
+		// while looking for ip collisions, filter out any existing config with
+		// the same name as the one we are trying to create.
+		if c.ID == cfgID {
+			cfg = &c
+			path = p
+		}
 	}
 
 	if cfg != nil {

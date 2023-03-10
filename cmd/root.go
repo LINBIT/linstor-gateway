@@ -69,10 +69,12 @@ func rootCommand() *cobra.Command {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:     "linstor-gateway",
-		Version: version,
-		Short:   "Manage linstor-gateway targets and exports",
-		Args:    cobra.NoArgs,
+		Use:           "linstor-gateway",
+		Version:       version,
+		Short:         "Manage linstor-gateway targets and exports",
+		Args:          cobra.NoArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			level, err := log.ParseLevel(loglevel)
 			if err != nil {
@@ -118,7 +120,7 @@ func Execute() {
 	cobra.OnInitialize(initConfig)
 	rootCmd := rootCommand()
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		os.Exit(1)
 	}
 }

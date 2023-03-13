@@ -1,17 +1,17 @@
 #! /usr/bin/env python3
 
 import argparse
+import errno
 import os
 import pipes
 import re
 import socket
 import subprocess
+import sys
+import time
 from io import StringIO
 from threading import Thread
 
-import errno
-import sys
-import time
 from lbpytest.controlmaster import SSH
 
 # stream to write output to
@@ -142,6 +142,7 @@ def setup():
         args.logdir = os.path.join('log', job)
         job_symlink = re.sub(r'-[^-]*-[^-]*?$', '', job) + '-latest'
 
+    # no log() here yet, only gets initialized later
     print('Logging to directory %s' % args.logdir, file=sys.stderr)
 
     if not os.access(args.logdir, os.R_OK + os.X_OK + os.W_OK):
@@ -165,5 +166,5 @@ def setup():
     for n in args.node:
         new_node = Node(n)
         nodes.append(new_node)
-        print('New node: {} {}'.format(new_node.name, new_node.hostname))
+        log('New node: {} {}'.format(new_node.name, new_node.hostname))
     return nodes

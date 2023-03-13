@@ -20,6 +20,9 @@ jobs:
       - name: Build project
         run: |
           make release
+      - name: Extract Release Notes
+        id: extract_release_notes
+        uses: ffurrer2/extract-release-notes@v1.16.0
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -30,6 +33,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+          body: ${{ steps.extract_release_notes.outputs.release_notes }}
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1

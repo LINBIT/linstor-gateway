@@ -304,11 +304,6 @@ func (n *NVMeoF) AddVolume(ctx context.Context, nqn Nqn, volCfg *common.VolumeCo
 	}
 
 	if !exists {
-		status := linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, resources)
-		if status.Service == common.ServiceStateStarted {
-			return nil, errors.New("cannot add volume while service is running")
-		}
-
 		deployedCfg.Volumes = append(deployedCfg.Volumes, *volCfg)
 
 		sort.Slice(deployedCfg.Volumes, func(i, j int) bool {

@@ -73,7 +73,7 @@ checkVERSION:
 ifdef FORCE
 	true
 else
-	test -z "$$(git ls-files -m)" || $(error Uncommitted changes in working directory)
+	test -z "$$(git ls-files -m)" || { echo "Uncommitted files in working directory"; exit 1; }
 	lbvers.py check --base=$(BASE) --build=$(BUILD) --build-nr=$(BUILD_NR) --pkg-nr=$(PKG_NR) \
 		--rpm-spec=linstor-gateway.spec --debian-changelog=debian/changelog --changelog=CHANGELOG.md
 endif

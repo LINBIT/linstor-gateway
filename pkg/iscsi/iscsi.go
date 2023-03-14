@@ -383,7 +383,7 @@ func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceCo
 		if rscCfg.Volumes[j].Number == lun {
 			err = i.cli.ResourceDefinitions.DeleteVolumeDefinition(ctx, iqn.WWN(), lun)
 			if err != nil && err != client.NotFoundError {
-				return nil, fmt.Errorf("failed to delete volume definition")
+				return nil, fmt.Errorf("failed to delete volume definition: %w", err)
 			}
 
 			rscCfg.Volumes = append(rscCfg.Volumes[:j], rscCfg.Volumes[j+1:]...)

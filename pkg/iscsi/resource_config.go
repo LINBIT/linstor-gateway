@@ -20,6 +20,7 @@ import (
 
 const (
 	DefaultISCSIPort = 3260
+	CurrentVersion   = 1
 )
 
 type ResourceConfig struct {
@@ -398,6 +399,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				OnDrbdDemoteFailure: "reboot-immediate",
 				TargetAs:            "Requires",
 			},
+		},
+		Metadata: reactor.PromoterMetadata{
+			LinstorGatewaySchemaVersion: CurrentVersion,
 		},
 	}, nil
 }

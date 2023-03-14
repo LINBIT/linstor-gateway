@@ -13,6 +13,10 @@ func upgradeIscsi(ctx context.Context, linstor *client.Client, name string, forc
 	if err != nil {
 		return false, err
 	}
+	if cfg.Metadata.LinstorGatewaySchemaVersion > iscsi.CurrentVersion {
+		return false, fmt.Errorf("schema version %d is not supported",
+			cfg.Metadata.LinstorGatewaySchemaVersion)
+	}
 
 	parsedCfg, err := iscsi.FromPromoter(cfg, resourceDefinition, volumeDefinitions)
 	if err != nil {

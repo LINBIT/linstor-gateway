@@ -19,8 +19,11 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
-const IDFormat = "nvmeof-%s"
-const DefaultPort = 4420
+const (
+	IDFormat       = "nvmeof-%s"
+	DefaultPort    = 4420
+	CurrentVersion = 1
+)
 
 type ResourceConfig struct {
 	NQN           Nqn                   `json:"nqn"`
@@ -244,6 +247,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				OnDrbdDemoteFailure: "reboot-immediate",
 				TargetAs:            "Requires",
 			},
+		},
+		Metadata: reactor.PromoterMetadata{
+			LinstorGatewaySchemaVersion: CurrentVersion,
 		},
 	}, nil
 }

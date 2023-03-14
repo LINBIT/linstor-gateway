@@ -23,10 +23,17 @@ type Config struct {
 	Promoter []PromoterConfig `toml:"promoter,omitempty"`
 }
 
+// PromoterMetadata is a custom extension to the drbd-reactor config format.
+// It stores fields specific to linstor-gateway.
+type PromoterMetadata struct {
+	LinstorGatewaySchemaVersion int `toml:"linstor-gateway-schema-version"`
+}
+
 // PromoterConfig is the configuration for drbd-reactors "promoter" plugin.
 type PromoterConfig struct {
 	ID        string                            `toml:"id"`
 	Resources map[string]PromoterResourceConfig `toml:"resources,omitempty"`
+	Metadata  PromoterMetadata                  `toml:"metadata,omitempty"`
 }
 
 // DeployedResources fetches the current state of the resources referenced in the promoter config.

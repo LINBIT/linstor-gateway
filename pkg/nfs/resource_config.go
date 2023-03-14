@@ -22,6 +22,7 @@ import (
 const (
 	ExportBasePath = "/srv/gateway-exports"
 	DefaultNFSPort = 2049
+	CurrentVersion = 1
 )
 
 var (
@@ -495,6 +496,9 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				OnDrbdDemoteFailure: "reboot-immediate",
 				TargetAs:            "BindsTo",
 			},
+		},
+		Metadata: reactor.PromoterMetadata{
+			LinstorGatewaySchemaVersion: CurrentVersion,
 		},
 	}, nil
 }

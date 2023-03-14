@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2023-03-14
+
+### Features
+
+* When creating a resource (iSCSI, NVMe-oF, or NFS), LINSTOR Gateway will now do a basic check for IP collisions. If the provided service IP is already in use by another resource, an error will be thrown. (48ac8502)
+
+### Fixes
+
+* The CLI will no longer print the usage information whenever an error happens. (4e2cc19c)
+* When listing resources, degraded resources could previously be displayed twice. This was changed so that every resource only gets reported once. (a4b56ceb)
+* Remove a check that verifies a resource is stopped before adding a volume. Adding volumes works just as well on running resources. (8426c36e)
+
 ## [1.1.1] - 2023-03-06
 
 ### Fixes
@@ -213,7 +225,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.0.0-rc.1...v1.0.0

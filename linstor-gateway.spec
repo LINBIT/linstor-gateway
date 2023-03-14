@@ -7,7 +7,7 @@
 %endif
 
 Name: linstor-gateway
-Version: 1.1.1
+Version: 1.2.0
 Release: 1
 Summary: LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
 %global tarball_version %(echo "%{version}" | sed -e 's/~rc/-rc/' -e 's/~alpha/-alpha/')
@@ -52,6 +52,9 @@ install -D -m 644 %{name}.xml %{buildroot}%{_firewalldir}/services/%{name}.xml
 	%{_firewalldir}/services/%{name}.xml
 
 %changelog
+* Tue Mar 14 2023 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 1.2.0-1
+-  New upstream release
+
 * Mon Mar 06 2023 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 1.1.1-1
 -  New upstream release
 

@@ -188,7 +188,9 @@ overview about the existing LINSTOR resources and service status.`,
 						ResourceStateColor(withStatus.Status.State),
 					})
 					if withStatus.Status.State != common.ResourceStateOK {
-						degradedResources = append(degradedResources, resource.Name)
+						if !contains(degradedResources, resource.Name) {
+							degradedResources = append(degradedResources, resource.Name)
+						}
 					}
 				}
 				if len(resource.Volumes) == 0 {

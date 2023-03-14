@@ -33,6 +33,16 @@ const (
 	defaultPort   = 8080
 )
 
+func contains(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if v == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
 func parseBaseURL(urlString string) (*url.URL, error) {
 	// Check scheme
 	urlSplit := strings.Split(urlString, "://")

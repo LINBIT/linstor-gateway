@@ -166,7 +166,10 @@ about the existing drbd-reactor and linstor parts.`,
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {
-						degradedResources = append(degradedResources, cfg.IQN.WWN())
+						id := cfg.IQN.WWN()
+						if !contains(degradedResources, id) {
+							degradedResources = append(degradedResources, id)
+						}
 					}
 				}
 				if len(cfg.Status.Volumes) == 0 {

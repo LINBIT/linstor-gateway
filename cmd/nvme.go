@@ -70,7 +70,10 @@ func listNVMECommand() *cobra.Command {
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {
-						degradedResources = append(degradedResources, cfg.NQN.Subsystem())
+						id := cfg.NQN.Subsystem()
+						if !contains(degradedResources, id) {
+							degradedResources = append(degradedResources, id)
+						}
 					}
 				}
 

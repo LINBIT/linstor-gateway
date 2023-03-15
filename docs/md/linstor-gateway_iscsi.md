@@ -32,4 +32,5 @@ as well as drbd-reactor is a prerequisite to use this tool.
 * [linstor-gateway iscsi list](linstor-gateway_iscsi_list.md)	 - Lists iSCSI targets
 * [linstor-gateway iscsi start](linstor-gateway_iscsi_start.md)	 - Starts an iSCSI target
 * [linstor-gateway iscsi stop](linstor-gateway_iscsi_stop.md)	 - Stops an iSCSI target
+* [linstor-gateway iscsi upgrade](linstor-gateway_iscsi_upgrade.md)	 - Check existing resources and upgrade their configuration if necessary
 

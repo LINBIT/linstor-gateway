@@ -30,4 +30,5 @@ nvme manages highly available NVME targets by leveraging LINSTOR and DRBD.
 * [linstor-gateway nvme list](linstor-gateway_nvme_list.md)	 - list configured NVMe-oF targets
 * [linstor-gateway nvme start](linstor-gateway_nvme_start.md)	 - Start a stopped NVMe-oF target
 * [linstor-gateway nvme stop](linstor-gateway_nvme_stop.md)	 - Stop a started NVMe-oF target
+* [linstor-gateway nvme upgrade](linstor-gateway_nvme_upgrade.md)	 - Check existing resources and upgrade their configuration if necessary
 

@@ -24,10 +24,12 @@ linstor-gateway iscsi create iqn.2019-08.com.linbit:example 192.168.122.181/24 2
 ### Options
 
 ```
-  -h, --help                    help for create
-  -p, --password string         Set the password to use for CHAP authentication
-  -g, --resource-group string   Set the LINSTOR resource group (default "DfltRscGrp")
-  -u, --username string         Set the username to use for CHAP authentication
+      --allowed-initiators strings   Restrict which initiator IQNs are allowed to connect to the target
+      --gross                        Make all size options specify gross size, i.e. the actual space used on disk
+  -h, --help                         help for create
+  -p, --password string              Set the password to use for CHAP authentication
+  -g, --resource-group string        Set the LINSTOR resource group (default "DfltRscGrp")
+  -u, --username string              Set the username to use for CHAP authentication
 ```
 
 ### Options inherited from parent commands

@@ -11,6 +11,6 @@ Vcs-Browser: https://github.com/LINBIT/linstor-gateway
 Package: linstor-gateway
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: linstor-gateway manages highly available iSCSI targets and NFS exports.
- Setting linstor including storage pools and resource groups as well as
- Corosync and Pacemaker's properties a prerequisite to use this tool.
+Description: Exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF
+ LINSTOR Gateway manages highly available iSCSI targets, NFS exports, and
+ NVMe-oF targets by leveraging LINSTOR and drbd-reactor.

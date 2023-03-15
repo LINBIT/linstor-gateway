@@ -9,7 +9,7 @@
 Name: linstor-gateway
 Version: 1.2.0
 Release: 1
-Summary: LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
+Summary: Exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
 %global tarball_version %(echo "%{version}" | sed -e 's/~rc/-rc/' -e 's/~alpha/-alpha/')
 
 URL: https://www.github.com/LINBIT/linstor-gateway
@@ -20,7 +20,8 @@ License: GPLv3+
 ExclusiveOS: linux
 
 %description
-LINSTOR Gateway exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
+LINSTOR Gateway manages highly available iSCSI targets, NFS exports, and NVMe-oF
+targets by leveraging LINSTOR and drbd-reactor.
 
 %prep
 %setup -q -n %{name}-%{tarball_version}

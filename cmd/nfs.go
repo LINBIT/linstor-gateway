@@ -21,12 +21,12 @@ func nfsCommands() *cobra.Command {
 		Use:     "nfs",
 		Version: version,
 		Short:   "Manages Highly-Available NFS exports",
-		Long: fmt.Sprintf(`linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
+		Long: `linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
 and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups
 is a prerequisite to use this tool.
 
-%s that, currently, only one NFS export can exist in a cluster.
-See "help nfs create" for more information`, bold("NOTE")),
+NOTE that, currently, only one NFS export can exist in a cluster.
+See "help nfs create" for more information`,
 		Args: cobra.NoArgs,
 	}
 

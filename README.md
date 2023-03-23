@@ -71,5 +71,5 @@ If you want to test the latest unstable version of LINSTOR Gateway, you can buil
 ```
 git clone https://github.com/LINBIT/linstor-gateway
 cd linstor-gateway
-go build .
+make
 ```

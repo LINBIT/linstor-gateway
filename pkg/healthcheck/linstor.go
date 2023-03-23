@@ -18,7 +18,7 @@ type checkLinstor struct {
 	controllers []string
 }
 
-func (c *checkLinstor) check() error {
+func (c *checkLinstor) check(bool) error {
 	ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
 	defer done()
 	cli, err := linstorcontrol.Default(c.controllers)
@@ -47,7 +47,7 @@ func (c *checkLinstor) format(err error) string {
 type checkFileWhitelist struct {
 }
 
-func (c *checkFileWhitelist) check() error {
+func (c *checkFileWhitelist) check(bool) error {
 	f, err := os.Open(satelliteConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)

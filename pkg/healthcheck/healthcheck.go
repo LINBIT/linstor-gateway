@@ -10,15 +10,17 @@ var bold = color.New(color.Bold).SprintfFunc()
 var errNotFound = errors.New("not found")
 
 type checker interface {
-	check() error
+	check(prevError bool) error
 	format(err error) string
 }
 
 func category(name string, checks ...checker) error {
+	var prevError bool
 	var msgs []string
 	for _, c := range checks {
-		err := c.check()
+		err := c.check(prevError)
 		if err != nil {
+			prevError = true
 			msgs = append(msgs, c.format(err))
 		}
 	}

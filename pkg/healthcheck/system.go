@@ -45,7 +45,7 @@ func unitStatus(service string) (*dbus.UnitStatus, error) {
 	return nil, errNotFound
 }
 
-func (c *checkStartedAndEnabled) check() error {
+func (c *checkStartedAndEnabled) check(bool) error {
 	status, err := unitStatus(c.service)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ type checkNotStartedButLoaded struct {
 	packageName string
 }
 
-func (c *checkNotStartedButLoaded) check() error {
+func (c *checkNotStartedButLoaded) check(bool) error {
 	status, err := unitStatus(c.service)
 	if err != nil {
 		return nil
@@ -108,7 +108,7 @@ type checkFileExists struct {
 	isDirectory bool
 }
 
-func (c *checkFileExists) check() error {
+func (c *checkFileExists) check(bool) error {
 	_, err := os.Stat(c.filename)
 	return err
 }
@@ -159,7 +159,7 @@ type checkKernelModuleLoaded struct {
 	packageName string
 }
 
-func (c *checkKernelModuleLoaded) check() error {
+func (c *checkKernelModuleLoaded) check(bool) error {
 	modules, err := lsmod()
 	if err != nil {
 		return err
@@ -187,7 +187,7 @@ type checkInPath struct {
 	packageName string
 }
 
-func (c *checkInPath) check() error {
+func (c *checkInPath) check(bool) error {
 	_, err := exec.LookPath(c.binary)
 	return err
 }

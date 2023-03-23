@@ -118,13 +118,13 @@ func TestStatusFromResources(t *testing.T) {
 			},
 			want: common.ResourceStatus{
 				State:   common.Unknown,
-				Service: common.ServiceStateStarted,
+				Service: common.ServiceStateStopped,
 				Primary: "",
 				Nodes:   []string{},
 				Volumes: []common.VolumeState{},
 			},
 		}, {
-			name: "service-stopped",
+			name: "config-not-deployed",
 			args: args{
 				serviceCfgPath: "/path/to/config.toml",
 				resources: []client.ResourceWithVolumes{{
@@ -150,6 +150,34 @@ func TestStatusFromResources(t *testing.T) {
 				State:   common.ResourceStateOK,
 				Service: common.ServiceStateStopped,
 				Primary: "node1",
+				Nodes:   []string{"node1", "node2"},
+				Volumes: []common.VolumeState{
+					{Number: 0, State: common.ResourceStateOK},
+					{Number: 1, State: common.ResourceStateOK},
+				},
+			},
+		}, {
+			name: "config-deployed-but-no-resource-in-use",
+			args: args{
+				serviceCfgPath: "/path/to/config.toml",
+				resources: []client.ResourceWithVolumes{{
+					Resource: client.Resource{Name: "test-resource", NodeName: "node1", State: resState(false)},
+					Volumes: []client.Volume{
+						volume(0, "UpToDate"),
+						volume(1, "UpToDate"),
+					},
+				}, {
+					Resource: client.Resource{Name: "test-resource", NodeName: "node2", State: resState(false)},
+					Volumes: []client.Volume{
+						volume(0, "UpToDate"),
+						volume(1, "UpToDate"),
+					},
+				}},
+			},
+			want: common.ResourceStatus{
+				State:   common.ResourceStateOK,
+				Service: common.ServiceStateStopped,
+				Primary: "",
 				Nodes:   []string{"node1", "node2"},
 				Volumes: []common.VolumeState{
 					{Number: 0, State: common.ResourceStateOK},

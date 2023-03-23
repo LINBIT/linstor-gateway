@@ -55,6 +55,7 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 	for _, nodeRsc := range resources {
 		nodes = append(nodes, nodeRsc.NodeName)
 
+		log.WithField("node", nodeRsc.NodeName).Debugf("node state: %+v", nodeRsc.State)
 		if nodeRsc.State != nil && nodeRsc.State.InUse != nil && *nodeRsc.State.InUse {
 			primary = nodeRsc.NodeName
 		}
@@ -64,7 +65,8 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 		}
 	}
 
-	if definition != nil && definition.Props[fmt.Sprintf("files%s", serviceCfgPath)] == "True" {
+	configFileProp := fmt.Sprintf("files%s", serviceCfgPath)
+	if definition != nil && definition.Props[configFileProp] == "True" && primary != "" {
 		service = common.ServiceStateStarted
 	}
 

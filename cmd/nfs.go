@@ -174,10 +174,14 @@ overview about the existing LINSTOR resources and service status.`,
 
 					log.Debugf("listing volume: %+v", vol)
 
+					serviceStatus := resource.Status.Service.String()
+					if resource.Status.Service == common.ServiceStateStarted && resource.Status.Primary != "" {
+						serviceStatus += " (" + resource.Status.Primary + ")"
+					}
 					table.Rich([]string{
 						resource.Name,
 						resource.ServiceIP.String(),
-						resource.Status.Service.String(),
+						serviceStatus,
 						nfs.ExportPath(resource, &vol),
 						withStatus.Status.State.String(),
 					}, []tablewriter.Colors{

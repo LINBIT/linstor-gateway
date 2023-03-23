@@ -65,8 +65,12 @@ func listNVMECommand() *cobra.Command {
 						log.Debugf("not displaying cluster private volume: %+v", vol)
 						continue
 					}
+					serviceStatus := cfg.Status.Service.String()
+					if cfg.Status.Service == common.ServiceStateStarted && cfg.Status.Primary != "" {
+						serviceStatus += " (" + cfg.Status.Primary + ")"
+					}
 					table.Rich(
-						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
+						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), serviceStatus, strconv.Itoa(vol.Number), vol.State.String()},
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {

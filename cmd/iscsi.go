@@ -161,8 +161,12 @@ about the existing drbd-reactor and linstor parts.`,
 						continue
 					}
 
+					serviceStatus := cfg.Status.Service.String()
+					if cfg.Status.Service == common.ServiceStateStarted && cfg.Status.Primary != "" {
+						serviceStatus += " (" + cfg.Status.Primary + ")"
+					}
 					table.Rich(
-						[]string{cfg.IQN.String(), strings.Join(serviceIpStrings, ", "), cfg.Status.Service.String(), strconv.Itoa(vol.Number), vol.State.String()},
+						[]string{cfg.IQN.String(), strings.Join(serviceIpStrings, ", "), serviceStatus, strconv.Itoa(vol.Number), vol.State.String()},
 						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
 					)
 					if vol.State != common.ResourceStateOK {

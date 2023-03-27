@@ -8,22 +8,11 @@ LINSTOR Gateway manages highly available **iSCSI targets**, **NFS exports**, and
 **NVMe-oF targets** by leveraging [LINSTOR](https://github.com/LINBIT/linstor-server)
 and [drbd-reactor](https://github.com/LINBIT/drbd-reactor).
 
-# Quick Start
+# Getting Started
 
-1. Set up a [LINSTOR](https://github.com/LINBIT/linstor-server) cluster. Ensure you have
-   a [storage pool](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-storage_pools) with enough space for your
-   data.
-2. Set up [drbd-reactor](https://github.com/LINBIT/drbd-reactor). The daemon should be configured to reload
-   automatically when the configuration changes – follow the steps from
-   the [drbd-reactor README](https://github.com/LINBIT/drbd-reactor/#automatic-reload).
-3. LINSTOR Gateway is packaged as a single binary. Download one of the
-   [releases](https://github.com/LINBIT/linstor-gateway/releases) and copy it to `/usr/local/bin`.
-4. Start the LINSTOR Gateway server:
-   ```
-   linstor-gateway server
-   ```
-   This repository also includes [linstor-gateway.service](./linstor-gateway.service)
-   which can be used to start the server via systemd.
+For a step-by-step tutorial on setting up a LINSTOR Gateway cluster, refer to
+this blog post:
+[Create a Highly Available iSCSI Target Using LINSTOR Gateway](https://linbit.com/blog/create-a-highly-available-iscsi-target-using-linstor-gateway/).
 
 # Requirements
 

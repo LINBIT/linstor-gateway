@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"errors"
 	"fmt"
+	"github.com/LINBIT/linstor-gateway/client"
 	"github.com/fatih/color"
 )
 
@@ -54,11 +55,10 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func CheckRequirements(controllers []string) error {
+func checkAgent() error {
 	errs := 0
 	err := category(
 		"LINSTOR",
-		&checkLinstor{controllers},
 		&checkFileWhitelist{},
 	)
 	if err != nil {
@@ -106,4 +106,53 @@ func CheckRequirements(controllers []string) error {
 		return fmt.Errorf("found %d issues", errs)
 	}
 	return nil
+}
+
+func checkServer(controllers []string) error {
+	errs := 0
+	err := category(
+		"LINSTOR",
+		&checkLinstor{controllers},
+	)
+	if err != nil {
+		errs++
+	}
+	if errs > 0 {
+		return fmt.Errorf("found %d issues", errs)
+	}
+	return nil
+}
+
+func checkClient(cli *client.Client) error {
+	errs := 0
+	err := category(
+		"Server Connection",
+		&checkGatewayServerConnection{cli},
+	)
+	if err != nil {
+		errs++
+	}
+	if errs > 0 {
+		return fmt.Errorf("found %d issues", errs)
+	}
+	return nil
+}
+
+func CheckRequirements(mode string, controllers []string, cli *client.Client) error {
+	doPrint := func() {
+		fmt.Printf("Checking %s requirements.\n\n", bold(mode))
+	}
+	switch mode {
+	case "agent":
+		doPrint()
+		return checkAgent()
+	case "server":
+		doPrint()
+		return checkServer(controllers)
+	case "client":
+		doPrint()
+		return checkClient(cli)
+	default:
+		return fmt.Errorf("unknown mode %q. Expected \"agent\", \"server\", or \"client\"", mode)
+	}
 }

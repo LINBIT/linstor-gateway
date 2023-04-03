@@ -22,6 +22,7 @@ type Client struct {
 	Iscsi  *ISCSIService
 	Nfs    *NFSService
 	NvmeOf *NvmeOfService
+	Status *StatusService
 }
 
 type clientError string
@@ -81,6 +82,7 @@ func NewClient(options ...Option) (*Client, error) {
 	c.Iscsi = &ISCSIService{c}
 	c.Nfs = &NFSService{c}
 	c.NvmeOf = &NvmeOfService{c}
+	c.Status = &StatusService{c}
 	return c, nil
 }
 

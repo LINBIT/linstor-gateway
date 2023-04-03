@@ -131,7 +131,7 @@ func (s *ServiceState) UnmarshalJSON(text []byte) error {
 
 func AnyResourcesInUse(resources []client.ResourceWithVolumes) bool {
 	for _, resource := range resources {
-		if resource.State.InUse != nil && *resource.State.InUse {
+		if resource.State != nil && resource.State.InUse != nil && *resource.State.InUse {
 			return true
 		}
 	}

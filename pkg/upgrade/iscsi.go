@@ -5,11 +5,19 @@ import (
 	"fmt"
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
+
+// iscsiMigrations defines the operations for upgrading a single version.
+// The array index ("n") denotes the starting version; the function at
+// index "n" migrates from version "n" to version "n+1".
+var iscsiMigrations = []func(cfg *reactor.PromoterConfig) error{
+	0: removeID,
+}
 
 func upgradeIscsi(ctx context.Context, linstor *client.Client, name string, forceYes bool, dryRun bool) (bool, error) {
 	const gatewayConfigPath = "/etc/drbd-reactor.d/linstor-gateway-iscsi-%s.toml"
-	cfg, resourceDefinition, volumeDefinitions, resources, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
+	cfg, _, _, _, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
 	if err != nil {
 		return false, err
 	}
@@ -17,17 +25,20 @@ func upgradeIscsi(ctx context.Context, linstor *client.Client, name string, forc
 		return false, fmt.Errorf("schema version %d is not supported",
 			cfg.Metadata.LinstorGatewaySchemaVersion)
 	}
-
-	parsedCfg, err := iscsi.FromPromoter(cfg, resourceDefinition, volumeDefinitions)
+	newCfg, _, _, _, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
 	if err != nil {
-		return false, fmt.Errorf("failed to parse config: %w", err)
-	}
-	newConfig, err := parsedCfg.ToPromoter(resources)
-	if err != nil {
-		return false, fmt.Errorf("failed to generate config: %w", err)
+		return false, err
 	}
 
-	return maybeWriteNewConfig(ctx, linstor, cfg, newConfig, forceYes, dryRun)
+	for i := cfg.Metadata.LinstorGatewaySchemaVersion; i < iscsi.CurrentVersion; i++ {
+		err := iscsiMigrations[i](newCfg)
+		if err != nil {
+			return false, fmt.Errorf("failed to migrate from version %d to %d: %w", i, i+1, err)
+		}
+	}
+	newCfg.Metadata.LinstorGatewaySchemaVersion = iscsi.CurrentVersion
+
+	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, forceYes, dryRun)
 }
 
 func Iscsi(ctx context.Context, linstor *client.Client, iqn iscsi.Iqn, forceYes bool, dryRun bool) error {

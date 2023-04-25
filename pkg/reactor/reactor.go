@@ -31,7 +31,7 @@ type PromoterMetadata struct {
 
 // PromoterConfig is the configuration for drbd-reactors "promoter" plugin.
 type PromoterConfig struct {
-	ID        string                            `toml:"id"`
+	ID        string                            `toml:"id,omitempty"`
 	Resources map[string]PromoterResourceConfig `toml:"resources,omitempty"`
 	Metadata  PromoterMetadata                  `toml:"metadata,omitempty"`
 }

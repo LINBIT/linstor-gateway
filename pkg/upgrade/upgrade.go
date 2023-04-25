@@ -1,34 +1,6 @@
 /*
 Package upgrade migrates existing resources to the latest version.
 We will always try to upgrade to the most modern version of the drbd-reactor configuration.
-
-In practice, this means the following DRBD options:
-
-options {
-   auto-promote no;
-   quorum majority;
-   on-suspended-primary-outdated force-secondary;
-   on-no-quorum io-error;
-}
-
-And the following drbd-reactor settings:
-
-[[promoter]]
-  id = "iscsi-target1"
-  [promoter.resources]
-    [promoter.resources.target1]
-      on-drbd-demote-failure = "reboot-immediate"
-      runner = "systemd"
-      start = [
-        "ocf:heartbeat:Filesystem fs_cluster_private device=/dev/drbd/by-res/target1/0 directory=/srv/ha/internal/target1 fstype=ext4 run_fsck=no",
-        "ocf:heartbeat:portblock pblock0 action=block ip=192.168.122.222 portno=3260 protocol=tcp",
-        "ocf:heartbeat:IPaddr2 service_ip0 cidr_netmask=24 ip=192.168.122.222",
-        "ocf:heartbeat:iSCSITarget target allowed_initiators='' incoming_password='' incoming_username='' iqn=iqn.2020-01.com.linbit:target1 portals=192.168.122.222:3260",
-        "ocf:heartbeat:iSCSILogicalUnit lu1 lun=1 path=/dev/drbd/by-res/target1/1 product_id='LINSTOR iSCSI' scsi_sn=6391f15d target_iqn=iqn.2020-01.com.linbit:target1",
-        "ocf:heartbeat:portblock portunblock0 action=unblock ip=192.168.122.222 portno=3260 protocol=tcp tickle_dir=/srv/ha/internal/target1",
-      ]
-      stop-services-on-exit = true
-      target-as = "Requires"
 */
 package upgrade
 

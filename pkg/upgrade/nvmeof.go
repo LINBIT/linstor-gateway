@@ -5,25 +5,40 @@ import (
 	"fmt"
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/nvmeof"
+	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
+
+// nvmeOfMigrations defines the operations for upgrading a single version.
+// The array index ("n") denotes the starting version; the function at
+// index "n" migrates from version "n" to version "n+1".
+var nvmeOfMigrations = []func(cfg *reactor.PromoterConfig) error{
+	0: removeID,
+}
 
 func upgradeNvmeOf(ctx context.Context, linstor *client.Client, name string, forceYes, dryRun bool) (bool, error) {
 	const gatewayConfigPath = "/etc/drbd-reactor.d/linstor-gateway-nvmeof-%s.toml"
-	cfg, resourceDefinition, volumeDefinitions, resources, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
+	cfg, _, _, _, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
+	if err != nil {
+		return false, err
+	}
+	if cfg.Metadata.LinstorGatewaySchemaVersion > nvmeof.CurrentVersion {
+		return false, fmt.Errorf("schema version %d is not supported",
+			cfg.Metadata.LinstorGatewaySchemaVersion)
+	}
+	newCfg, _, _, _, err := parseExistingConfig(ctx, linstor, fmt.Sprintf(gatewayConfigPath, name))
 	if err != nil {
 		return false, err
 	}
 
-	parsedCfg, err := nvmeof.FromPromoter(cfg, resourceDefinition, volumeDefinitions)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse config: %w", err)
+	for i := cfg.Metadata.LinstorGatewaySchemaVersion; i < nvmeof.CurrentVersion; i++ {
+		err := nvmeOfMigrations[i](newCfg)
+		if err != nil {
+			return false, fmt.Errorf("failed to migrate from version %d to %d: %w", i, i+1, err)
+		}
 	}
-	newConfig, err := parsedCfg.ToPromoter(resources)
-	if err != nil {
-		return false, fmt.Errorf("failed to generate config: %w", err)
-	}
+	newCfg.Metadata.LinstorGatewaySchemaVersion = nvmeof.CurrentVersion
 
-	return maybeWriteNewConfig(ctx, linstor, cfg, newConfig, forceYes, dryRun)
+	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, forceYes, dryRun)
 }
 
 func NvmeOf(ctx context.Context, linstor *client.Client, nqn nvmeof.Nqn, forceYes, dryRun bool) error {

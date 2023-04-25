@@ -124,7 +124,10 @@ high availability primitives.`,
 
 	cmd.Flags().StringVarP(&username, "username", "u", "", "Set the username to use for CHAP authentication")
 	cmd.Flags().StringVarP(&password, "password", "p", "", "Set the password to use for CHAP authentication")
-	cmd.Flags().StringVarP(&group, "resource-group", "g", "DfltRscGrp", "Set the LINSTOR resource group")
+	cmd.Flags().StringVarP(&group, "deprecated-resource-group", "g", "DfltRscGrp", "Set the LINSTOR resource group")
+	_ = cmd.Flags().MarkHidden("deprecated-resource-group")
+	_ = cmd.Flags().MarkShorthandDeprecated("deprecated-resource-group", "use -r instead")
+	cmd.Flags().StringVarP(&group, "resource-group", "r", "DfltRscGrp", "Set the LINSTOR resource group")
 	cmd.Flags().StringSliceVar(&allowedInitiators, "allowed-initiators", []string{}, "Restrict which initiator IQNs are allowed to connect to the target")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 

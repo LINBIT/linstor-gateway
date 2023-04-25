@@ -101,7 +101,7 @@ func Nfs(ctx context.Context, linstor *client.Client, name string, forceYes bool
 	if didDrbd {
 		didAny = true
 	}
-	didNfs, err := upgradeNfs(ctx, linstor, name, forceYes, false)
+	didNfs, err := upgradeNfs(ctx, linstor, name, forceYes, dryRun)
 	if err != nil {
 		return fmt.Errorf("failed to upgrade promoter config: %w", err)
 	}

@@ -62,7 +62,7 @@ func maybeWriteNewConfig(ctx context.Context, linstor *client.Client, oldConfig 
 	}
 	fmt.Println("The following configuration changes are necessary:")
 	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(oldToml, newToml, false)
+	diffs := dmp.DiffCleanupSemantic(dmp.DiffMain(oldToml, newToml, false))
 	fmt.Println(dmp.DiffPrettyText(diffs))
 	fmt.Println()
 	if dryRun {

@@ -6,7 +6,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fatih/color v1.14.1
 	github.com/google/go-cmp v0.5.9
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/gorilla/mux v1.8.0
 	github.com/icza/gog v0.0.0-20220909135443-35d926f98ec3
 	github.com/moul/http2curl v1.0.0

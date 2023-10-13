@@ -1,5 +1,5 @@
 TEST_SUITE_IMAGE ?= linstor-gateway-e2e:latest
-BASE_IMAGE ?= $$LINBIT_DOCKER_REGSITRY/linstor-gateway-tests/base:alma-8
+BASE_IMAGE ?= $$LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-8
 LINSTOR_GATEWAY_VERSION ?= 0.0.0.$$CI_COMMIT_SHA
 TORUN ?= all
 

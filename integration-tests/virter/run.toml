@@ -1,3 +1,5 @@
+version = 1
+
 [values]
 LinstorGatewayVersion = "*"
 LinstorDevicePath = "/dev/sda"
@@ -8,15 +10,15 @@ OutDir = ""
 [steps.docker]
 image = "quay.io/ansible/ansible-runner:stable-2.9-devel"
 command = [
-    "ansible-playbook",
-    "--inventory", "/virter/workspace/virter/inventory",
-    "/virter/workspace/virter/provision-playbook.yml",
-    "--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
-    "--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
-    "--tags", "run",
+	"ansible-playbook",
+	"--inventory", "/virter/workspace/virter/inventory",
+	"/virter/workspace/virter/provision-playbook.yml",
+	"--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
+	"--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
+	"--tags", "run",
 ]
 [steps.docker.env]
-ANSIBLE_PIPELINING="yes"
+ANSIBLE_PIPELINING = "yes"
 
 [[steps]]
 [steps.docker]

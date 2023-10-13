@@ -1,7 +1,7 @@
 variables:
   BUILD_HELPERS_VERSION: cad23b57db14b7676808fa645c4561bc66c3e204
-  VIRTER_VERSION: v0.21.0
-  VMSHED_VERSION: v0.19.0
+  VIRTER_VERSION: v0.25.0
+  VMSHED_VERSION: v0.20.1
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
   # we do `git rev-list --count origin/master` below.

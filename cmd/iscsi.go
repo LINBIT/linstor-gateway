@@ -51,6 +51,7 @@ func createISCSICommand() *cobra.Command {
 	var serviceIps []common.IpCidr
 	var allowedInitiators []string
 	var grossSize bool
+	var implementation string
 
 	cmd := &cobra.Command{
 		Use:   "create IQN SERVICE_IPS [VOLUME_SIZE]...",
@@ -111,6 +112,7 @@ high availability primitives.`,
 				AllowedInitiators: allowedInitiatorIqns,
 				ResourceGroup:     group,
 				GrossSize:         grossSize,
+				Implementation:    implementation,
 			})
 			if err != nil {
 				return err
@@ -130,6 +132,7 @@ high availability primitives.`,
 	cmd.Flags().StringVarP(&group, "resource-group", "r", "DfltRscGrp", "Set the LINSTOR resource group")
 	cmd.Flags().StringSliceVar(&allowedInitiators, "allowed-initiators", []string{}, "Restrict which initiator IQNs are allowed to connect to the target")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
+	cmd.Flags().StringVar(&implementation, "implementation", "", `Set the iSCSI target implementation to use ("iet", "tgt", "lio", "lio-t", or "scst")`)
 
 	return cmd
 }

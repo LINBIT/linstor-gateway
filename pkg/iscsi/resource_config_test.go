@@ -132,6 +132,27 @@ func TestParsePromoterConfig(t *testing.T) {
 				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16"), ipnet("2.2.2.2/16"), ipnet("3.3.3.3/16")},
 			},
 		},
+		{
+			name: "with specific implementation",
+			cfg: &reactor.PromoterConfig{
+				ID: "iscsi-target1",
+				Resources: map[string]reactor.PromoterResourceConfig{
+					"target1": {
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"implementation": "scst", "allowed_initiators": "", "incoming_username": "user", "incoming_password": "password", "iqn": "iqn.2021-08.com.linbit:target1", "portals": "1.1.1.1:3260 2.2.2.2:3260 3.3.3.3:3260"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"implementation": "scst", "lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						},
+					},
+				},
+			},
+			want: &ResourceConfig{
+				IQN: Iqn{"iqn.2021-08.com.linbit", "target1"}, AllowedInitiators: nil, Username: "user", Password: "password",
+				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16")}, Implementation: "scst",
+			},
+		},
 	}
 	for i := range tests {
 		tcase := &tests[i]

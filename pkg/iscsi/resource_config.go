@@ -32,6 +32,7 @@ type ResourceConfig struct {
 	ServiceIPs        []common.IpCidr       `json:"service_ips"`
 	Status            common.ResourceStatus `json:"status"`
 	GrossSize         bool                  `json:"gross_size"`
+	Implementation    string                `json:"implementation"`
 }
 
 const (
@@ -107,6 +108,7 @@ func parsePromoterConfig(cfg *reactor.PromoterConfig) (*ResourceConfig, error) {
 						r.AllowedInitiators = append(r.AllowedInitiators, iqn)
 					}
 				}
+				r.Implementation = agent.Attributes["implementation"]
 			}
 		case *reactor.SystemdService:
 			// ignore systemd services for now
@@ -313,16 +315,21 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		})
 	}
 
+	targetAttrs := map[string]string{
+		"iqn":                r.IQN.String(),
+		"portals":            r.portals(),
+		"incoming_username":  r.Username,
+		"incoming_password":  r.Password,
+		"allowed_initiators": strings.Join(allowedInitiatorStrings, " "),
+	}
+	if r.Implementation != "" {
+		targetAttrs["implementation"] = r.Implementation
+	}
+
 	agents = append(agents, &reactor.ResourceAgent{
-		Type: "ocf:heartbeat:iSCSITarget",
-		Name: "target",
-		Attributes: map[string]string{
-			"iqn":                r.IQN.String(),
-			"portals":            r.portals(),
-			"incoming_username":  r.Username,
-			"incoming_password":  r.Password,
-			"allowed_initiators": strings.Join(allowedInitiatorStrings, " "),
-		},
+		Type:       "ocf:heartbeat:iSCSITarget",
+		Name:       "target",
+		Attributes: targetAttrs,
 	})
 
 	for i := 1; i < len(deployedRes.Volumes); i++ {
@@ -350,16 +357,20 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		serial := fmt.Sprintf("%.4x", md5.Sum([]byte(r.IQN.String())))
 		log.WithField("iqn", r.IQN.String()).Tracef("Setting scsi serial number to %s", serial)
 
+		luAttrs := map[string]string{
+			"target_iqn": r.IQN.String(),
+			"lun":        strconv.Itoa(int(vol.VolumeNumber)),
+			"path":       fmt.Sprintf(devPath),
+			"product_id": "LINSTOR iSCSI",
+			"scsi_sn":    serial,
+		}
+		if r.Implementation != "" {
+			luAttrs["implementation"] = r.Implementation
+		}
 		agents = append(agents, &reactor.ResourceAgent{
-			Type: "ocf:heartbeat:iSCSILogicalUnit",
-			Name: fmt.Sprintf("lu%d", vol.VolumeNumber),
-			Attributes: map[string]string{
-				"target_iqn": r.IQN.String(),
-				"lun":        strconv.Itoa(int(vol.VolumeNumber)),
-				"path":       fmt.Sprintf(devPath),
-				"product_id": "LINSTOR iSCSI",
-				"scsi_sn":    serial,
-			},
+			Type:       "ocf:heartbeat:iSCSILogicalUnit",
+			Name:       fmt.Sprintf("lu%d", vol.VolumeNumber),
+			Attributes: luAttrs,
 		})
 	}
 

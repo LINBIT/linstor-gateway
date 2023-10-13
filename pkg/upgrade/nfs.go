@@ -89,7 +89,7 @@ func upgradeNfs(ctx context.Context, linstor *client.Client, name string, forceY
 	}
 	newCfg.Metadata.LinstorGatewaySchemaVersion = nfs.CurrentVersion
 
-	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, forceYes, dryRun)
+	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, fmt.Sprintf(nfs.IDFormat, name), forceYes, dryRun)
 }
 
 func Nfs(ctx context.Context, linstor *client.Client, name string, forceYes bool, dryRun bool) error {

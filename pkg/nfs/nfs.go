@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"path/filepath"
 	"time"
 
 	"github.com/LINBIT/golinstor/client"
@@ -15,7 +16,10 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
-const IDFormat = "nfs-%s"
+const (
+	IDFormat       = "nfs-%s"
+	FilenameFormat = "linstor-gateway-nfs-%s.toml"
+)
 
 type NFS struct {
 	cli *linstorcontrol.Linstor
@@ -99,15 +103,17 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("failed to check for existing NFS configs: %w", err)
 	}
 
+	// only one nfsserver resource is allowed per cluster. check for an existing one.
 	for _, c := range configs {
-		if c.ID == rsc.ID() {
+		name, _ := c.FirstResource()
+		if name == rsc.Name {
 			continue
 		}
 		for _, r := range c.Resources {
 			for _, s := range r.Start {
 				if agent, ok := s.(*reactor.ResourceAgent); ok {
 					if agent.Type == "ocf:heartbeat:nfsserver" {
-						return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", c.ID)
+						return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", name)
 					}
 				}
 			}
@@ -116,7 +122,6 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 
 	var cfg *reactor.PromoterConfig
 	var path string
-	cfgID := fmt.Sprintf(IDFormat, rsc.Name)
 	configs, paths, err := reactor.ListConfigs(ctx, n.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve existing configs: %w", err)
@@ -125,6 +130,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 	for i := range configs {
 		c := configs[i]
 		p := paths[i]
+		name, _ := c.FirstResource()
 
 		if err := common.CheckIPCollision(c, rsc.ServiceIP.IP()); err != nil {
 			return nil, fmt.Errorf("invalid configuration: %w", err)
@@ -132,7 +138,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 
 		// while looking for ip collisions, filter out any existing config with
 		// the same name as the one we are trying to create.
-		if c.ID == cfgID {
+		if name == rsc.Name {
 			cfg = &c
 			path = p
 		}
@@ -179,7 +185,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, rsc.ID())
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
@@ -195,7 +201,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 }
 
 func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
+	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -204,7 +210,7 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.AttachConfig(ctx, n.cli.Client, cfg)
+	err = reactor.AttachConfig(ctx, n.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to attach reactor configuration: %w", err)
 	}
@@ -221,7 +227,7 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 }
 
 func (n *NFS) Stop(ctx context.Context, name string) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
+	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -230,7 +236,7 @@ func (n *NFS) Stop(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.DetachConfig(ctx, n.cli.Client, cfg)
+	err = reactor.DetachConfig(ctx, n.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -256,11 +262,12 @@ func (n *NFS) List(ctx context.Context) ([]*ResourceConfig, error) {
 	for i := range cfgs {
 		cfg := &cfgs[i]
 		path := paths[i]
+		filename := filepath.Base(path)
 
 		var rsc string
-		num, _ := fmt.Sscanf(cfg.ID, IDFormat, &rsc)
+		num, _ := fmt.Sscanf(filename, FilenameFormat, &rsc)
 		if num == 0 {
-			log.WithField("id", cfg.ID).Trace("not an NFS resource config, skipping")
+			log.WithField("filename", filename).Trace("not an nfs resource config, skipping")
 			continue
 		}
 
@@ -348,7 +355,7 @@ func (n *NFS) DeleteVolume(ctx context.Context, name string, lun int) (*Resource
 				return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 			}
 
-			err = reactor.EnsureConfig(ctx, n.cli.Client, cfg)
+			err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, rscCfg.ID())
 			if err != nil {
 				return nil, fmt.Errorf("failed to update config")
 			}

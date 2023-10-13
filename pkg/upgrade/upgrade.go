@@ -47,7 +47,7 @@ func parseExistingConfig(ctx context.Context, linstor *client.Client, path strin
 	return cfg, resourceDefinition, volumeDefinitions, resources, nil
 }
 
-func maybeWriteNewConfig(ctx context.Context, linstor *client.Client, oldConfig *reactor.PromoterConfig, newConfig *reactor.PromoterConfig, forceYes, dryRun bool) (bool, error) {
+func maybeWriteNewConfig(ctx context.Context, linstor *client.Client, oldConfig *reactor.PromoterConfig, newConfig *reactor.PromoterConfig, id string, forceYes, dryRun bool) (bool, error) {
 	if cmp.Equal(oldConfig, newConfig) {
 		// nothing to do
 		return false, nil
@@ -75,7 +75,7 @@ func maybeWriteNewConfig(ctx context.Context, linstor *client.Client, oldConfig 
 			return false, fmt.Errorf("aborted")
 		}
 	}
-	err = reactor.EnsureConfig(ctx, linstor, newConfig)
+	err = reactor.EnsureConfig(ctx, linstor, newConfig, id)
 	if err != nil {
 		return true, fmt.Errorf("failed to install config: %w", err)
 	}

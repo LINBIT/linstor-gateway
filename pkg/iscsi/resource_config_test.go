@@ -27,7 +27,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "default",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
 						Start: []reactor.StartEntry{
@@ -46,16 +45,8 @@ func TestParsePromoterConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid id",
-			cfg: &reactor.PromoterConfig{
-				ID: "target1",
-			},
-			wantErr: true,
-		},
-		{
 			name: "too many resources",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {},
 					"target2": {},
@@ -66,7 +57,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "too few agent entries",
 			cfg: &reactor.PromoterConfig{
-				ID:        "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{"target1": {Start: []reactor.StartEntry{}}},
 			},
 			wantErr: true,
@@ -74,7 +64,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "missing portblock",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
 						Start: []reactor.StartEntry{
@@ -91,7 +80,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "missing ip",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
 						Start: []reactor.StartEntry{
@@ -108,7 +96,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "multiple ips",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
 						Start: []reactor.StartEntry{
@@ -135,7 +122,6 @@ func TestParsePromoterConfig(t *testing.T) {
 		{
 			name: "with specific implementation",
 			cfg: &reactor.PromoterConfig{
-				ID: "iscsi-target1",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"target1": {
 						Start: []reactor.StartEntry{

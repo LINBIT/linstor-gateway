@@ -25,13 +25,11 @@ func TestFilterConfigs(t *testing.T) {
 		name: "one file",
 		files: []client.ExternalFile{
 			{
-				Path: filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml"),
-				Content: []byte(`[[promoter]]
-id = "iscsi-target1"
-`),
+				Path:    filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml"),
+				Content: []byte(`[[promoter]]`),
 			},
 		},
-		expectedConfigs: []PromoterConfig{{ID: "iscsi-target1", Resources: nil}},
+		expectedConfigs: []PromoterConfig{{Resources: nil}},
 		expectedPaths:   []string{filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml")},
 	}, {
 		name: "one file with invalid contents",
@@ -46,15 +44,13 @@ id = "iscsi-target1"
 		name: "one relevant file",
 		files: []client.ExternalFile{
 			{
-				Path: filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml"),
-				Content: []byte(`[[promoter]]
-id = "iscsi-target1"
-`),
+				Path:    filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml"),
+				Content: []byte(`[[promoter]]`),
 			},
 			{Path: "/some/other/file"},
 			{Path: filepath.Join(promoterDir, "oops-not-the-right-pattern.toml")},
 		},
-		expectedConfigs: []PromoterConfig{{ID: "iscsi-target1", Resources: nil}},
+		expectedConfigs: []PromoterConfig{{Resources: nil}},
 		expectedPaths:   []string{filepath.Join(promoterDir, "linstor-gateway-iscsi-target1.toml")},
 	}}
 

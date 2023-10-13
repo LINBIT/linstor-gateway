@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
-const IDFormat = "iscsi-%s"
+const (
+	IDFormat       = "iscsi-%s"
+	FilenameFormat = "linstor-gateway-iscsi-%s.toml"
+)
 
 type ISCSI struct {
 	cli *linstorcontrol.Linstor
@@ -96,17 +100,14 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	var cfg *reactor.PromoterConfig
-	var path string
-	cfgID := fmt.Sprintf(IDFormat, rsc.IQN.WWN())
 	configs, paths, err := reactor.ListConfigs(ctx, i.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve existing configs: %w", err)
 	}
 
-	for i := range configs {
-		c := configs[i]
-		p := paths[i]
+	for j := range configs {
+		c := configs[j]
+		p := paths[j]
 
 		for _, ip := range rsc.ServiceIPs {
 			if err := common.CheckIPCollision(c, ip.IP()); err != nil {
@@ -116,19 +117,14 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 
 		// while looking for ip collisions, filter out any existing config with
 		// the same name as the one we are trying to create.
-		if c.ID == cfgID {
-			cfg = &c
-			path = p
-		}
-	}
-
-	if cfg != nil {
-		deployedCfg, err := i.getExistingDeployment(ctx, rsc, cfg, path)
-		if err != nil {
-			return nil, err
-		}
-		if deployedCfg != nil {
-			return deployedCfg, nil
+		if configName, _ := c.FirstResource(); configName == rsc.IQN.WWN() {
+			deployedCfg, err := i.getExistingDeployment(ctx, rsc, &c, p)
+			if err != nil {
+				return nil, err
+			}
+			if deployedCfg != nil {
+				return deployedCfg, nil
+			}
 		}
 	}
 
@@ -153,12 +149,12 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		}
 	}()
 
-	cfg, err = rsc.ToPromoter(deployment)
+	cfg, err := rsc.ToPromoter(deployment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg, rsc.ID())
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
@@ -168,13 +164,14 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
 
+	path := reactor.ConfigPath(rsc.ID())
 	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, deployment)
 
 	return rsc, nil
 }
 
 func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -183,7 +180,7 @@ func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.AttachConfig(ctx, i.cli.Client, cfg)
+	err = reactor.AttachConfig(ctx, i.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -200,7 +197,7 @@ func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 }
 
 func (i *ISCSI) Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
+	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -209,7 +206,7 @@ func (i *ISCSI) Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.DetachConfig(ctx, i.cli.Client, cfg)
+	err = reactor.DetachConfig(ctx, i.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -235,11 +232,12 @@ func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
 	for j := range cfgs {
 		cfg := &cfgs[j]
 		path := paths[j]
+		filename := filepath.Base(path)
 
 		var rsc string
-		n, _ := fmt.Sscanf(cfg.ID, IDFormat, &rsc)
-		if n == 0 {
-			log.WithField("id", cfg.ID).Trace("not an iscsi resource config, skipping")
+		num, _ := fmt.Sscanf(filename, FilenameFormat, &rsc)
+		if num == 0 {
+			log.WithField("filename", filename).Trace("not an iSCSI resource config, skipping")
 			continue
 		}
 
@@ -344,7 +342,7 @@ func (i *ISCSI) AddVolume(ctx context.Context, iqn Iqn, volCfg *common.VolumeCon
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, i.cli.Client, cfg, deployedCfg.ID())
 	if err != nil {
 		return nil, fmt.Errorf("failed to update config: %w", err)
 	}
@@ -397,7 +395,7 @@ func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceCo
 				return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 			}
 
-			err = reactor.EnsureConfig(ctx, i.cli.Client, cfg)
+			err = reactor.EnsureConfig(ctx, i.cli.Client, cfg, rscCfg.ID())
 			if err != nil {
 				return nil, fmt.Errorf("failed to update config")
 			}

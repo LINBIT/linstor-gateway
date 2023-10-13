@@ -19,20 +19,15 @@ func TestReactorConfig_UnmarshalText(t *testing.T) {
 		wantErr  bool
 	}{{
 		name: "empty",
-		cfg: `[[promoter]]
-id = "empty-agents"
-`,
+		cfg:  `[[promoter]]`,
 		expected: reactor.Config{
 			Promoter: []reactor.PromoterConfig{{
-				ID:        "empty-agents",
 				Resources: nil,
 			}},
 		},
 	}, {
 		name: "unexpected start type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = "start me"
@@ -41,8 +36,6 @@ id = "unexpected-types"
 	}, {
 		name: "unexpected runner type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     runner = 1234
@@ -51,8 +44,6 @@ id = "unexpected-types"
 	}, {
 		name: "unexpected on-drbd-demote-failure type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     on-drbd-demote-failure = true
@@ -61,8 +52,6 @@ id = "unexpected-types"
 	}, {
 		name: "unexpected stop-services-on-exit type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     stop-services-on-exit = "not-a-boolean"
@@ -71,8 +60,6 @@ id = "unexpected-types"
 	}, {
 		name: "unexpected target-as type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     target-as = 3.14
@@ -81,8 +68,6 @@ id = "unexpected-types"
 	}, {
 		name: "unexpected start entry type",
 		cfg: `[[promoter]]
-id = "unexpected-types"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = [ 1234 ]
@@ -91,15 +76,12 @@ id = "unexpected-types"
 	}, {
 		name: "with systemd resources",
 		cfg: `[[promoter]]
-id = "systemd-resources"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = [ "linstordb.mount" ]
 `,
 		expected: reactor.Config{
 			Promoter: []reactor.PromoterConfig{{
-				ID: "systemd-resources",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"rsc1": {
 						Start: []reactor.StartEntry{
@@ -114,15 +96,12 @@ id = "systemd-resources"
 	}, {
 		name: "with resource agents",
 		cfg: `[[promoter]]
-id = "ocf-resources"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = [ "ocf:heartbeat:IPaddr2 my_ip ip=1.2.3.4 cidr_netmask=24" ]
 `,
 		expected: reactor.Config{
 			Promoter: []reactor.PromoterConfig{{
-				ID: "ocf-resources",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"rsc1": {
 						Start: []reactor.StartEntry{
@@ -142,15 +121,12 @@ id = "ocf-resources"
 	}, {
 		name: "with mixed start entries",
 		cfg: `[[promoter]]
-id = "mixed-resources"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = [ "ocf:heartbeat:IPaddr2 my_ip ip=1.2.3.4 cidr_netmask=24", "linstordb.mount" ]
 `,
 		expected: reactor.Config{
 			Promoter: []reactor.PromoterConfig{{
-				ID: "mixed-resources",
 				Resources: map[string]reactor.PromoterResourceConfig{
 					"rsc1": {
 						Start: []reactor.StartEntry{
@@ -173,8 +149,6 @@ id = "mixed-resources"
 	}, {
 		name: "invalid ocf entry",
 		cfg: `[[promoter]]
-id = "invalid-ocf"
-
 [promoter.resources]
   [promoter.resources.rsc1]
     start = [ "ocf:heartbeat:IPaddr2" ]
@@ -217,19 +191,17 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 			cfg: reactor.Config{
 				Promoter: []reactor.PromoterConfig{
 					{
-						ID:        "empty-agents",
 						Resources: nil,
 					},
 				},
 			},
-			expected: "\n[[promoter]]\n  id = \"empty-agents\"\n",
+			expected: "\n[[promoter]]\n",
 		},
 		{
 			name: "with-resources",
 			cfg: reactor.Config{
 				Promoter: []reactor.PromoterConfig{
 					{
-						ID: "with-resources",
 						Resources: map[string]reactor.PromoterResourceConfig{
 							"rsc1": {Start: nil, Runner: "shell", OnDrbdDemoteFailure: "log", StopServicesOnExit: true, TargetAs: "BindsTo"},
 							"rsc2": {},
@@ -239,7 +211,6 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 			},
 			expected: `
 [[promoter]]
-  id = "with-resources"
 
   [promoter.resources]
 
@@ -257,7 +228,6 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 			cfg: reactor.Config{
 				Promoter: []reactor.PromoterConfig{
 					{
-						ID: "resource-agents",
 						Resources: map[string]reactor.PromoterResourceConfig{
 							"rsc1": {
 								Start: []reactor.StartEntry{
@@ -272,7 +242,6 @@ func TestReactorConfig_MarshalText(t *testing.T) {
 			},
 			expected: `
 [[promoter]]
-  id = "resource-agents"
 
   [promoter.resources]
 

@@ -66,24 +66,15 @@ const (
 
 func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefinition, volumeDefinition []client.VolumeDefinition) (*ResourceConfig, error) {
 	r := &ResourceConfig{}
-	var res string
-	n, err := fmt.Sscanf(cfg.ID, IDFormat, &res)
-	if n != 1 {
-		return nil, fmt.Errorf("failed to parse id into resource name: %w", err)
+
+	var rscCfg *reactor.PromoterResourceConfig
+	r.Name, rscCfg = cfg.FirstResource()
+	if rscCfg == nil {
+		return nil, fmt.Errorf("promoter config without resource")
 	}
 
-	r.Name = res
 	if definition != nil {
 		r.ResourceGroup = definition.ResourceGroupName
-	}
-
-	if len(cfg.Resources) != 1 {
-		return nil, errors.New(fmt.Sprintf("promoter config without exactly 1 resource (has %d)", len(cfg.Resources)))
-	}
-
-	var rscCfg reactor.PromoterResourceConfig
-	for _, v := range cfg.Resources {
-		rscCfg = v
 	}
 
 	if len(rscCfg.Start) < 1 {
@@ -487,7 +478,6 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	})
 
 	return &reactor.PromoterConfig{
-		ID: r.ID(),
 		Resources: map[string]reactor.PromoterResourceConfig{
 			r.Name: {
 				Runner:              "systemd",

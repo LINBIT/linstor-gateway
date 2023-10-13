@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -15,6 +16,11 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
+)
+
+const (
+	IDFormat       = "nvmeof-%s"
+	FilenameFormat = "linstor-gateway-nvmeof-%s.toml"
 )
 
 var UUIDNVMeoF = uuid.NewSHA1(uuid.Nil, []byte("nvmeof.gateway.linstor.linbit.com"))
@@ -98,7 +104,6 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 
 	var cfg *reactor.PromoterConfig
 	var path string
-	cfgID := fmt.Sprintf(IDFormat, rsc.NQN.Subsystem())
 	configs, paths, err := reactor.ListConfigs(ctx, n.cli.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve existing configs: %w", err)
@@ -107,6 +112,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 	for i := range configs {
 		c := configs[i]
 		p := paths[i]
+		name, _ := c.FirstResource()
 
 		if err := common.CheckIPCollision(c, rsc.ServiceIP.IP()); err != nil {
 			return nil, fmt.Errorf("invalid configuration: %w", err)
@@ -114,7 +120,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 
 		// while looking for ip collisions, filter out any existing config with
 		// the same name as the one we are trying to create.
-		if c.ID == cfgID {
+		if name == rsc.NQN.Subsystem() {
 			cfg = &c
 			path = p
 		}
@@ -156,7 +162,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, fmt.Sprintf(IDFormat, rsc.NQN.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
@@ -172,7 +178,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 }
 
 func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
+	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -181,7 +187,7 @@ func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.AttachConfig(ctx, n.cli.Client, cfg)
+	err = reactor.AttachConfig(ctx, n.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -198,7 +204,7 @@ func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 }
 
 func (n *NVMeoF) Stop(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
-	cfg, _, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
+	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
 	}
@@ -207,7 +213,7 @@ func (n *NVMeoF) Stop(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 		return nil, nil
 	}
 
-	err = reactor.DetachConfig(ctx, n.cli.Client, cfg)
+	err = reactor.DetachConfig(ctx, n.cli.Client, cfg, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
@@ -233,11 +239,12 @@ func (n *NVMeoF) List(ctx context.Context) ([]*ResourceConfig, error) {
 	for i := range cfgs {
 		cfg := &cfgs[i]
 		path := paths[i]
+		filename := filepath.Base(path)
 
 		var rsc string
-		num, _ := fmt.Sscanf(cfg.ID, IDFormat, &rsc)
+		num, _ := fmt.Sscanf(filename, FilenameFormat, &rsc)
 		if num == 0 {
-			log.WithField("id", cfg.ID).Trace("not a nvme resource config, skipping")
+			log.WithField("filename", filename).Trace("not an NVMe-oF resource config, skipping")
 			continue
 		}
 
@@ -341,7 +348,7 @@ func (n *NVMeoF) AddVolume(ctx context.Context, nqn Nqn, volCfg *common.VolumeCo
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg)
+	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to update config: %w", err)
 	}
@@ -394,7 +401,7 @@ func (n *NVMeoF) DeleteVolume(ctx context.Context, nqn Nqn, nsid int) (*Resource
 				return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 			}
 
-			err = reactor.EnsureConfig(ctx, n.cli.Client, cfg)
+			err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 			if err != nil {
 				return nil, fmt.Errorf("failed to update config")
 			}

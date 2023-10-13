@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	IDFormat       = "nvmeof-%s"
 	DefaultPort    = 4420
 	CurrentVersion = 1
 )
@@ -100,10 +99,10 @@ func parseNQN(startEntries []reactor.StartEntry, index int) (Nqn, error) {
 
 func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefinition, volumeDefinition []client.VolumeDefinition) (*ResourceConfig, error) {
 	r := &ResourceConfig{}
-	var nqn string
-	n, err := fmt.Sscanf(cfg.ID, IDFormat, &nqn)
-	if n != 1 {
-		return nil, fmt.Errorf("failed to parse id into resource name: %w", err)
+
+	_, rscCfg := cfg.FirstResource()
+	if rscCfg == nil {
+		return nil, fmt.Errorf("promoter config without resource")
 	}
 
 	if definition != nil {
@@ -114,15 +113,11 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 		return nil, errors.New(fmt.Sprintf("promoter config without exactly 1 resource (has %d)", len(cfg.Resources)))
 	}
 
-	var rscCfg reactor.PromoterResourceConfig
-	for _, v := range cfg.Resources {
-		rscCfg = v
-	}
-
 	if len(rscCfg.Start) < 5 {
 		return nil, errors.New(fmt.Sprintf("config has too few agent entries, expected at least 3, got %d", len(rscCfg.Start)))
 	}
 
+	var err error
 	r.ServiceIP, err = parseIP(rscCfg.Start, 2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse service IP: %w", err)
@@ -238,7 +233,6 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	})
 
 	return &reactor.PromoterConfig{
-		ID: r.ID(),
 		Resources: map[string]reactor.PromoterResourceConfig{
 			r.NQN.Subsystem(): {
 				Runner:              "systemd",

@@ -38,7 +38,7 @@ func upgradeIscsi(ctx context.Context, linstor *client.Client, name string, forc
 	}
 	newCfg.Metadata.LinstorGatewaySchemaVersion = iscsi.CurrentVersion
 
-	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, forceYes, dryRun)
+	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, fmt.Sprintf(iscsi.IDFormat, name), forceYes, dryRun)
 }
 
 func Iscsi(ctx context.Context, linstor *client.Client, iqn iscsi.Iqn, forceYes bool, dryRun bool) error {

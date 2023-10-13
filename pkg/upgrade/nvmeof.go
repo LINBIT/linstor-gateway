@@ -38,7 +38,7 @@ func upgradeNvmeOf(ctx context.Context, linstor *client.Client, name string, for
 	}
 	newCfg.Metadata.LinstorGatewaySchemaVersion = nvmeof.CurrentVersion
 
-	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, forceYes, dryRun)
+	return maybeWriteNewConfig(ctx, linstor, cfg, newCfg, fmt.Sprintf(nvmeof.IDFormat, name), forceYes, dryRun)
 }
 
 func NvmeOf(ctx context.Context, linstor *client.Client, nqn nvmeof.Nqn, forceYes, dryRun bool) error {

@@ -55,11 +55,10 @@ func ClusterPrivateVolumeAgent(deployedVol client.Volume, resource string) *reac
 }
 
 func CheckIPCollision(config reactor.PromoterConfig, checkIP net.IP) error {
-	var rscCfg reactor.PromoterResourceConfig
-	for _, v := range config.Resources {
-		rscCfg = v
+	name, rscCfg := config.FirstResource()
+	if rscCfg == nil {
+		return fmt.Errorf("no resource found in config")
 	}
-
 	for _, entry := range rscCfg.Start {
 		switch agent := entry.(type) {
 		case *reactor.ResourceAgent:
@@ -68,12 +67,12 @@ func CheckIPCollision(config reactor.PromoterConfig, checkIP net.IP) error {
 				ip := net.ParseIP(agent.Attributes["ip"])
 				if ip == nil {
 					return fmt.Errorf("malformed IP address %s in agent %s of config %s",
-						agent.Attributes["ip"], agent.Name, config.ID)
+						agent.Attributes["ip"], agent.Name, name)
 				}
 				log.Debugf("checking IP %s", ip)
 				if ip.Equal(checkIP) {
 					return fmt.Errorf("IP address %s already in use by config %s",
-						ip.String(), config.ID)
+						ip.String(), name)
 				}
 			}
 		}

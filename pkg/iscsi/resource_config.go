@@ -46,26 +46,17 @@ const minAgentEntries = 4 // portblock, service_ip, target, portunblock
 
 func parsePromoterConfig(cfg *reactor.PromoterConfig) (*ResourceConfig, error) {
 	r := &ResourceConfig{}
-	var res string
-	n, err := fmt.Sscanf(cfg.ID, IDFormat, &res)
-	if n != 1 {
-		return nil, fmt.Errorf("failed to parse id into resource name: %w", err)
-	}
 
-	if len(cfg.Resources) != 1 {
-		return nil, errors.New(fmt.Sprintf("promoter config without exactly 1 resource (has %d)", len(cfg.Resources)))
+	_, rscCfg := cfg.FirstResource()
+	if rscCfg == nil {
+		return nil, fmt.Errorf("promoter config without resource")
 	}
-
-	var rscCfg reactor.PromoterResourceConfig
-	for _, v := range cfg.Resources {
-		rscCfg = v
-	}
-
 	if len(rscCfg.Start) < minAgentEntries {
 		return nil, errors.New(fmt.Sprintf("config has too few agent entries, expected at least %d, got %d",
 			minAgentEntries, len(rscCfg.Start)))
 	}
 
+	var err error
 	var numPortblocks, numPortunblocks int
 	for _, entry := range rscCfg.Start {
 		switch agent := entry.(type) {
@@ -390,7 +381,6 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	return &reactor.PromoterConfig{
-		ID: r.ID(),
 		Resources: map[string]reactor.PromoterResourceConfig{
 			r.IQN.WWN(): {
 				Runner:              "systemd",

@@ -142,6 +142,17 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		return nil, fmt.Errorf("failed to create linstor resource: %w", err)
 	}
 
+	defer func() {
+		// if we fail beyond this point, roll back by deleting the created resource definition
+		if err != nil {
+			log.Debugf("Rollback: deleting just created resource definition %s", rsc.IQN.WWN())
+			err := i.cli.ResourceDefinitions.Delete(ctx, rsc.IQN.WWN())
+			if err != nil {
+				log.Warnf("Failed to roll back created resource definition: %v", err)
+			}
+		}
+	}()
+
 	cfg, err = rsc.ToPromoter(deployment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)

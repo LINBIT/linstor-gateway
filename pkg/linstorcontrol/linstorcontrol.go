@@ -150,6 +150,7 @@ func DefaultResourceProps() map[string]string {
 //     definition on the respective nodes
 //   - An error if one occurred, or nil
 func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist bool) (*client.ResourceDefinition, *client.ResourceGroup, []client.ResourceWithVolumes, error) {
+	var success bool
 	logger := log.WithField("resource", res.Name)
 
 	logger.Trace("ensure resource group exists")
@@ -190,6 +191,19 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		if (!mayExist && isErrAlreadyExists(err)) || !isErrAlreadyExists(err) {
 			return nil, nil, nil, fmt.Errorf("failed to create resource definition: %w", err)
 		}
+	}
+	// if we fail beyond this point, roll back by deleting the created resource definition
+	if !isErrAlreadyExists(err) {
+		// but only roll back if we actually created the resource definition just now
+		defer func() {
+			if !success {
+				log.Debugf("Rollback: deleting just created resource definition %s", res.Name)
+				err := l.ResourceDefinitions.Delete(ctx, res.Name)
+				if err != nil {
+					log.Warnf("Failed to roll back created resource definition: %v", err)
+				}
+			}
+		}()
 	}
 
 	for _, vol := range res.Volumes {
@@ -272,6 +286,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		}
 	}
 
+	success = true
 	return &rdef, &rgroup, view, nil
 }
 

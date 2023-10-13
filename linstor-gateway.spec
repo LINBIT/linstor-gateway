@@ -37,6 +37,10 @@ install -D -m 644 %{name}.xml %{buildroot}%{_firewalldir}/services/%{name}.xml
 %post
 %systemd_post %{name}.service
 %firewalld_reload
+# if drbd-reactor is already installed, install the auto-reload service
+find %{_datadir}/doc/drbd-reactor* \
+	\( -name 'drbd-reactor-reload.path' -o -name 'drbd-reactor-reload.service' \) \
+	-exec cp {} %{_unitdir}/ \; || true
 
 %preun
 %systemd_preun %{name}.service

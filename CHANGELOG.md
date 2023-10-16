@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0-rc.1] - 2023-10-16
+
+### Features
+
+* The `status` command will now show what node a resource is running on. (106dfc88)
+* The `check-health` command now differentiates between "agent", "server", and "client" mode, checking the requirements for the respective mode of operation. (e0b25072)
+* All `create` commands now use `-r` as the shorthand flag for resource groups. Previously, iSCSI used `-g` instead -- this shorthand is now deprecated. (5b0eb9ab)
+* When creating an iSCSI target, the `--implementation` flag can now be used to specify what iSCSI target implementation should be used by the underlying resource agent. (e6bcc14f)
+* When a step in the creation of a resource fails, the resources created in previous steps will now be cleaned up. This avoids "resource already exists" errors. (434d2d13)
+* When installing LINSTOR Gateway via rpm, the drbd-reactor auto-reload files will now be copied to the appropriate place automatically. (736cd2ae)
+
+### Fixes
+
+* The `check-health` command now finds the correct path to the drbd-reactor documentation directory more reliably. (bc4747ac)
+
 ## [1.2.0] - 2023-03-14
 
 ### Features
@@ -225,7 +240,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0-rc.1...HEAD
+[1.3.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.2.0...v1.3.0-rc.1
 [1.2.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.0.0...v1.1.0

@@ -6,7 +6,9 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
@@ -119,7 +121,8 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 }
 
 func deleteNFSCommand() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "delete NAME",
 		Short: "Deletes an NFS export",
 		Long: `Deletes an NFS export by stopping and deleting the drbd-reactor config
@@ -129,15 +132,33 @@ and removing the LINSTOR resources.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			resourceName := args[0]
-			err := cli.Nfs.Delete(ctx, resourceName)
-			if err != nil {
-				return err
+
+			var yes bool
+			if force {
+				yes = true
+			} else {
+				fmt.Printf("%s: Deleting NFS export %q %s.\n",
+					color.YellowString("WARNING"), resourceName,
+					bold("and all data stored on it"))
+				yes = prompt.Confirm("Continue?")
 			}
 
-			fmt.Printf("Deleted export %s\n", resourceName)
+			if yes {
+				err := cli.Nfs.Delete(ctx, resourceName)
+				if err != nil {
+					return err
+				}
+
+				fmt.Printf("Deleted export %q\n", resourceName)
+			} else {
+				fmt.Println("Aborted")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+
+	return cmd
 }
 
 func listNFSCommand() *cobra.Command {

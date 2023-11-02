@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
 	"github.com/fatih/color"
 	log "github.com/sirupsen/logrus"
@@ -275,7 +276,8 @@ func stopISCSICommand() *cobra.Command {
 }
 
 func deleteISCSICommand() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "delete IQN...",
 		Short: "Deletes an iSCSI target",
 		Long: `Deletes an iSCSI target by stopping and deleting the corresponding
@@ -292,18 +294,35 @@ of the target will be deleted.`,
 					continue
 				}
 
-				err = cli.Iscsi.Delete(context.Background(), iqn)
-				if err != nil {
-					allErrs = append(allErrs, err)
-					continue
+				var yes bool
+				if force {
+					yes = true
+				} else {
+					fmt.Printf("%s: Deleting iSCSI target %q %s.\n",
+						color.YellowString("WARNING"), iqn.String(),
+						bold("and all data stored on it"))
+					yes = prompt.Confirm("Continue?")
 				}
 
-				fmt.Printf("Deleted target \"%s\"\n", iqn)
+				if yes {
+					err = cli.Iscsi.Delete(context.Background(), iqn)
+					if err != nil {
+						allErrs = append(allErrs, err)
+						continue
+					}
+
+					fmt.Printf("Deleted target %q\n", iqn)
+				} else {
+					fmt.Println("Aborted")
+				}
 			}
 
 			return allErrs.Err()
 		},
 	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+
+	return cmd
 }
 
 func addVolumeISCSICommand() *cobra.Command {

@@ -33,33 +33,16 @@ And the following drbd-reactor settings:
 package upgrade
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"github.com/LINBIT/golinstor/client"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pelletier/go-toml"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	log "github.com/sirupsen/logrus"
-	"os"
 	"strings"
 )
-
-// confirm displays a prompt `s` to the user and returns a bool indicating yes / no
-// If the lowercased, trimmed input begins with anything other than 'y', it returns false
-func confirm(s string) bool {
-	r := bufio.NewReader(os.Stdin)
-
-	fmt.Printf("%s [y/N]: ", s)
-
-	res, err := r.ReadString('\n')
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return strings.ToLower(strings.TrimSpace(res)) == "y"
-}
 
 func encode(cfg *reactor.PromoterConfig) (string, error) {
 	buffer := strings.Builder{}
@@ -114,7 +97,7 @@ func maybeWriteNewConfig(ctx context.Context, linstor *client.Client, oldConfig 
 		return true, nil
 	}
 	if !forceYes {
-		yes := confirm("Apply this configuration now?")
+		yes := prompt.Confirm("Apply this configuration now?")
 		if !yes {
 			// abort
 			return false, fmt.Errorf("aborted")

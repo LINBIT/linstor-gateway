@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -60,7 +61,7 @@ func upgradeDrbdOptions(ctx context.Context, linstor *client.Client, resource st
 		return true, nil
 	}
 	if !forceYes {
-		yes := confirm("Change these options now?")
+		yes := prompt.Confirm("Change these options now?")
 		if !yes {
 			// abort
 			return false, fmt.Errorf("aborted")

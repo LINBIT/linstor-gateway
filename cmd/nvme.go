@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/LINBIT/linstor-gateway/client"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/fatih/color"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
@@ -168,7 +170,8 @@ func createNVMECommand() *cobra.Command {
 }
 
 func deleteNVMECommand() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "delete NQN...",
 		Short: "Delete existing NVMe-oF targets",
 		Args:  cobra.MinimumNArgs(1),
@@ -181,22 +184,37 @@ func deleteNVMECommand() *cobra.Command {
 					continue
 				}
 
-				err = cli.NvmeOf.Delete(context.Background(), nqn)
-				if err == client.NotFoundError {
-					allErrs = append(allErrs, noTarget(nqn))
-					continue
-				}
-				if err != nil {
-					allErrs = append(allErrs, err)
-					continue
+				var yes bool
+				if force {
+					yes = true
+				} else {
+					fmt.Printf("%s: Deleting NVMe-oF target %q %s.\n",
+						color.YellowString("WARNING"), nqn.String(),
+						bold("and all data stored on it"))
+					yes = prompt.Confirm("Continue?")
 				}
 
-				fmt.Printf("Deleted target \"%s\"\n", nqn)
+				if yes {
+					err = cli.NvmeOf.Delete(context.Background(), nqn)
+					if err == client.NotFoundError {
+						allErrs = append(allErrs, noTarget(nqn))
+						continue
+					}
+					if err != nil {
+						allErrs = append(allErrs, err)
+						continue
+					}
+					fmt.Printf("Deleted target %q\n", nqn)
+				} else {
+					fmt.Println("Aborted")
+				}
 			}
 
 			return allErrs.Err()
 		},
 	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+	return cmd
 }
 
 func startNVMECommand() *cobra.Command {

@@ -429,6 +429,15 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 	}
 
 	agents = append(agents, &reactor.ResourceAgent{
+		Type: "ocf:heartbeat:IPaddr2",
+		Name: "service_ip",
+		Attributes: map[string]string{
+			"ip":           r.ServiceIP.IP().String(),
+			"cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix()),
+		},
+	})
+
+	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:nfsserver",
 		Name: "nfsserver",
 		Attributes: map[string]string{
@@ -462,8 +471,6 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			})
 		}
 	}
-
-	agents = append(agents, &reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip", Attributes: map[string]string{"ip": r.ServiceIP.IP().String(), "cidr_netmask": strconv.Itoa(r.ServiceIP.Prefix())}})
 
 	agents = append(agents, &reactor.ResourceAgent{
 		Type: "ocf:heartbeat:portblock",

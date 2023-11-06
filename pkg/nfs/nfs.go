@@ -84,6 +84,52 @@ func (n *NFS) getExistingDeployment(ctx context.Context, rsc *ResourceConfig, cf
 	return deployedCfg, nil
 }
 
+func (n *NFS) isNFSConfig(config reactor.PromoterConfig) bool {
+	for _, r := range config.Resources {
+		for _, s := range r.Start {
+			if agent, ok := s.(*reactor.ResourceAgent); ok {
+				if agent.Type == "ocf:heartbeat:nfsserver" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// checkExistingConfigs goes through the list of currently deployed configs, and checks:
+// - if an NFS config already exists; if so, abort with an error
+// - if an existing config has the same name as the one we are trying to create; if so, just return that
+// - if the IP address of the new config collides with an existing config; if so, abort with an error
+func (n *NFS) checkExistingConfigs(ctx context.Context, newRsc *ResourceConfig) (*reactor.PromoterConfig, string, error) {
+	configs, paths, err := reactor.ListConfigs(ctx, n.cli.Client)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to check for existing NFS configs: %w", err)
+	}
+
+	var existingConfig *reactor.PromoterConfig
+	var existingPath string
+	for i := range configs {
+		c := configs[i]
+		p := paths[i]
+
+		// filter out any existing config with the same name as the one we are trying to create.
+		if name, _ := c.FirstResource(); name == newRsc.Name {
+			existingConfig = &c
+			existingPath = p
+			continue
+		}
+		if n.isNFSConfig(c) {
+			return nil, "", fmt.Errorf("an NFS config already exists in %s. Only one NFS resource is allowed", p)
+		}
+
+		if err := common.CheckIPCollision(c, newRsc.ServiceIP.IP()); err != nil {
+			return nil, "", fmt.Errorf("invalid configuration: %w", err)
+		}
+	}
+	return existingConfig, existingPath, nil
+}
+
 // Create creates an NFS export according to the resource configuration
 // described in rsc. It automatically prepends a "cluster private volume" to the
 // list of volumes, so volume numbers must start at 1.
@@ -98,54 +144,12 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	configs, _, err := reactor.ListConfigs(ctx, n.cli.Client)
+	existingConfig, existingPath, err := n.checkExistingConfigs(ctx, rsc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check for existing NFS configs: %w", err)
+		return nil, err
 	}
-
-	// only one nfsserver resource is allowed per cluster. check for an existing one.
-	for _, c := range configs {
-		name, _ := c.FirstResource()
-		if name == rsc.Name {
-			continue
-		}
-		for _, r := range c.Resources {
-			for _, s := range r.Start {
-				if agent, ok := s.(*reactor.ResourceAgent); ok {
-					if agent.Type == "ocf:heartbeat:nfsserver" {
-						return nil, fmt.Errorf("an NFS config with a different ID already exists: %s", name)
-					}
-				}
-			}
-		}
-	}
-
-	var cfg *reactor.PromoterConfig
-	var path string
-	configs, paths, err := reactor.ListConfigs(ctx, n.cli.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve existing configs: %w", err)
-	}
-
-	for i := range configs {
-		c := configs[i]
-		p := paths[i]
-		name, _ := c.FirstResource()
-
-		if err := common.CheckIPCollision(c, rsc.ServiceIP.IP()); err != nil {
-			return nil, fmt.Errorf("invalid configuration: %w", err)
-		}
-
-		// while looking for ip collisions, filter out any existing config with
-		// the same name as the one we are trying to create.
-		if name == rsc.Name {
-			cfg = &c
-			path = p
-		}
-	}
-
-	if cfg != nil {
-		deployedCfg, err := n.getExistingDeployment(ctx, rsc, cfg, path)
+	if existingConfig != nil {
+		deployedCfg, err := n.getExistingDeployment(ctx, rsc, existingConfig, existingPath)
 		if err != nil {
 			return nil, err
 		}
@@ -180,12 +184,12 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		}
 	}()
 
-	cfg, err = rsc.ToPromoter(deployment)
+	existingConfig, err = rsc.ToPromoter(deployment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert resource to promoter configuration: %w", err)
 	}
 
-	err = reactor.EnsureConfig(ctx, n.cli.Client, cfg, rsc.ID())
+	err = reactor.EnsureConfig(ctx, n.cli.Client, existingConfig, rsc.ID())
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
@@ -195,7 +199,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
 
-	rsc.Status = linstorcontrol.StatusFromResources(path, resourceDefinition, resourceGroup, deployment)
+	rsc.Status = linstorcontrol.StatusFromResources(existingPath, resourceDefinition, resourceGroup, deployment)
 
 	return rsc, nil
 }

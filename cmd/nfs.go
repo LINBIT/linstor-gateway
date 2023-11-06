@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"os"
+	"path/filepath"
 )
 
 func nfsCommands() *cobra.Command {
@@ -43,14 +44,22 @@ See "help nfs create" for more information`,
 
 }
 
+func autoGenerateExportPaths(exportPath string, numVolumes int) []string {
+	exportPaths := make([]string, numVolumes)
+	for i := 0; i < numVolumes; i++ {
+		exportPaths[i] = filepath.Join(exportPath, fmt.Sprintf("vol%d", i+1))
+	}
+	return exportPaths
+}
+
 func createNFSCommand() *cobra.Command {
 	resourceGroup := "DfltRscGrp"
 	allowedIPsCIDR := common.ServiceIPFromParts(net.IPv4zero, 0)
-	exportPath := "/"
+	exportPaths := []string{"/"}
 	grossSize := false
 
 	cmd := &cobra.Command{
-		Use:   "create NAME SERVICE_IP SIZE",
+		Use:   "create NAME SERVICE_IP [VOLUME_SIZE]...",
 		Short: "Creates an NFS export",
 		Long: `Creates a highly available NFS export based on LINSTOR and drbd-reactor.
 At first it creates a new resource within the LINSTOR system under the
@@ -71,7 +80,7 @@ $ mount -t nfs 192.168.122.222:/srv/gateway-exports/example/test1 /mnt/mynfs/`,
 		Example: `linstor-gateway nfs create example 192.168.211.122/24 2G
 linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
 `,
-		Args: cobra.ExactArgs(3),
+		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -81,9 +90,32 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 				return err
 			}
 
-			size, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(args[2])
-			if err != nil {
-				return err
+			rawSizes := args[2:]
+			if len(rawSizes) != len(exportPaths) {
+				if len(exportPaths) == 1 {
+					// special case: when we have multiple volumes, but only one export path, try to auto-generate the export paths
+					exportPaths = autoGenerateExportPaths(exportPaths[0], len(rawSizes))
+				} else {
+					return fmt.Errorf("specified %d volumes but %d export paths. Need exactly one export path per volume", len(rawSizes), len(exportPaths))
+				}
+			}
+
+			var volumes []nfs.VolumeConfig
+			for i, rawValue := range rawSizes {
+				val, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(rawValue)
+				if err != nil {
+					return err
+				}
+
+				volumes = append(volumes, nfs.VolumeConfig{
+					ExportPath: exportPaths[i],
+					VolumeConfig: common.VolumeConfig{
+						Number:              i + 1,
+						SizeKiB:             uint64(val.Value / unit.K),
+						FileSystem:          "ext4",
+						FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
+					},
+				})
 			}
 
 			rsc := &nfs.ResourceConfig{
@@ -91,16 +123,8 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 				ResourceGroup: resourceGroup,
 				ServiceIP:     serviceIP,
 				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
-				Volumes: []nfs.VolumeConfig{{
-					ExportPath: exportPath,
-					VolumeConfig: common.VolumeConfig{
-						Number:              1,
-						SizeKiB:             uint64(size.Value / unit.K),
-						FileSystem:          "ext4",
-						FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
-					},
-				}},
-				GrossSize: grossSize,
+				Volumes:       volumes,
+				GrossSize:     grossSize,
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
@@ -113,7 +137,7 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 	}
 
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "LINSTOR resource group to use")
-	cmd.Flags().StringVarP(&exportPath, "export-path", "p", exportPath, fmt.Sprintf("Set the export path, relative to %s", nfs.ExportBasePath))
+	cmd.Flags().StringSliceVarP(&exportPaths, "export-path", "p", exportPaths, fmt.Sprintf("Set the export path, relative to %s. Can be specified multiple times when creating more than one volume", nfs.ExportBasePath))
 	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 

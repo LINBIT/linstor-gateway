@@ -2,7 +2,7 @@ module github.com/LINBIT/linstor-gateway
 
 require (
 	bitbucket.org/creachadair/shell v0.0.7
-	github.com/LINBIT/golinstor v0.48.0
+	github.com/LINBIT/golinstor v0.50.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fatih/color v1.16.0
 	github.com/google/go-cmp v0.6.0
@@ -55,7 +55,7 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl/v2 v2.3.0 // indirect

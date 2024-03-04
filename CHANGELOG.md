@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2024-03-04
+
+* No changes over rc1
+
 ## [1.4.0-rc.1] - 2024-02-20
 
 ### Features
@@ -258,7 +262,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0-rc.1...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0-rc.1...v1.4.0
 [1.4.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0...v1.4.0-rc.1
 [1.3.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0-rc.1...v1.3.0
 [1.3.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.2.0...v1.3.0-rc.1

@@ -7,7 +7,7 @@
 %endif
 
 Name: linstor-gateway
-Version: 1.4.0~rc.1
+Version: 1.4.0
 Release: 1
 Summary: Exposes highly available LINSTOR storage via iSCSI, NFS, or NVMe-OF.
 %global tarball_version %(echo "%{version}" | sed -e 's/~rc/-rc/' -e 's/~alpha/-alpha/')
@@ -57,6 +57,9 @@ find %{_datadir}/doc/drbd-reactor* \
 	%{_firewalldir}/services/%{name}.xml
 
 %changelog
+* Mon Mar 04 2024 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 1.4.0-1
+-  New upstream release
+
 * Tue Feb 20 2024 Christoph Böhmwalder <christoph.boehmwalder@linbit.com> - 1.4.0~rc.1-1
 -  New upstream release
 

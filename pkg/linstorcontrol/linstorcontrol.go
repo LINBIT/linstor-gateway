@@ -323,7 +323,6 @@ func isErrAlreadyExists(err error) bool {
 		apiconsts.FailLostStorPool,
 		apiconsts.FailExistsRscGrp,
 		apiconsts.FailExistsVlmGrp,
-		apiconsts.FailExistsOpenflexTargetPerRscDfn,
 		apiconsts.FailExistsSnapshotShipping,
 		apiconsts.FailExistsExosEnclosure,
 	}

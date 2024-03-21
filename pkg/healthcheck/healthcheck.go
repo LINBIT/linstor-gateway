@@ -59,6 +59,12 @@ func contains(haystack []string, needle string) bool {
 
 func checkAgent() error {
 	errs := 0
+	if err := category(
+		"System Utilities",
+		&checkInPath{binary: "iptables", packageName: "iptables"},
+	); err != nil {
+		errs++
+	}
 	err := category(
 		"LINSTOR",
 		&checkFileWhitelist{},
@@ -77,7 +83,12 @@ func checkAgent() error {
 	}
 	err = category(
 		"Resource Agents",
-		&checkFileExists{"/usr/lib/ocf/resource.d/heartbeat", "resource-agents", true},
+		&checkFileExists{filename: "/usr/lib/ocf/resource.d/heartbeat", packageName: "resource-agents", isDirectory: true},
+		&checkFileExists{
+			filename:    "/usr/lib/ocf/resource.d/heartbeat/nvmet-subsystem",
+			packageName: "resource-agents",
+			hint:        "The nvmet-* resource agents are only shipped with resource-agents 4.9.0 or later. See https://github.com/ClusterLabs/resource-agents for instructions on how to manually install a newer version.",
+		},
 	)
 	if err != nil {
 		errs++

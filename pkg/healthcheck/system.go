@@ -107,6 +107,7 @@ type checkFileExists struct {
 	filename    string
 	packageName string
 	isDirectory bool
+	hint        string
 }
 
 func (c *checkFileExists) check(bool) error {
@@ -122,6 +123,9 @@ func (c *checkFileExists) format(_ error) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "    %s The %s %s does not exist\n", color.RedString("✗"), what, bold(c.filename))
 	fmt.Fprintf(&b, "      Please install the %s package\n", bold(c.packageName))
+	if c.hint != "" {
+		fmt.Fprintf(&b, "      %s %s\n", color.BlueString("Hint:"), c.hint)
+	}
 	return b.String()
 }
 

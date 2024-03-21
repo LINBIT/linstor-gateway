@@ -12,6 +12,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/fatih/color"
+	"github.com/mitchellh/go-ps"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -206,5 +207,33 @@ func (c *checkInPath) format(err error) string {
 	if c.hint != "" {
 		fmt.Fprintf(&b, "      %s %s\n", color.BlueString("Hint:"), c.hint)
 	}
+	return b.String()
+}
+
+type checkProcessRunning struct {
+	process     string
+	packageName string
+}
+
+func (c *checkProcessRunning) check(prevError bool) error {
+	procs, err := ps.Processes()
+	if err != nil {
+		return err
+	}
+	for _, p := range procs {
+		if p.Executable() == c.process {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s not found in process list", c.process)
+}
+
+func (c *checkProcessRunning) format(err error) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "    %s Process %s is not running\n", color.RedString("✗"), bold(c.process))
+	fmt.Fprintf(&b, "      %s\n", err.Error())
+	fmt.Fprintf(&b, "      Make sure that:\n")
+	fmt.Fprintf(&b, "      • the %s package is installed\n", bold(c.packageName))
+	fmt.Fprintf(&b, "      • the %s process is started\n", bold(c.process))
 	return b.String()
 }

@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/icza/gog v0.0.0-20220909135443-35d926f98ec3
+	github.com/mitchellh/go-ps v1.0.0
 	github.com/moul/http2curl v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pelletier/go-toml v1.9.5

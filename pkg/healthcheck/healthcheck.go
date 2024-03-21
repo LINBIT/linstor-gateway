@@ -95,7 +95,12 @@ func checkAgent() error {
 	}
 	err = category(
 		"iSCSI",
-		&checkInPath{binary: "targetcli", packageName: "targetcli"},
+		&checkInPath{binary: "targetcli", packageName: "targetcli", hint: "targetcli is only required for the LIO backend. If you are not planning on using LIO, you can ignore this warning."},
+		&checkInPath{binary: "scstadmin", packageName: "scstadmin", hint: "scstadmin is only required for the SCST backend. If you are not planning on using SCST, you can ignore this warning."},
+		&checkKernelModuleLoaded{"scst", "scst"},
+		&checkKernelModuleLoaded{"iscsi_scst", "scst"},
+		&checkKernelModuleLoaded{"scst_vdisk", "scst"},
+		&checkProcessRunning{"iscsi-scstd", "scst"},
 	)
 	if err != nil {
 		errs++

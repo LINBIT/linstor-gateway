@@ -3,8 +3,10 @@ package healthcheck
 import (
 	"errors"
 	"fmt"
-	"github.com/LINBIT/linstor-gateway/client"
+
 	"github.com/fatih/color"
+
+	"github.com/LINBIT/linstor-gateway/client"
 )
 
 var bold = color.New(color.Bold).SprintfFunc()
@@ -66,7 +68,7 @@ func checkAgent() error {
 	}
 	err = category(
 		"drbd-reactor",
-		&checkInPath{"drbd-reactor", "drbd-reactor"},
+		&checkInPath{binary: "drbd-reactor", packageName: "drbd-reactor"},
 		&checkStartedAndEnabled{"drbd-reactor.service", "drbd-reactor"},
 		&checkReactorAutoReload{},
 	)
@@ -82,14 +84,14 @@ func checkAgent() error {
 	}
 	err = category(
 		"iSCSI",
-		&checkInPath{"targetcli", "targetcli"},
+		&checkInPath{binary: "targetcli", packageName: "targetcli"},
 	)
 	if err != nil {
 		errs++
 	}
 	err = category(
 		"NVMe-oF",
-		&checkInPath{"nvmetcli", "nvmetcli"},
+		&checkInPath{binary: "nvmetcli", packageName: "nvmetcli", hint: "nvmetcli is not (yet) packaged on all distributions. See https://git.infradead.org/users/hch/nvmetcli.git for instructions on how to manually install it."},
 		&checkKernelModuleLoaded{"nvmet", "nvmetcli"},
 	)
 	if err != nil {

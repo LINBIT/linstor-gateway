@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/coreos/go-systemd/v22/dbus"
-	"github.com/fatih/color"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/coreos/go-systemd/v22/dbus"
+	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
 )
 
 type checkStartedAndEnabled struct {
@@ -185,6 +186,7 @@ func (c *checkKernelModuleLoaded) format(err error) string {
 type checkInPath struct {
 	binary      string
 	packageName string
+	hint        string
 }
 
 func (c *checkInPath) check(bool) error {
@@ -197,5 +199,8 @@ func (c *checkInPath) format(err error) string {
 	fmt.Fprintf(&b, "    %s The %s tool is not available\n", color.RedString("✗"), bold(c.binary))
 	fmt.Fprintf(&b, "      %s\n", err.Error())
 	fmt.Fprintf(&b, "      Please install the %s package\n", bold(c.packageName))
+	if c.hint != "" {
+		fmt.Fprintf(&b, "      %s %s\n", color.BlueString("Hint:"), c.hint)
+	}
 	return b.String()
 }

@@ -7,7 +7,7 @@ TestSuiteImage = "linstor-gateway-e2e"
 OutDir = ""
 
 [[steps]]
-[steps.docker]
+[steps.container]
 image = "quay.io/ansible/ansible-runner:stable-2.9-devel"
 command = [
 	"ansible-playbook",
@@ -17,12 +17,12 @@ command = [
 	"--extra-vars", "linstor_device_path={{ .LinstorDevicePath }}",
 	"--tags", "run",
 ]
-[steps.docker.env]
+[steps.container.env]
 ANSIBLE_PIPELINING = "yes"
 
 [[steps]]
-[steps.docker]
+[steps.container]
 image = "{{.TestSuiteImage}}"
-[steps.docker.copy]
+[steps.container.copy]
 source = "/log"
 dest = "{{.OutDir}}"

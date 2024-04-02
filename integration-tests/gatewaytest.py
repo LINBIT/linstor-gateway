@@ -2,6 +2,7 @@
 
 import argparse
 import errno
+import ipaddress
 import os
 import pipes
 import re
@@ -12,10 +13,21 @@ import time
 from io import StringIO
 from threading import Thread
 
+import requests
 from lbpytest.controlmaster import SSH
 
 # stream to write output to
 logstream = None
+
+# save the original excepthook, see handle_exception() below
+__real_excepthook = sys.excepthook
+
+# map the resource type to the name of the identifier field in the API
+id_map = {
+    'nfs': 'name',
+    'nvme-of': 'nqn',
+    'iscsi': 'iqn',
+}
 
 
 class Tee(object):
@@ -50,13 +62,52 @@ def log(*args, **kwargs):
 class Nodes(list):
     def __init__(self, members=[]):
         super(Nodes, self).__init__(members)
+        self.access_net = os.getenv('VIRTER_ACCESS_NETWORK')
 
     def run(self, command):
         return [n.run(command) for n in self]
 
     def cleanup(self):
+        log('Cleaning up nodes')
         for n in self:
             n.cleanup()
+
+    def get_service_ip(self) -> str:
+        """
+        Get an available IP address from the access network, including the
+        network mask of the access network.
+
+        :return: an IP address with network mask as a string (e.g. '192.168.1.254/24')
+        """
+
+        if self.access_net is None:
+            raise RuntimeError('No access network defined')
+        return '{}/{}'.format(self.get_available_ip(), self.get_access_net_mask())
+
+    def get_available_ip(self) -> str:
+        """
+        Get an IP address from the access network that is not used by any node
+        in the cluster. The search is started from the end of the network to
+        maximize the chance of getting an actually unused IP address.
+
+        :return: an IP address as a string (e.g. '192.168.1.254')
+        """
+        if self.access_net is None:
+            raise RuntimeError('No access network defined')
+        net = ipaddress.ip_network(self.access_net, strict=False)
+        addrs = [a for a in net.hosts()]
+        for n in self:
+            if n.addr in addrs:
+                addrs.remove(n.addr)
+        for a in reversed(addrs):
+            return str(a)
+        raise RuntimeError('No available IP address found')
+
+    def get_access_net_mask(self) -> int:
+        if self.access_net is None:
+            raise RuntimeError('No access network defined')
+        net = ipaddress.ip_network(self.access_net, strict=False)
+        return net.prefixlen
 
 
 class Node:
@@ -88,7 +139,9 @@ class Node:
 
     def stop_server(self):
         if self.server_process:
+            log('Stopping server on {}'.format(self.name))
             self.server_process.terminate()
+            self.server_process = None
 
     def run(self, cmd, quote=True, catch=False, return_stdout=False, stdin=None, stdout=None,
             stderr=None, env=None):
@@ -129,6 +182,53 @@ class Node:
         if return_stdout:
             return stdout.getvalue().strip()
 
+    def assert_resource_exists(self, cls, name):
+        resp = requests.get('http://{}:8080/api/v2/{}'.format(self.addr, cls))
+        try:
+            resources = resp.json()
+        except:
+            raise RuntimeError('could not parse response for {} resource {}: {}'.format(cls, name, resp.text))
+        id_field = id_map[cls]
+        for resource in resources:
+            if id_field not in resource:
+                raise RuntimeError(
+                    'ASSERT: got invalid response for {} resource {} ({})'.format(cls, name, resources))
+            if resource[id_field] == name:
+                return
+
+        raise RuntimeError(
+            'ASSERT: {} resource {} should exist, but not found (resources: {})'.format(cls, name, resources))
+
+    def assert_resource_not_exists(self, cls, name):
+        resp = requests.get('http://{}:8080/api/v2/{}'.format(self.addr, cls))
+        try:
+            resources = resp.json()
+        except:
+            raise RuntimeError('could not parse response for {} resource {}: {}'.format(cls, name, resp.text))
+        id_field = id_map[cls]
+        for resource in resources:
+            if id_field not in resource:
+                raise RuntimeError(
+                    'ASSERT: got invalid response for {} resource {} ({})'.format(cls, name, resources))
+            if resource[id_field] == name:
+                raise RuntimeError(
+                    'ASSERT: {} resource {} should NOT exist, but found (resources: {})'.format(cls, name, resources))
+
+
+def handle_exception(callback):
+    """
+    Run the specified callback after calling the original excepthook.
+    This is intended to be assigned to sys.excepthook.
+    :param callback: a function to be called after the original excepthook
+    :return: a function that can be assigned to sys.excepthook
+    """
+
+    def handle(exc_type, exc_value, exc_traceback):
+        __real_excepthook(exc_type, exc_value, exc_traceback)
+        callback()
+
+    return handle
+
 
 def setup():
     parser = argparse.ArgumentParser()
@@ -167,4 +267,7 @@ def setup():
         new_node = Node(n)
         nodes.append(new_node)
         log('New node: {} {}'.format(new_node.name, new_node.hostname))
+
+    # make sure that the nodes are cleaned up even if an exception occurs
+    sys.excepthook = handle_exception(nodes.cleanup)
     return nodes

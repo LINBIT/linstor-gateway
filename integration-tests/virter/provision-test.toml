@@ -4,7 +4,7 @@ version = 1
 LinstorGatewayVersion = "*"
 
 [[steps]]
-[steps.docker]
+[steps.container]
 image = "quay.io/ansible/ansible-runner:stable-2.9-devel"
 command = [
 	"ansible-playbook",
@@ -13,5 +13,5 @@ command = [
 	"--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
 	"--tags", "testimage"
 ]
-[steps.docker.env]
+[steps.container.env]
 ANSIBLE_PIPELINING = "yes"

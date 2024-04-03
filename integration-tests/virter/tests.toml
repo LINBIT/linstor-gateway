@@ -1,7 +1,10 @@
 test_suite_file = "run.toml"
 
 [tests]
-[tests.iscsi-create]
+[tests.iscsi-create-lio-t]
+vms = [3]
+
+[tests.iscsi-create-scst]
 vms = [3]
 
 [tests.nfs-create]

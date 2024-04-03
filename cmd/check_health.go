@@ -2,14 +2,19 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/LINBIT/linstor-gateway/pkg/healthcheck"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/LINBIT/linstor-gateway/pkg/healthcheck"
 )
 
 func checkHealthCommand() *cobra.Command {
+	var defaultIscsiBackends = []string{"lio-t", "scst"}
+
 	var mode string
+	var iscsiBackends []string
 	cmd := &cobra.Command{
 		Use:   "check-health",
 		Short: "Check if all requirements and dependencies are met on the current system",
@@ -32,7 +37,7 @@ that a LINSTOR Gateway server can be reached.
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			controllers := viper.GetStringSlice("linstor.controllers")
-			err := healthcheck.CheckRequirements(mode, controllers, cli)
+			err := healthcheck.CheckRequirements(mode, iscsiBackends, controllers, cli)
 			if err != nil {
 				fmt.Println()
 				log.Fatalf("Health check failed: %v", err)
@@ -42,6 +47,7 @@ that a LINSTOR Gateway server can be reached.
 	cmd.Flags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
 	viper.BindPFlag("linstor.controllers", cmd.Flags().Lookup("controllers"))
 	cmd.Flags().StringVarP(&mode, "mode", "m", "agent", `Which type of node to check requirements for. Can be "agent", "server", or "client"`)
+	cmd.Flags().StringSliceVar(&iscsiBackends, "iscsi-backends", defaultIscsiBackends, "List of iSCSI backends to check for (one of 'lio-t', 'scst')")
 
 	return cmd
 }

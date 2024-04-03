@@ -57,7 +57,15 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func checkAgent() error {
+func toMap(slice []string) map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, s := range slice {
+		m[s] = struct{}{}
+	}
+	return m
+}
+
+func checkAgent(iscsiBackends []string) error {
 	errs := 0
 	if err := category(
 		"System Utilities",
@@ -93,16 +101,26 @@ func checkAgent() error {
 	if err != nil {
 		errs++
 	}
-	err = category(
-		"iSCSI",
-		&checkInPath{binary: "targetcli", packageName: "targetcli", hint: "targetcli is only required for the LIO backend. If you are not planning on using LIO, you can ignore this warning."},
-		&checkInPath{binary: "scstadmin", packageName: "scstadmin", hint: "scstadmin is only required for the SCST backend. If you are not planning on using SCST, you can ignore this warning."},
-		&checkKernelModuleLoaded{"scst", "scst"},
-		&checkKernelModuleLoaded{"iscsi_scst", "scst"},
-		&checkKernelModuleLoaded{"scst_vdisk", "scst"},
-		&checkProcessRunning{"iscsi-scstd", "scst"},
-	)
-	if err != nil {
+
+	var iscsiChecks []checker
+	backendsMap := toMap(iscsiBackends)
+	for backend := range backendsMap {
+		switch backend {
+		case "lio-t":
+			iscsiChecks = append(iscsiChecks,
+				&checkInPath{binary: "targetcli", packageName: "targetcli", hint: "targetcli is only required for the LIO backend. If you are not planning on using LIO, try excluding it via `--iscsi-backends`."},
+			)
+		case "scst":
+			iscsiChecks = append(iscsiChecks,
+				&checkInPath{binary: "scstadmin", packageName: "scstadmin", hint: "scstadmin is only required for the SCST backend. If you are not planning on using SCST, try excluding it via `--iscsi-backends`."},
+				&checkKernelModuleLoaded{"scst", "scst"},
+				&checkKernelModuleLoaded{"iscsi_scst", "scst"},
+				&checkKernelModuleLoaded{"scst_vdisk", "scst"},
+				&checkProcessRunning{"iscsi-scstd", "scst"},
+			)
+		}
+	}
+	if err := category("iSCSI", iscsiChecks...); err != nil {
 		errs++
 	}
 	err = category(
@@ -156,14 +174,14 @@ func checkClient(cli *client.Client) error {
 	return nil
 }
 
-func CheckRequirements(mode string, controllers []string, cli *client.Client) error {
+func CheckRequirements(mode string, iscsiBackends []string, controllers []string, cli *client.Client) error {
 	doPrint := func() {
 		fmt.Printf("Checking %s requirements.\n\n", bold(mode))
 	}
 	switch mode {
 	case "agent":
 		doPrint()
-		return checkAgent()
+		return checkAgent(iscsiBackends)
 	case "server":
 		doPrint()
 		return checkServer(controllers)

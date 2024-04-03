@@ -82,6 +82,10 @@
   yum:
     pkg:
       - "linstor-gateway-{{ linstor_gateway_version }}"
+    update_cache: true
+  register: linstor_gateway_install
+  retries: 5
+  until: linstor_gateway_install is success
   tags:
     - testimage
 

@@ -1,37 +1,50 @@
 ---
+- name: Get installed kernel packages
+  package_facts:
+    manager: auto
+  tags:
+    - preload
+
+- name: Install required kernel version
+  yum:
+    name: kernel-{{ kernel_version }}
+    state: present
+  tags:
+    - preload
+
+- name: Remove all other kernels
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ ansible_facts.packages | dict2items | selectattr('key', 'search', '^kernel-[0-9]') | map(attribute='key') | list }}"
+  tags:
+    - preload
 
 - name: Add linstor repo
   yum_repository:
     name: drbd
     description: LINBIT Packages for LINSTOR and DRBD
-    baseurl: "{{ drbd_repo_baseurl }}"
+    baseurl: "{{ linbit_repo_baseurl }}/yum/rhel{{ rhel_major_version }}/drbd-9/x86_64"
     gpgcheck: true
     gpgkey: https://packages.linbit.com/package-signing-pubkey.asc
   tags:
     - preload
 
-- name: Fetch lbdist helper
-  unarchive:
-    src: "{{ lbdist_tar_url }}"
-    dest: /var/cache
-    remote_src: true
-    creates: /var/cache/python-lbdist-master
-  tags:
-    - preload
-
-
-- name: List available kmods
-  yum:
-    list: "kmod-drbd-*_*"
-    disablerepo: "*"
-    enablerepo: "drbd"
-  register: kmods
-  tags:
-    - preload
-
+# cat /etc/os-release | curl -sT - -X POST https://bestmodule.drbd.io/api/v1/best/$(uname -r)
 - name: Determine best kmod
-  command: "{{ ansible_python['executable'] }} /var/cache/python-lbdist-master/lbdisttool.py --kmods {{ kmods.results | map(attribute='version') | map('regex_replace', '^(.*)$', 'kmod-drbd-\\1') | join(' ')}}"
+  uri:
+    url: https://bestmodule.drbd.io/api/v1/best/{{ kernel_version }}
+    src: "/etc/os-release"
+    remote_src: "True"
+    method: POST
+    body_format: raw
+    return_content: true
   register: best_kmod
+  tags:
+    - preload
+
+- debug:
+    var: best_kmod.content
   tags:
     - preload
 
@@ -39,7 +52,7 @@
   yum:
     pkg:
       - drbd-utils
-      - "{{ best_kmod.stdout }}"
+      - "{{ best_kmod.content | regex_replace('(.*)\\.rpm', '\\1') }}"
   notify:
     - Restart satellite
   tags:

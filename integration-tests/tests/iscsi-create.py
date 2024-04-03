@@ -9,7 +9,7 @@ first.start_server()
 service_ip = nodes.get_service_ip()
 
 first.run([
-    'linstor-gateway', 'iscsi', 'create', 'iqn.2019-08.com.linbit:iscsi1',
+    'linstor-gateway', 'iscsi', 'create', '--implementation=lio-t', 'iqn.2019-08.com.linbit:iscsi1',
     service_ip, '1G',
 ])
 first.assert_resource_exists('iscsi', 'iqn.2019-08.com.linbit:iscsi1')

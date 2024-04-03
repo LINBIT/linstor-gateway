@@ -1,9 +1,9 @@
 ---
-- name: Add pacemaker repo
+- name: Add LINBIT repo
   yum_repository:
-    name: pacemaker
+    name: drbd
     description: LINBIT Packages for LINSTOR and DRBD
-    baseurl: "{{ pacemaker_repo_baseurl }}"
+    baseurl: "{{ linbit_repo_baseurl }}/yum/rhel{{ rhel_major_version }}/drbd-9/x86_64"
     gpgcheck: true
     gpgkey: https://packages.linbit.com/package-signing-pubkey.asc
   tags:
@@ -15,25 +15,58 @@
     description: LINBIT CI Packages
     baseurl: "{{ ci_repo_baseurl }}"
     gpgcheck: false
-    metadata_expire: 0
+    metadata_expire: "0"
   tags:
     - preload
-
 
 - name: Install resource-agents
   yum:
     pkg:
       - resource-agents
-    enablerepo: pacemaker
+    enablerepo: drbd
   tags:
     - preload
-
 
 - name: Install resource-agents helpers
   yum:
     pkg:
       - iptables
       - targetcli
+  tags:
+    - preload
+
+- name: Install scst utils
+  yum:
+    pkg:
+      - scstadmin
+      - scst
+    enablerepo: drbd
+  tags:
+    - preload
+
+- name: Install kmod-scst
+  yum:
+    pkg:
+      - "kmod-scst-*_{{ kernel_version | regex_replace('^(\\d+\\.\\d+.\\d+)-(.*)\\.el.*$', '\\1_\\2') }}*"
+    enablerepo: drbd
+  tags:
+    - preload
+
+- name: Configure automatic module loading
+  copy:
+    dest: /etc/modules-load.d/scst.conf
+    content: |
+      scst
+      iscsi-scst
+      scst_vdisk
+  tags:
+    - preload
+
+- name: Enable iscsi-scst service
+  service:
+    name: iscsi-scst
+    state: stopped
+    enabled: yes
   tags:
     - preload
 

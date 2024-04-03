@@ -51,7 +51,7 @@ build:
           -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
           -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
           -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
-          -d rhel8.0
+          -d rhel9.0
       }
 
 package:
@@ -104,8 +104,8 @@ base-image:
     - |
       virter image rm gateway-base-image
       cd integration-tests
-      make BASE_IMAGE=$LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-8 base_image
-      virter image push $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-8
+      make BASE_IMAGE=$LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-9 base_image
+      virter image push $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-9
 
 publish-docker:
   stage: package
@@ -149,7 +149,7 @@ test-e2e:
       ci_prepare_tools
       ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
       ci_fetch_binary vmshed vmshed-$VMSHED_VERSION https://github.com/LINBIT/vmshed/releases/download/$VMSHED_VERSION/vmshed-linux-amd64
-    - virter image pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-8
+    - virter image pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-9
     - docker pull $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:latest
     - |
       cd integration-tests

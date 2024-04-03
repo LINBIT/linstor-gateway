@@ -2,6 +2,6 @@ name = "t"
 provision_file = "provision-test.toml"
 
 [[vms]]
-base_image = "linstor-gateway-tests--base-alma-8"
+base_image = "linstor-gateway-tests--base-alma-9"
 vcpus = 2
 memory = "4G"

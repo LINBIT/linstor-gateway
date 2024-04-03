@@ -1,8 +1,9 @@
 version = 1
 
 [values]
-DRBDRepoBaseURL = ""
-PacemakerRepoBaseURL = ""
+KernelVersion = "5.14.0-362.13.1.el9_3.x86_64"
+RhelMajorVersion = "9"
+LinbitRepoBaseURL = ""
 CIRepoBaseURL = ""
 
 [[steps]]
@@ -12,8 +13,9 @@ command = [
 	"ansible-playbook",
 	"--inventory", "/virter/workspace/virter/inventory",
 	"/virter/workspace/virter/provision-playbook.yml",
-	"--extra-vars", "drbd_repo_baseurl={{ .DRBDRepoBaseURL }}",
-	"--extra-vars", "pacemaker_repo_baseurl={{ .PacemakerRepoBaseURL }}",
+	"--extra-vars", "kernel_version={{ .KernelVersion }}",
+	"--extra-vars", "rhel_major_version={{ .RhelMajorVersion }}",
+	"--extra-vars", "linbit_repo_baseurl={{ .LinbitRepoBaseURL }}",
 	"--extra-vars", "ci_repo_baseurl={{ .CIRepoBaseURL }}",
 	"--tags", "preload"
 ]

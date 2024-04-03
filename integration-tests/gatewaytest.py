@@ -13,6 +13,7 @@ import time
 from io import StringIO
 from threading import Thread
 
+import linstor
 import requests
 from lbpytest.controlmaster import SSH
 
@@ -57,6 +58,102 @@ def log(*args, **kwargs):
     """ Print message to stderr """
     print(*args, file=logstream)
     logstream.flush()
+
+
+class LinstorConnection(linstor.Linstor):
+    def __init__(self, node):
+        super(LinstorConnection, self).__init__("linstor://" + node.addr)
+        self.connect()
+
+    def __del__(self):
+        self.disconnect()
+
+    def wait_for_resource_active(self, resource: str, retries: int = 5):
+        """
+        Wait for a resource to become active. Active is defined as having only Diskless or UpToDate resources and at
+        least 2 UpToDate resources, while also having the resource InUse on one node.
+
+        :returns: the node name on which the resource is InUse
+        :exception: TimeoutError: if the resource does not reach the desired state after the specified number of retries
+        """
+
+        want_states = ['Diskless', 'UpToDate']
+        attempts = 0
+
+        def do_attempt():
+            resp = self.resource_list(filter_by_resources=[resource])
+            if len(resp) == 0:
+                return False
+            states = resp[0].resource_states
+            if len(states) == 0:
+                return False
+
+            num_uptodate = 0
+            num_diskless = 0
+            inuse = ''
+            for st in states:
+                if st.volume_states[0].disk_state == 'UpToDate':
+                    num_uptodate += 1
+                if st.volume_states[0].disk_state == 'Diskless':
+                    num_diskless += 1
+                if st.in_use:
+                    inuse = st.node_name
+
+            if num_uptodate + num_diskless == len(states) and num_uptodate >= 2 and inuse != '':
+                return inuse
+            print('Resource {} not yet active, UpToDate: {} / Diskless: {} / InUse: {}'.format(resource, num_uptodate,
+                                                                                               num_diskless, inuse))
+            return False
+
+        while True:
+            attempts += 1
+            if attempts > retries:
+                raise TimeoutError(
+                    'Resource {} did not reach state {} after {} retries'.format(resource, want_states, retries))
+
+            inuse_node = do_attempt()
+            if inuse_node:
+                return inuse_node
+
+            time.sleep(1)
+
+    def wait_inuse_stable(self, resource: str, node: str, count_required: int = 5):
+        """
+        Wait for a resource to be InUse on the specified node for a certain number of attempts.
+        """
+
+        count = 0
+
+        def do_attempt():
+            resp = self.resource_list(filter_by_resources=[resource])
+            if len(resp) == 0:
+                raise Exception('Resource {} not found'.format(resource))
+            states = resp[0].resource_states
+            if len(states) == 0:
+                raise Exception('Resource {} has no states'.format(resource))
+
+            for st in states:
+                if st.in_use:
+                    if st.node_name == node:
+                        return True
+                    raise Exception(
+                        'Resource {} is in use by node {}, expected {}'.format(resource, st.node_name, node))
+            raise Exception('Resource {} is not in use on any node'.format(resource))
+
+        while True:
+            count += 1
+            if count > count_required:
+                return True
+            do_attempt()
+
+            time.sleep(1)
+
+    def resource_exists(self, resource: str):
+        """
+        Check if a resource exists.
+        """
+        resp = self.resource_list(filter_by_resources=[resource])
+        return len(resp) > 0 and len(resp[0].resource_states) > 0
 
 
 class Nodes(list):
@@ -111,7 +208,7 @@ class Nodes(list):
 
 
 class Node:
-    def __init__(self, name, addr=None):
+    def __init__(self, name, logdir, addr=None):
         self.name = name
         try:
             self.addr = addr if addr else socket.gethostbyname(name)
@@ -120,9 +217,25 @@ class Node:
         self.ssh = SSH(self.addr)
         self.hostname = self.run(['hostname', '-f'], return_stdout=True)
         self.server_process = None
+        self.logdir = logdir
+
+    def save_logs(self):
+        log('Saving logs for {}'.format(self.name))
+        journal_log = self.run(["journalctl"], return_stdout=True)
+        with open(os.path.join(self.logdir, '{}-journal.log'.format(self.name)), 'w') as f:
+            f.write(journal_log)
+
+        dmesg_log = self.run(["dmesg"], return_stdout=True)
+        with open(os.path.join(self.logdir, '{}-dmesg.log'.format(self.name)), 'w') as f:
+            f.write(dmesg_log)
+
+        lsmod_log = self.run(["lsmod"], return_stdout=True)
+        with open(os.path.join(self.logdir, '{}-lsmod.log'.format(self.name)), 'w') as f:
+            f.write(lsmod_log)
 
     def cleanup(self):
         self.stop_server()
+        self.save_logs()
         self.ssh.close()
 
     def start_server(self):
@@ -264,7 +377,7 @@ def setup():
 
     nodes = Nodes()
     for n in args.node:
-        new_node = Node(n)
+        new_node = Node(n, args.logdir)
         nodes.append(new_node)
         log('New node: {} {}'.format(new_node.name, new_node.hostname))
 

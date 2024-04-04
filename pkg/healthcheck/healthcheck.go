@@ -10,6 +10,7 @@ import (
 )
 
 var bold = color.New(color.Bold).SprintfFunc()
+var faint = color.New(color.Faint).SprintfFunc()
 var errNotFound = errors.New("not found")
 
 type checker interface {

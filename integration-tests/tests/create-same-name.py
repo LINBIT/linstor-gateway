@@ -11,7 +11,7 @@ service_ip = nodes.get_service_ip()
 other_service_ip = nodes.get_service_ip()
 
 first.run([
-    'linstor-gateway', 'iscsi', 'create', 'iqn.2019-08.com.linbit:target1',
+    'linstor-gateway', 'iscsi', 'create', '--implementation=scst', 'iqn.2019-08.com.linbit:target1',
     service_ip, '1G'
 ])
 

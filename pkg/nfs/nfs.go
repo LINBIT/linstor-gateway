@@ -194,6 +194,20 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		return nil, fmt.Errorf("failed to register reactor config file: %w", err)
 	}
 
+	defer func() {
+		// if we fail beyond this point, delete the just created reactor config
+		if err != nil {
+			log.Debugf("Rollback: deleting just created reactor config %s", rsc.ID())
+			if err := reactor.DeleteConfig(ctx, n.cli.Client, rsc.ID()); err != nil {
+				log.Warnf("Failed to roll back created reactor config: %v", err)
+			}
+
+			if err := common.WaitUntilResourceCondition(ctx, n.cli.Client, rsc.Name, common.NoResourcesInUse); err != nil {
+				log.Warnf("Failed to wait for resource to become unused: %v", err)
+			}
+		}
+	}()
+
 	_, err = n.Start(ctx, rsc.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start resources: %w", err)
@@ -225,6 +239,11 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, name, common.AnyResourcesInUse)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for resource to become used: %w", err)
+	}
+
+	err = common.AssertResourceInUseStable(waitCtx, n.cli.Client, name)
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for resource to become stable: %w", err)
 	}
 
 	return n.Get(ctx, name)

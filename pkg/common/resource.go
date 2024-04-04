@@ -157,3 +157,47 @@ func WaitUntilResourceCondition(ctx context.Context, cli *client.Client, name st
 		time.Sleep(3 * time.Second)
 	}
 }
+
+func getInUseNode(ctx context.Context, cli *client.Client, name string) (string, error) {
+	resources, err := cli.Resources.GetResourceView(ctx, &client.ListOpts{Resource: []string{name}})
+	if err != nil {
+		return "", err
+	}
+	for _, resource := range resources {
+		if resource.State != nil && resource.State.InUse != nil && *resource.State.InUse {
+			return resource.NodeName, nil
+		}
+	}
+
+	return "", nil
+}
+
+// AssertResourceInUseStable records the node that a resource is running on, and then monitors the resource to check
+// that it remains on the same node for a few seconds. This is useful for sanity-checking that a resource has started
+// up and is healthy.
+func AssertResourceInUseStable(ctx context.Context, cli *client.Client, name string) error {
+	initialNode, err := getInUseNode(ctx, cli, name)
+	if err != nil {
+		return fmt.Errorf("failed to get InUse node for resource %s: %w", name, err)
+	}
+	if initialNode == "" {
+		return fmt.Errorf("resource %s is not in use on any node", name)
+	}
+
+	count := 0
+	for {
+		node, err := getInUseNode(ctx, cli, name)
+		if err != nil {
+			return err
+		}
+		if node != initialNode {
+			return fmt.Errorf("resource startup failed on node %s", initialNode)
+		}
+
+		time.Sleep(1 * time.Second)
+		count++
+		if count > 5 {
+			return nil
+		}
+	}
+}

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0-rc.1] - 2024-04-09
+
+### Features
+
+* Added hints to some health check outputs to help users resolve potential issues. (09e0860)
+* New health check for NVMe-oF resource agents. (d3441f5)
+* New health check for SCST kernel modules and user space utilities. (138c1f6)
+* The drbd-reactor health check now also checks that if the `drbd-reactor-reload.{path,service}` files are up-to-date. (2c40ff0)
+* When creating a resource, linstor-gateway now waits a few seconds to ensure that the resource is actually running. This prevents situations where the resource fails to start, but linstor-gateway still reports it as "running". (2c40ff0)
+* Various improvements to the end-to-end tests.
+
 ## [1.4.0] - 2024-03-04
 
 * No changes over rc1
@@ -262,7 +273,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.5.0-rc.1...HEAD
+[1.5.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...v1.5.0-rc.1
 [1.4.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0-rc.1...v1.4.0
 [1.4.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0...v1.4.0-rc.1
 [1.3.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0-rc.1...v1.3.0

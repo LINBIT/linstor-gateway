@@ -14,7 +14,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pelletier/go-toml v1.9.5
 	github.com/rck/unit v0.0.3
-	github.com/rs/cors v1.10.1
+	github.com/rs/cors v1.11.0
 	github.com/sergi/go-diff v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0

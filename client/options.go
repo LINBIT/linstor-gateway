@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"net/http"
 	"net/url"
 )
 
@@ -17,10 +16,9 @@ func BaseURL(URL *url.URL) Option {
 	}
 }
 
-// HTTPClient is a Client's option to set a specific http.Client.
-func HTTPClient(httpClient *http.Client) Option {
+func UserAgent(userAgent string) Option {
 	return func(c *Client) error {
-		c.httpClient = httpClient
+		c.userAgent = userAgent
 		return nil
 	}
 }

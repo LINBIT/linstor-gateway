@@ -3,21 +3,25 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
-	"github.com/LINBIT/linstor-gateway/pkg/prompt"
-	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
-	"github.com/fatih/color"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/LINBIT/linstor-gateway/pkg/common"
-	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
+	"github.com/LINBIT/linstor-gateway/pkg/prompt"
+	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/LINBIT/linstor-gateway/pkg/version"
+
+	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
 	"github.com/spf13/cobra"
+
+	"github.com/LINBIT/linstor-gateway/pkg/common"
+	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 )
 
 var bold = color.New(color.Bold).SprintfFunc()
@@ -25,7 +29,7 @@ var bold = color.New(color.Bold).SprintfFunc()
 func iscsiCommands() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:     "iscsi",
-		Version: version,
+		Version: version.Version,
 		Short:   "Manages Highly-Available iSCSI targets",
 		Long: `linstor-gateway iscsi manages highly available iSCSI targets by leveraging
 LINSTOR and drbd-reactor. Setting up LINSTOR, including storage pools and resource groups,

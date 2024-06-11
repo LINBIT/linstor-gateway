@@ -3,26 +3,29 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/LINBIT/linstor-gateway/pkg/version"
+
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"net"
-	"os"
-	"path/filepath"
 )
 
 func nfsCommands() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:     "nfs",
-		Version: version,
+		Version: version.Version,
 		Short:   "Manages Highly-Available NFS exports",
 		Long: `linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
 and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups

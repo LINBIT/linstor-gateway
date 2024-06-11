@@ -11,9 +11,9 @@ linstor-gateway: $(GOSOURCES) version.env
 	[ -n "$(GOOS)" ] && NAME="$${NAME}-$(GOOS)"; \
 	[ -n "$(GOARCH)" ] && NAME="$${NAME}-$(GOARCH)"; \
 	go build -o "$$NAME" \
-		-ldflags "-X github.com/LINBIT/linstor-gateway/cmd.version=$${VERSION} \
-		-X 'github.com/LINBIT/linstor-gateway/cmd.builddate=$(shell LC_ALL=C date --utc)' \
-		-X github.com/LINBIT/linstor-gateway/cmd.githash=$${GITHASH}"
+		-ldflags "-X github.com/LINBIT/linstor-gateway/pkg/version.Version=$${VERSION} \
+		-X 'github.com/LINBIT/linstor-gateway/pkg/version.BuildDate=$(shell LC_ALL=C date --utc)' \
+		-X github.com/LINBIT/linstor-gateway/pkg/version.GitCommit=$${GITHASH}"
 
 .PHONY: install
 install:

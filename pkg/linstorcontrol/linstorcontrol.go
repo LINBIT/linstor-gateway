@@ -6,14 +6,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/icza/gog"
 	"sort"
+
+	"github.com/icza/gog"
 
 	apiconsts "github.com/LINBIT/golinstor"
 	"github.com/LINBIT/golinstor/client"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
+	"github.com/LINBIT/linstor-gateway/pkg/version"
 )
 
 // Linstor is a struct containing the configuration that is needed to create or delete a LINSTOR resource.
@@ -125,7 +127,11 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 }
 
 func Default(controllers []string) (*Linstor, error) {
-	cli, err := client.NewClient(client.Log(log.StandardLogger()), client.Controllers(controllers))
+	cli, err := client.NewClient(
+		client.Log(log.StandardLogger()),
+		client.Controllers(controllers),
+		client.UserAgent(version.UserAgent()),
+	)
 	if err != nil {
 		return nil, err
 	}

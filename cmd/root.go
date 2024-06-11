@@ -2,22 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/LINBIT/linstor-gateway/client"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/LINBIT/linstor-gateway/client"
+	"github.com/LINBIT/linstor-gateway/pkg/version"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-)
-
-// (potentially) injected by makefile
-var (
-	version   string
-	builddate string
-	githash   string
 )
 
 var (
@@ -80,7 +75,7 @@ func rootCommand() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:           "linstor-gateway",
-		Version:       version,
+		Version:       version.Version,
 		Short:         "Manage linstor-gateway targets and exports",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
@@ -96,7 +91,11 @@ func rootCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cli, err = client.NewClient(client.BaseURL(base), client.Log(log.StandardLogger()))
+			cli, err = client.NewClient(
+				client.BaseURL(base),
+				client.Log(log.StandardLogger()),
+				client.UserAgent(version.UserAgent()),
+			)
 			if err != nil {
 				return fmt.Errorf("failed to connect to LINSTOR Gateway server: %w", err)
 			}

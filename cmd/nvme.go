@@ -3,16 +3,19 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/LINBIT/linstor-gateway/client"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/prompt"
 	"github.com/LINBIT/linstor-gateway/pkg/upgrade"
+	"github.com/LINBIT/linstor-gateway/pkg/version"
+
 	"github.com/fatih/color"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/rck/unit"
@@ -25,7 +28,7 @@ import (
 func nvmeCommands() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:     "nvme",
-		Version: version,
+		Version: version.Version,
 		Short:   "Manages Highly-Available NVME targets",
 		Long:    `nvme manages highly available NVME targets by leveraging LINSTOR and DRBD.`,
 		Args:    cobra.NoArgs,

@@ -5,19 +5,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/LINBIT/linstor-gateway/pkg/rest"
-	"github.com/moul/http2curl"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/moul/http2curl"
+
+	"github.com/LINBIT/linstor-gateway/pkg/rest"
 )
 
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
 	log        interface{} // must be either Logger, TestLogger, or LeveledLogger
+	userAgent  string
 
 	Iscsi  *ISCSIService
 	Nfs    *NFSService
@@ -130,6 +133,9 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
 	}
 	req.Header.Set("Accept", "application/json")
 

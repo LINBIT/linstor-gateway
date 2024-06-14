@@ -18,7 +18,7 @@ import (
 func filesystemProps(vol VolumeConfig) map[string]string {
 	return map[string]string{
 		apiconsts.NamespcFilesystem + "/Type":       vol.FileSystem,
-		apiconsts.NamespcFilesystem + "/MkfsParams": "-E root_owner=" + vol.FileSystemRootOwner.String(),
+		apiconsts.NamespcFilesystem + "/MkfsParams": "-E nodiscard -E root_owner=" + vol.FileSystemRootOwner.String(),
 	}
 }
 

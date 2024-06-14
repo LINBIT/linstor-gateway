@@ -218,7 +218,7 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		volProps := map[string]string{}
 		if vol.FileSystem != "" {
 			volProps[apiconsts.NamespcFilesystem+"/Type"] = vol.FileSystem
-			volProps[apiconsts.NamespcFilesystem+"/MkfsParams"] = "-E root_owner=" + vol.FileSystemRootOwner.String()
+			volProps[apiconsts.NamespcFilesystem+"/MkfsParams"] = "-E nodiscard -E root_owner=" + vol.FileSystemRootOwner.String()
 		}
 		var volFlags []string
 		if res.GrossSize {

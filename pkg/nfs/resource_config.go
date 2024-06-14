@@ -3,14 +3,16 @@ package nfs
 import (
 	"errors"
 	"fmt"
-	apiconsts "github.com/LINBIT/golinstor"
-	"github.com/icza/gog"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	apiconsts "github.com/LINBIT/golinstor"
+	"github.com/icza/gog"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/LINBIT/golinstor/client"
 	"github.com/google/uuid"
@@ -151,6 +153,24 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	return r, nil
 }
 
+func parseRootOwner(mkfsParams string) (common.UidGid, error) {
+	rootOwnerRegex := regexp.MustCompile(`-E root_owner=(\d+):(\d+)`)
+	matches := rootOwnerRegex.FindStringSubmatch(mkfsParams)
+	if len(matches) != 3 {
+		return common.UidGid{}, fmt.Errorf("failed to parse uid and gid from MkfsParams: %q", mkfsParams)
+	}
+
+	uid, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return common.UidGid{}, fmt.Errorf("failed to parse uid from MkfsParams: %q", matches[1])
+	}
+	gid, err := strconv.Atoi(matches[2])
+	if err != nil {
+		return common.UidGid{}, fmt.Errorf("failed to parse gid from MkfsParams: %q", matches[2])
+	}
+	return common.UidGid{Uid: uid, Gid: gid}, nil
+}
+
 // parseVolume converts a resource agent of the type "ocf:heartbeat:Filesystem"
 // to a VolumeConfig.
 // It associates the agent to a specific volume via its name (for details see
@@ -185,11 +205,10 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 	}
 	var rootOwner common.UidGid
 	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/MkfsParams"]; ok {
-		scanned, err := fmt.Sscanf(val, "-E root_owner=%d:%d", &rootOwner.Uid, &rootOwner.Gid)
-		if scanned != 2 || err != nil {
+		rootOwner, err = parseRootOwner(val)
+		if err != nil {
 			log.WithFields(log.Fields{
 				"err":      err,
-				"scanned":  scanned,
 				"volume":   vol.VolumeNumber,
 				"resource": resName,
 			}).Warnf("invalid MkfsParams for volume: %q", val)

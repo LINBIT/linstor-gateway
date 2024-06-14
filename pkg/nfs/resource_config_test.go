@@ -1,16 +1,18 @@
 package nfs
 
 import (
-	apiconsts "github.com/LINBIT/golinstor"
-	"github.com/LINBIT/golinstor/client"
-	"github.com/LINBIT/linstor-gateway/pkg/common"
-	"github.com/LINBIT/linstor-gateway/pkg/reactor"
-	"github.com/icza/gog"
-	"github.com/pelletier/go-toml"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"net"
 	"testing"
+
+	apiconsts "github.com/LINBIT/golinstor"
+	"github.com/LINBIT/golinstor/client"
+	"github.com/icza/gog"
+	"github.com/pelletier/go-toml"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/LINBIT/linstor-gateway/pkg/common"
+	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
 func filesystemProps(vol VolumeConfig) map[string]string {
@@ -261,6 +263,45 @@ func TestValid(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParseRootOwner(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   string
+		want    common.UidGid
+		wantErr bool
+	}{{
+		name:    "empty",
+		input:   "",
+		wantErr: true,
+	}, {
+		name:    "invalid",
+		input:   "-E root_owner=invalid",
+		wantErr: true,
+	}, {
+		name:  "normal",
+		input: "-E root_owner=123:456",
+		want:  common.UidGid{Uid: 123, Gid: 456},
+	}, {
+		name:  "other_text",
+		input: "-E something=else -E root_owner=123:456 -E other=stuff",
+		want:  common.UidGid{Uid: 123, Gid: 456},
+	}}
+	for i := range tests {
+		tcase := &tests[i]
+		t.Run(tcase.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := parseRootOwner(tcase.input)
+			if tcase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tcase.want, got)
 			}
 		})
 	}

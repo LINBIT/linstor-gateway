@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 )
 
@@ -17,13 +18,13 @@ func (s *NFSService) GetAll(ctx context.Context) ([]*nfs.ResourceConfig, error) 
 
 func (s *NFSService) Create(ctx context.Context, config *nfs.ResourceConfig) (*nfs.ResourceConfig, error) {
 	var ret *nfs.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nfs", config, ret)
+	_, err := s.client.doPOST(ctx, "/api/v2/nfs", config, &ret)
 	return ret, err
 }
 
 func (s *NFSService) Get(ctx context.Context, name string) (*nfs.ResourceConfig, error) {
 	var config *nfs.ResourceConfig
-	_, err := s.client.doGET(ctx, "/api/v2/nfs/"+name, config)
+	_, err := s.client.doGET(ctx, "/api/v2/nfs/"+name, &config)
 	return config, err
 }
 
@@ -34,12 +35,12 @@ func (s *NFSService) Delete(ctx context.Context, name string) error {
 
 func (s *NFSService) Start(ctx context.Context, name string) (*nfs.ResourceConfig, error) {
 	var ret *nfs.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/start", nil, ret)
+	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/start", nil, &ret)
 	return ret, err
 }
 
 func (s *NFSService) Stop(ctx context.Context, name string) (*nfs.ResourceConfig, error) {
 	var ret *nfs.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/stop", nil, ret)
+	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/stop", nil, &ret)
 	return ret, err
 }

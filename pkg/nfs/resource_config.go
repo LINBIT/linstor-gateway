@@ -153,22 +153,16 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	return r, nil
 }
 
-func parseRootOwner(mkfsParams string) (common.UidGid, error) {
+func parseRootOwner(mkfsParams string) (common.UserGroup, error) {
 	rootOwnerRegex := regexp.MustCompile(`-E root_owner=(\d+):(\d+)`)
 	matches := rootOwnerRegex.FindStringSubmatch(mkfsParams)
 	if len(matches) != 3 {
-		return common.UidGid{}, fmt.Errorf("failed to parse uid and gid from MkfsParams: %q", mkfsParams)
+		return common.UserGroup{}, fmt.Errorf("failed to parse uid and gid from MkfsParams: %q", mkfsParams)
 	}
-
-	uid, err := strconv.Atoi(matches[1])
-	if err != nil {
-		return common.UidGid{}, fmt.Errorf("failed to parse uid from MkfsParams: %q", matches[1])
-	}
-	gid, err := strconv.Atoi(matches[2])
-	if err != nil {
-		return common.UidGid{}, fmt.Errorf("failed to parse gid from MkfsParams: %q", matches[2])
-	}
-	return common.UidGid{Uid: uid, Gid: gid}, nil
+	return common.UserGroup{
+		User:  matches[1],
+		Group: matches[2],
+	}, nil
 }
 
 // parseVolume converts a resource agent of the type "ocf:heartbeat:Filesystem"
@@ -203,16 +197,22 @@ func parseVolume(agent *reactor.ResourceAgent, volumes []client.VolumeDefinition
 	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/Type"]; ok {
 		filesystem = val
 	}
-	var rootOwner common.UidGid
-	if val, ok := vol.Props[apiconsts.NamespcFilesystem+"/MkfsParams"]; ok {
-		rootOwner, err = parseRootOwner(val)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"err":      err,
-				"volume":   vol.VolumeNumber,
-				"resource": resName,
-			}).Warnf("invalid MkfsParams for volume: %q", val)
+	var rootOwner common.UserGroup
+	if val, ok := vol.Props[apiconsts.NamespcFilesystem+apiconsts.KeyFsUser]; ok {
+		rootOwner.User = val
+	}
+	if val, ok := vol.Props[apiconsts.NamespcFilesystem+apiconsts.KeyFsGroup]; ok {
+		rootOwner.Group = val
+	}
+	if rootOwner.User == "" || rootOwner.Group == "" {
+		// for backwards compatibility, we also support the root_owner parameter in MkfsParams
+		if val, ok := vol.Props[apiconsts.NamespcFilesystem+apiconsts.KeyFsMkfsparameters]; ok {
+			rootOwner, err = parseRootOwner(val)
+			if err != nil {
+				return nil, err
+			}
 		}
+
 	}
 	if vol.VolumeNumber == nil {
 		vol.VolumeNumber = gog.Ptr(int32(0))

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 
 	"github.com/icza/gog"
 
@@ -219,8 +218,8 @@ func (l *Linstor) EnsureResource(ctx context.Context, res Resource, mayExist boo
 		volProps := map[string]string{}
 		if vol.FileSystem != "" {
 			volProps[apiconsts.NamespcFilesystem+"/"+apiconsts.KeyFsType] = vol.FileSystem
-			volProps[apiconsts.NamespcFilesystem+"/"+apiconsts.KeyFsUser] = strconv.Itoa(vol.FileSystemRootOwner.Uid)
-			volProps[apiconsts.NamespcFilesystem+"/"+apiconsts.KeyFsGroup] = strconv.Itoa(vol.FileSystemRootOwner.Gid)
+			volProps[apiconsts.NamespcFilesystem+"/"+apiconsts.KeyFsUser] = vol.FileSystemRootOwner.User
+			volProps[apiconsts.NamespcFilesystem+"/"+apiconsts.KeyFsGroup] = vol.FileSystemRootOwner.Group
 		}
 		var volFlags []string
 		if res.GrossSize {

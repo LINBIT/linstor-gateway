@@ -17,8 +17,9 @@ import (
 
 func filesystemProps(vol VolumeConfig) map[string]string {
 	return map[string]string{
-		apiconsts.NamespcFilesystem + "/Type":       vol.FileSystem,
-		apiconsts.NamespcFilesystem + "/MkfsParams": "-E nodiscard -E root_owner=" + vol.FileSystemRootOwner.String(),
+		apiconsts.NamespcFilesystem + "/Type":              vol.FileSystem,
+		apiconsts.NamespcFilesystem + apiconsts.KeyFsUser:  vol.FileSystemRootOwner.User,
+		apiconsts.NamespcFilesystem + apiconsts.KeyFsGroup: vol.FileSystemRootOwner.Group,
 	}
 }
 
@@ -38,7 +39,7 @@ func TestResource_RoundTrip(t *testing.T) {
 					Number:              1,
 					SizeKiB:             1024,
 					FileSystem:          "ext4",
-					FileSystemRootOwner: common.UidGid{Uid: 47, Gid: 11},
+					FileSystemRootOwner: common.UserGroup{User: "someone", Group: "somegroup"},
 				},
 				ExportPath: "/",
 			},
@@ -273,7 +274,7 @@ func TestParseRootOwner(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    common.UidGid
+		want    common.UserGroup
 		wantErr bool
 	}{{
 		name:    "empty",
@@ -286,11 +287,11 @@ func TestParseRootOwner(t *testing.T) {
 	}, {
 		name:  "normal",
 		input: "-E root_owner=123:456",
-		want:  common.UidGid{Uid: 123, Gid: 456},
+		want:  common.UserGroup{User: "123", Group: "456"},
 	}, {
 		name:  "other_text",
 		input: "-E something=else -E root_owner=123:456 -E other=stuff",
-		want:  common.UidGid{Uid: 123, Gid: 456},
+		want:  common.UserGroup{User: "123", Group: "456"},
 	}}
 	for i := range tests {
 		tcase := &tests[i]

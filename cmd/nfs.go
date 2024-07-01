@@ -117,7 +117,7 @@ linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/
 						Number:              i + 1,
 						SizeKiB:             uint64(val.Value / unit.K),
 						FileSystem:          filesystem,
-						FileSystemRootOwner: common.UidGid{Uid: 65534, Gid: 65534}, // corresponds to "nobody:nobody"
+						FileSystemRootOwner: common.UserGroup{User: "nobody", Group: "nobody"},
 					},
 				})
 			}

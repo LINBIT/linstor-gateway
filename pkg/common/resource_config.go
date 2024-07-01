@@ -2,12 +2,14 @@ package common
 
 import (
 	"fmt"
-	"github.com/LINBIT/golinstor/client"
-	"github.com/LINBIT/linstor-gateway/pkg/reactor"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"path/filepath"
 	"strings"
+
+	"github.com/LINBIT/golinstor/client"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
 const (
@@ -37,7 +39,7 @@ func ClusterPrivateVolume() VolumeConfig {
 		Number:              0,
 		SizeKiB:             clusterPrivateVolumeSizeKiB,
 		FileSystem:          clusterPrivateVolumeFileSystem,
-		FileSystemRootOwner: UidGid{Uid: 0, Gid: 0},
+		FileSystemRootOwner: UserGroup{User: "root", Group: "root"},
 	}
 }
 

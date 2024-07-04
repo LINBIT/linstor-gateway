@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0-rc.1] - 2024-07-04
+
+### Changes
+
+* Add a sensible User-Agent when sending http requests via the client. (fc34f086)
+* NFS: Let LINSTOR set the file system owner of the export's root directory. This allows XFS file systems to be used with NFS exports. (01161bfc)
+* NFS: Add a --filesystem option when creating an NFS export. (86b70a58)
+
+### Fixes
+
+* Fix some Go API client functions so that they actually return data. (34f68fc3)
+
 ## [1.5.0] - 2024-04-17
 
 ### Features
@@ -273,7 +285,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0-rc.1...HEAD
+[1.6.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.5.0...v1.6.0-rc.1
 [1.5.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0-rc.1...v1.4.0
 [1.4.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.3.0...v1.4.0-rc.1

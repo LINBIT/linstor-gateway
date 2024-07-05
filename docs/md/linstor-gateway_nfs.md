@@ -8,7 +8,7 @@ linstor-gateway nfs manages highly available NFS exports by leveraging LINSTOR
 and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups
 is a prerequisite to use this tool.
 
-NOTE that, currently, only one NFS export can exist in a cluster.
+NOTE that only one NFS resource can exist in a cluster.
 See "help nfs create" for more information
 
 ### Options

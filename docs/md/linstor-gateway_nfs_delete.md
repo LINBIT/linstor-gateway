@@ -20,7 +20,8 @@ linstor-gateway nfs delete example
 ### Options
 
 ```
-  -h, --help   help for delete
+  -f, --force   Delete without prompting for confirmation
+  -h, --help    help for delete
 ```
 
 ### Options inherited from parent commands

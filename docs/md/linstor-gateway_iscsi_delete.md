@@ -21,7 +21,8 @@ linstor-gateway iscsi delete iqn.2019-08.com.linbit:example
 ### Options
 
 ```
-  -h, --help   help for delete
+  -f, --force   Delete without prompting for confirmation
+  -h, --help    help for delete
 ```
 
 ### Options inherited from parent commands

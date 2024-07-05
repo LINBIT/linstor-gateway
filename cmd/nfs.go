@@ -31,7 +31,7 @@ func nfsCommands() *cobra.Command {
 and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups
 is a prerequisite to use this tool.
 
-NOTE that, currently, only one NFS export can exist in a cluster.
+NOTE that only one NFS resource can exist in a cluster.
 See "help nfs create" for more information`,
 		Args: cobra.NoArgs,
 	}
@@ -71,18 +71,11 @@ specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS 
 export.
 
-!!! NOTE that, currently, only one NFS export can exist in a cluster.
-To create multiple mountable exports, run this command once, then manually create
-subdirectories in the resulting export directory.
-For example:
-$ linstor-gateway nfs create example 192.168.122.222/24 1G
-Created export 'example' at 192.168.122.222:/srv/gateway-exports/example
-$ mkdir /srv/gateway-exports/example/test{1,2}
-
-This can then be mounted separately:
-$ mount -t nfs 192.168.122.222:/srv/gateway-exports/example/test1 /mnt/mynfs/`,
+!!! NOTE that only one NFS resource can exist in a cluster.
+To create multiple exports, create a single resource with multiple volumes.`,
 		Example: `linstor-gateway nfs create example 192.168.211.122/24 2G
 linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
+linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --export-path /movies
 `,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {

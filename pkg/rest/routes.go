@@ -16,7 +16,7 @@ func (s *server) routes() {
 	iscsiv2 := apiv2.PathPrefix("/iscsi").Subrouter()
 	iscsiv2.HandleFunc("", s.ISCSIList()).Methods("GET")
 	iscsiv2.HandleFunc("", s.ISCSICreate()).Methods("POST")
-	iscsiv2.HandleFunc("({iqn}", s.ISCSIGet(true)).Methods("GET")
+	iscsiv2.HandleFunc("/{iqn}", s.ISCSIGet(true)).Methods("GET")
 	iscsiv2.HandleFunc("/{iqn}", s.ISCSIDelete(true)).Methods("DELETE")
 	iscsiv2.HandleFunc("/{iqn}/start", s.ISCSIStart()).Methods("POST")
 	iscsiv2.HandleFunc("/{iqn}/stop", s.ISCSIStop()).Methods("POST")

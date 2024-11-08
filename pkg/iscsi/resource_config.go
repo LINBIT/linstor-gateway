@@ -4,13 +4,14 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"github.com/icza/gog"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/icza/gog"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/LINBIT/golinstor/client"
 
@@ -345,15 +346,21 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		// do the same thing as the ocf resource agent:
 		//   To have a reasonably unique default SCSI SN, use the first 8 bytes
 		//   of an MD5 hash of $OCF_RESOURCE_INSTANCE.
-		// except instead of using $OCF_RESOURCE_INSTANCE, we use the IQN.
-		serial := fmt.Sprintf("%.4x", md5.Sum([]byte(r.IQN.String())))
-		log.WithField("iqn", r.IQN.String()).Tracef("Setting scsi serial number to %s", serial)
+		// except instead of using $OCF_RESOURCE_INSTANCE, we use the IQN plus
+		// the volume number. This gives us a unique serial number for each
+		// volume, which should please most initiators.
+		hashContent := fmt.Sprintf("%s-%d", r.IQN.String(), vol.VolumeNumber)
+		serial := fmt.Sprintf("%x", md5.Sum([]byte(hashContent)))[:8]
+		log.
+			WithField("iqn", r.IQN.String()).
+			WithField("volume", vol.VolumeNumber).
+			Tracef("Setting scsi serial number to %s", serial)
 
 		luAttrs := map[string]string{
 			"target_iqn": r.IQN.String(),
 			"lun":        strconv.Itoa(int(vol.VolumeNumber)),
 			"path":       fmt.Sprintf(devPath),
-			"product_id": "LINSTOR iSCSI",
+			"product_id": "LINSTOR " + serial,
 			"scsi_sn":    serial,
 		}
 		if r.Implementation != "" {

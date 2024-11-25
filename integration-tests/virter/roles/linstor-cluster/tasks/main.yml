@@ -5,6 +5,14 @@
   tags:
     - preload
 
+- name: Remove all other kernels
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ ansible_facts.packages | dict2items | selectattr('key', 'search', '^kernel-[0-9]') | map(attribute='key') | list }}"
+  tags:
+    - preload
+
 - name: Install required kernel version
   yum:
     name: kernel-{{ kernel_version }}
@@ -12,11 +20,15 @@
   tags:
     - preload
 
-- name: Remove all other kernels
+- name: List installed kernels
   yum:
-    name: "{{ item }}"
-    state: absent
-  with_items: "{{ ansible_facts.packages | dict2items | selectattr('key', 'search', '^kernel-[0-9]') | map(attribute='key') | list }}"
+    list: kernel
+  register: installed_kernels
+  tags:
+    - preload
+
+- debug:
+    var: installed_kernels
   tags:
     - preload
 

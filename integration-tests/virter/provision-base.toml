@@ -1,7 +1,7 @@
 version = 1
 
 [values]
-KernelVersion = "5.14.0-362.13.1.el9_3.x86_64"
+KernelVersion = "5.14.0-503.11.1.el9_5.x86_64"
 RhelMajorVersion = "9"
 LinbitRepoBaseURL = ""
 CIRepoBaseURL = ""

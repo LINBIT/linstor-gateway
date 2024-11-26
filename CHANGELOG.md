@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2024-11-26
+
+### Changes
+
+* Change the `scsi_sn` and `product_id` calculations so that they are both unique per volume. (0d144af9)
+
 ## [1.6.0] - 2024-07-18
 
 ### Fixes
@@ -291,7 +297,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.7.0...HEAD
+[1.6.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0-rc.1...v1.6.0
 [1.6.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.5.0...v1.6.0-rc.1
 [1.5.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...v1.5.0

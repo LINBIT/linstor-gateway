@@ -18,7 +18,7 @@ stages:
 
 build:
   stage: build
-  image: golang:buster
+  image: golang:1.23-bookworm
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_TAG
@@ -122,7 +122,7 @@ publish-docker:
 
 test:
   stage: test
-  image: golang:buster
+  image: golang:1.23-bookworm
   rules:
     - if: $CI_MERGE_REQUEST_ID
   cache:

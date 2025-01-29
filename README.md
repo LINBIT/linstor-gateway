@@ -8,30 +8,31 @@ LINSTOR Gateway manages highly available **iSCSI targets**, **NFS exports**, and
 **NVMe-oF targets** by leveraging [LINSTOR](https://github.com/LINBIT/linstor-server)
 and [drbd-reactor](https://github.com/LINBIT/drbd-reactor).
 
-# Getting Started
+## Getting started
+
+Refer to the [_Understanding LINSTOR Gateway_](https://linbit.com/drbd-user-guide/linstorgateway-guide-1_0-en/) user guide which outlines some of the basic knowledge needed to effectively operate and administer a storage cluster that relies on LINSTOR Gateway.
+This guide also provides some insight into the design decisions that were made while implementing LINSTOR Gateway, and gives an overview of how its internals work.
 
 For a step-by-step tutorial on setting up a LINSTOR Gateway cluster, refer to
 this blog post:
 [Create a Highly Available iSCSI Target Using LINSTOR Gateway](https://linbit.com/blog/create-a-highly-available-iscsi-target-using-linstor-gateway/).
 
-# Requirements
+## Requirements
 
 LINSTOR Gateway provides a built-in health check that automatically tests whether all requirements are correctly met on
 the current host.
 
-Simply execute
+Simply enter the following command, and follow any suggestions that the command output might show:
 
 ```
 linstor-gateway check-health
 ```
 
-and follow any suggestions that may come up.
-
-# Documentation
+## Documentation
 
 If you want to learn more about LINSTOR Gateway, here are some pointers for further reading.
 
-### Command Line
+### Command line
 
 Help for the command line interface is available by running:
 
@@ -43,7 +44,7 @@ The same information can also be browsed in Markdown format [here](./docs/md/lin
 
 ### Configuration
 
-LINSTOR Gateway takes a configuration file. See its documentation [here](./docs/config.md).
+LINSTOR Gateway takes a configuration file. Refer to its documentation [here](./docs/config.md).
 
 ### Internals
 
@@ -53,7 +54,7 @@ documented [here](https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway/)
 It also exposes a Go client for the REST
 API: <a href="https://pkg.go.dev/github.com/LINBIT/linstor-gateway/client"><img src="https://pkg.go.dev/badge/github.com/LINBIT/linstor-gateway/client.svg" alt="Go Reference"></a>
 
-# Building
+## Building
 
 If you want to test the latest unstable version of LINSTOR Gateway, you can build the git version from sources:
 

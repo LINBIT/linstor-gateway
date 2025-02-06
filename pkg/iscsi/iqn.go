@@ -12,16 +12,24 @@ var (
 	// A notable difference in this implementation (which also differs from
 	// RFC3720, where the IQN format is defined) is that we require the
 	// "unique" part after the colon to be present.
+	// We also impose a stricter format for the domain name, allowing only
+	// lowercase alphanumeric characters and hyphens.
+	// rtslib-fb converts the iqn to lowercase at some point, so we cannot
+	// allow uppercase characters.
 	//
 	// See also the source code of rtslib-fb for the original regex:
 	// https://github.com/open-iscsi/rtslib-fb/blob/b5be390be961/rtslib/utils.py#L384
-	regexIQN = `iqn\.\d{4}-[0-1][0-9]\.[^ _]*\.[^ _]*`
+	regexIQN = `iqn\.\d{4}-[0-1][0-9]\.[a-z0-9-]+\.[a-z0-9-]+`
 
 	// This format is mandated by LINSTOR. Since we use the unique part
 	// directly for LINSTOR resource names, it needs to be compliant.
+	// Can only contain lowercase alphanumeric characters and hyphens (for the
+	// same reason as the domain name).
+	// The name must not start with a digit, and must be at least two characters
+	// long.
 	// Note: while LINSTOR does allow underscores, rtslib-fb does not. See
 	// the GitHub link above: it checks for `not re.search('_', wwn)`
-	regexResourceName = `[[:alpha:]][[:alnum:]-]+`
+	regexResourceName = `[a-z][a-z0-9-]+`
 
 	regexWWN = regexp.MustCompile(`^(` + regexIQN + `):(` + regexResourceName + `)$`)
 )
@@ -93,5 +101,7 @@ func NewIqn(s string) (Iqn, error) {
 type invalidIqn string
 
 func (i invalidIqn) Error() string {
-	return fmt.Sprintf("'%s' is not a valid IQN. expected format: iqn.YYYY-MM.DOTTED.DOMAIN.NAME:UNIQUE_RESOURCE_NAME", string(i))
+	return fmt.Sprintf("'%s' is not a valid IQN. expected format: "+
+		"iqn.YYYY-MM.DOTTED.DOMAIN.NAME:UNIQUE_RESOURCE_NAME (only lowercase characters, digits, and \"-\")",
+		string(i))
 }

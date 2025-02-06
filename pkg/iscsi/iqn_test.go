@@ -55,6 +55,18 @@ func TestCheckIQN(t *testing.T) {
 		descr:       "empty string",
 		input:       "",
 		expectError: true,
+	}, {
+		descr:       "missing iqn",
+		input:       "2019-08.com.linbit:example",
+		expectError: true,
+	}, {
+		descr:       "uppercase domain name",
+		input:       "iqn.2019-08.CoM.LiNBiT:example",
+		expectError: true,
+	}, {
+		descr:       "uppercase unique part",
+		input:       "iqn.2019-08.com.linbit:EXAmple",
+		expectError: true,
 	}}
 
 	for i := range cases {

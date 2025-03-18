@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## 1.8.0 - 2025-03-18
+
+### Changes
+
+* Add a health check for the `fuser` tool (20f28d80)
+* Disallow uppercase characters when creating iSCSI IQN (9754bf6d)
+
+### Fixes
+
+* Fix a typo in a REST route (ae74e771)
+
 ## [1.7.0] - 2024-11-26
 
 ### Changes

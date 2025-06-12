@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 	"github.com/LINBIT/linstor-gateway/pkg/nvmeof"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"

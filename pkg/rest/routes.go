@@ -1,8 +1,22 @@
 package rest
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/LINBIT/linstor-gateway/pkg/version"
+)
+
+// serverNameMiddleware adds a "Server" header to the response, identifying the linstor-gateway server.
+func serverNameMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "linstor-gateway/"+version.Version)
+		next.ServeHTTP(w, r)
+	})
+}
 
 func (s *server) routes() {
+	s.router.Use(serverNameMiddleware)
+
 	apiv2 := s.router.PathPrefix("/api/v2").Subrouter()
 	apiv2.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,4 +60,7 @@ func (s *server) routes() {
 	nvmeofv2.HandleFunc("/{nqn}/{nsid}", s.NVMeoFAddVolume()).Methods("PUT")
 	nvmeofv2.HandleFunc("/{nqn}/{nsid}", s.NVMeoFDelete(false)).Methods("DELETE")
 
+	// gorilla/mux usually does not apply middlewares to the NotFoundHandler. To apply the serverNameMiddleware,
+	// overwrite the NotFoundHandler with a new route that has the middleware applied.
+	s.router.NotFoundHandler = s.router.NewRoute().HandlerFunc(http.NotFound).GetHandler()
 }

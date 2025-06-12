@@ -1,5 +1,5 @@
 variables:
-  BUILD_HELPERS_VERSION: cad23b57db14b7676808fa645c4561bc66c3e204
+  BUILD_HELPERS_VERSION: b67f7745a1485878063a43c3d5dc8b21eb15e966
   VIRTER_VERSION: v0.27.0
   VMSHED_VERSION: v0.22.0
   # we have to change the way GitLab CI clones the repository.
@@ -168,3 +168,18 @@ test-e2e:
     reports:
       junit: integration-tests/tests-out/test-results/*.xml
     expire_in: 1 week
+
+sbom:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+  image: golang:1.23-bookworm
+  before_script:
+    - git init build-helpers -q -b unused
+    - git -C build-helpers fetch -q --depth 1 $CI_SERVER_PROTOCOL://gitlab-ci-token:${CI_JOB_TOKEN}@$CI_SERVER_HOST:$CI_SERVER_PORT/linbit/build-helpers.git $BUILD_HELPERS_VERSION
+    - git -C build-helpers checkout -q $BUILD_HELPERS_VERSION
+    - . build-helpers/gitlab-utils.sh
+    - ci_prepare_tools
+  script:
+    - make sbom/linstor-gateway.cdx.json
+    - ci_put_bom linstor-gateway $CI_COMMIT_TAG sbom/linstor-gateway.cdx.json

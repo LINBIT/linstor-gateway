@@ -86,3 +86,7 @@ clean:
 .PHONY: clean-version
 clean-version:
 	rm -f version.env
+
+sbom/linstor-gateway.cdx.json:
+	@mkdir -p sbom
+	go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest app -json -output $@

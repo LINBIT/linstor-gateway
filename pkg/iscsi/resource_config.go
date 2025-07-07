@@ -360,7 +360,11 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			"target_iqn": r.IQN.String(),
 			"lun":        strconv.Itoa(int(vol.VolumeNumber)),
 			"path":       fmt.Sprintf(devPath),
-			"product_id": "LINSTOR " + serial,
+			// Attention: VMware uses the product_id (= t10_dev_id) to determine
+			// LUN equivalence, so it must be unique for each LUN. However, it
+			// only considers the first 8 bytes for whatever reason, so take
+			// care that the first 8 characters of the product_id are unique.
+			"product_id": serial,
 			"scsi_sn":    serial,
 		}
 		if r.Implementation != "" {

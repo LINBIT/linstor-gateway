@@ -1,5 +1,5 @@
 TEST_SUITE_IMAGE ?= linstor-gateway-e2e:latest
-BASE_OS_IMAGE ?= alma-9
+BASE_OS_IMAGE_SOURCE ?= https://vault.almalinux.org/9.5/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.5-20241120.x86_64.qcow2
 BASE_IMAGE ?= $$LINBIT_DOCKER_REGISTRY/linstor-gateway-tests/base:alma-9
 LINSTOR_GATEWAY_VERSION ?= 0.0.0.$$CI_COMMIT_SHA
 TORUN ?= all
@@ -19,7 +19,8 @@ run:
 			--set values.LinstorGatewayVersion=$(LINSTOR_GATEWAY_VERSION)
 
 base_image:
-	virter image build $(BASE_OS_IMAGE) \
+	virter image pull linstor-gateway-tests-base-os $(BASE_OS_IMAGE_SOURCE)
+	virter image build linstor-gateway-tests-base-os \
 			--provision virter/provision-base.toml \
 			--set values.LinbitRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com \
 			--set values.CIRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/ci-yum/rhel9 \

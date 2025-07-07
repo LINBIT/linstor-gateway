@@ -113,7 +113,7 @@ func checkAgent(iscsiBackends []string) error {
 		switch backend {
 		case "lio-t":
 			iscsiChecks = append(iscsiChecks,
-				&checkInPath{binary: "targetcli", packageName: "targetcli", hint: "targetcli is only required for the LIO backend. If you are not planning on using LIO, try excluding it via `--iscsi-backends`."},
+				&checkInPath{binary: "targetcli", packageName: "targetcli", hint: "targetcli is only required for the LIO target (lio-t) backend. If you are not planning on using LIO target, try excluding it via `--iscsi-backends`."},
 			)
 		case "scst":
 			iscsiChecks = append(iscsiChecks,

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2025-07-08
+
+### Changes
+
+* Add a Server header to the REST API responses to identify the LINSTOR Gateway server. (82c9a4fe)
+* Generate Software Bill of Materials (SBOM) files for each release. (173ab210)
+* Clarify a health check message about the `targetcli` package. (df6af21c)
+
+### Fixes
+
+* Make the first 8 bytes of the `product_id` unique so that VMware ESXi does not consider two devices to be identical. (f9510879)
+
 ## [1.8.0] - 2025-03-18
 
 ### Changes
@@ -308,9 +320,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.7.0...v1.8.0
-[1.6.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0...v1.7.0
+[1.7.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0-rc.1...v1.6.0
 [1.6.0-rc.1]: https://github.com/LINBIT/linstor-gateway/compare/v1.5.0...v1.6.0-rc.1
 [1.5.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.4.0...v1.5.0

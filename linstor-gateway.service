@@ -3,7 +3,7 @@ Description=LINSTOR Gateway
 After=network.target
 
 [Service]
-ExecStart=/usr/sbin/linstor-gateway server --addr ":8080"
+ExecStart=/usr/sbin/linstor-gateway server
 
 [Install]
 WantedBy=multi-user.target

@@ -16,6 +16,12 @@ import (
 	"github.com/LINBIT/linstor-gateway/pkg/rest"
 )
 
+const (
+	DefaultHost   = "localhost"
+	DefaultScheme = "http"
+	DefaultPort   = 8337
+)
+
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
@@ -65,7 +71,7 @@ type LeveledLogger interface {
 }
 
 func NewClient(options ...Option) (*Client, error) {
-	defaultBase, err := url.Parse("http://localhost:8080")
+	defaultBase, err := url.Parse(fmt.Sprintf("%s://%s:%d", DefaultScheme, DefaultHost, DefaultPort))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse default URL: %w", err)
 	}

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/LINBIT/linstor-gateway/client"
 	"github.com/LINBIT/linstor-gateway/pkg/rest"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,7 +20,7 @@ An up to date version of the REST-API documentation can be found here:
 https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 
 For example:
-linstor-gateway server --addr=":8080"`,
+linstor-gateway server --addr=":8337"`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			controllers := viper.GetStringSlice("linstor.controllers")
@@ -26,7 +29,8 @@ linstor-gateway server --addr=":8080"`,
 	}
 
 	serverCmd.ResetCommands()
-	serverCmd.Flags().StringVar(&addr, "addr", ":8080", "Host and port as defined by http.ListenAndServe()")
+	defaultAddr := fmt.Sprintf(":%d", client.DefaultPort)
+	serverCmd.Flags().StringVar(&addr, "addr", defaultAddr, "Host and port as defined by http.ListenAndServe()")
 	serverCmd.Flags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
 	viper.BindPFlag("linstor.controllers", serverCmd.Flags().Lookup("controllers"))
 	serverCmd.DisableAutoGenTag = true

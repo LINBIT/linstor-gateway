@@ -1,6 +1,6 @@
 openapi: 3.0.2
 servers:
-  - url: 'http://localhost:8080'
+  - url: 'http://localhost:8337'
     description: Local LINSTOR Gateway server
 info:
   description: |
@@ -9,11 +9,11 @@ info:
     The v2 REST API should stay compatible; only additions are made to the API.
     If there are breaking changes or redesigned a new major REST API version will be issued.
 
-    By default, the server runs on port `8080`.
+    By default, the server runs on port `8337`.
 
     To change the bind address or port you can use the `--addr` option to linstor-gateway:
     ```
-    linstor-gateway server --addr=":8080"
+    linstor-gateway server --addr=":12345"
     ```
 
     Changelog:

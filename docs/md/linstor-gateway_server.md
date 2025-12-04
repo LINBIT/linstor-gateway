@@ -9,7 +9,7 @@ An up to date version of the REST-API documentation can be found here:
 https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 
 For example:
-linstor-gateway server --addr=":8080"
+linstor-gateway server --addr=":8337"
 
 ```
 linstor-gateway server [flags]
@@ -18,7 +18,7 @@ linstor-gateway server [flags]
 ### Options
 
 ```
-      --addr string           Host and port as defined by http.ListenAndServe() (default ":8080")
+      --addr string           Host and port as defined by http.ListenAndServe() (default ":8337")
       --controllers strings   List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)
   -h, --help                  help for server
 ```
@@ -27,7 +27,7 @@ linstor-gateway server [flags]
 
 ```
       --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8337")
       --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 

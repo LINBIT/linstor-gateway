@@ -296,7 +296,7 @@ class Node:
             return stdout.getvalue().strip()
 
     def assert_resource_exists(self, cls, name):
-        resp = requests.get('http://{}:8080/api/v2/{}'.format(self.addr, cls))
+        resp = requests.get('http://{}:8337/api/v2/{}'.format(self.addr, cls))
         try:
             resources = resp.json()
         except:
@@ -313,7 +313,7 @@ class Node:
             'ASSERT: {} resource {} should exist, but not found (resources: {})'.format(cls, name, resources))
 
     def assert_resource_not_exists(self, cls, name):
-        resp = requests.get('http://{}:8080/api/v2/{}'.format(self.addr, cls))
+        resp = requests.get('http://{}:8337/api/v2/{}'.format(self.addr, cls))
         try:
             resources = resp.json()
         except:

@@ -27,7 +27,7 @@ linstor-gateway iscsi list
 
 ```
       --config string     Config file to load (default "/etc/linstor-gateway/linstor-gateway.toml")
-  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8080")
+  -c, --connect string    LINSTOR Gateway server to connect to (default "http://localhost:8337")
       --loglevel string   Set the log level (as defined by logrus) (default "info")
 ```
 

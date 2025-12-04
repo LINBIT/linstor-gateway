@@ -3,13 +3,14 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func parseURL(str string) *url.URL {
@@ -46,14 +47,14 @@ func TestNewRequest(t *testing.T) {
 	}, {
 		name: `default case`,
 		in:   params{method: "GET", path: "/test", body: nil},
-		want: wantData{Method: "GET", URL: parseURL("http://localhost:8080/test"), Body: ""},
+		want: wantData{Method: "GET", URL: parseURL("http://localhost:8337/test"), Body: ""},
 	}, {
 		name: `body`,
 		in: params{method: "POST", path: "/test", body: testData{
 			A: "test",
 			B: 4711,
 		}},
-		want: wantData{Method: "POST", URL: parseURL("http://localhost:8080/test"), Body: "{\"a\":\"test\",\"b\":4711}\n", ContentType: "application/json"},
+		want: wantData{Method: "POST", URL: parseURL("http://localhost:8337/test"), Body: "{\"a\":\"test\",\"b\":4711}\n", ContentType: "application/json"},
 	}, {
 		name:      `invalid body`,
 		in:        params{method: "POST", path: "/test", body: make(chan int)}, // channels cannot be marshalled, causing json.Marshal to fail,

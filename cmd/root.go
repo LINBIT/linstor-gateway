@@ -22,12 +22,6 @@ var (
 	cli      *client.Client
 )
 
-const (
-	defaultHost   = "localhost"
-	defaultScheme = "http"
-	defaultPort   = 8080
-)
-
 func contains(haystack []string, needle string) bool {
 	for _, v := range haystack {
 		if v == needle {
@@ -44,9 +38,9 @@ func parseBaseURL(urlString string) (*url.URL, error) {
 
 	if len(urlSplit) == 1 {
 		if urlSplit[0] == "" {
-			urlSplit[0] = defaultHost
+			urlSplit[0] = client.DefaultHost
 		}
-		urlSplit = []string{defaultScheme, urlSplit[0]}
+		urlSplit = []string{client.DefaultScheme, urlSplit[0]}
 	}
 
 	if len(urlSplit) != 2 {
@@ -57,7 +51,7 @@ func parseBaseURL(urlString string) (*url.URL, error) {
 	// Check port
 	endpointSplit := strings.Split(endpoint, ":")
 	if len(endpointSplit) == 1 {
-		endpointSplit = []string{endpointSplit[0], strconv.Itoa(defaultPort)}
+		endpointSplit = []string{endpointSplit[0], strconv.Itoa(client.DefaultPort)}
 	}
 	if len(endpointSplit) != 2 {
 		return nil, fmt.Errorf("URL with multiple port separators. parts: %v", endpointSplit)
@@ -111,7 +105,8 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(docsCommand(rootCmd))
 	rootCmd.AddCommand(checkHealthCommand())
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "/etc/linstor-gateway/linstor-gateway.toml", "Config file to load")
-	rootCmd.PersistentFlags().StringVarP(&host, "connect", "c", "http://localhost:8080", "LINSTOR Gateway server to connect to")
+	defaultConnect := fmt.Sprintf("%s://%s:%d", client.DefaultScheme, client.DefaultHost, client.DefaultPort)
+	rootCmd.PersistentFlags().StringVarP(&host, "connect", "c", defaultConnect, "LINSTOR Gateway server to connect to")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", log.InfoLevel.String(), "Set the log level (as defined by logrus)")
 	return rootCmd
 }

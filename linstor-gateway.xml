@@ -2,5 +2,5 @@
 <service>
 <short>LINSTOR Gateway</short>
 <description>A utility to expose LINSTOR storage via iSCSI, NFS, and NVMe</description>
-<port protocol="tcp" port="8080"/><!-- REST API -->
+<port protocol="tcp" port="8337"/><!-- REST API -->
 </service>

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-12-04
+
+### Breaking Changes
+
+* Change the default HTTP port from 8080 to 8337. (6ace6105)
+
 ## [1.9.0] - 2025-07-08
 
 ### Changes
@@ -320,7 +326,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.6.0...v1.7.0

@@ -13,6 +13,8 @@ and [drbd-reactor](https://github.com/LINBIT/drbd-reactor).
 Refer to the [_Understanding LINSTOR Gateway_](https://linbit.com/drbd-user-guide/linstorgateway-guide-1_0-en/) user guide which outlines some of the basic knowledge needed to effectively operate and administer a storage cluster that relies on LINSTOR Gateway.
 This guide also provides some insight into the design decisions that were made while implementing LINSTOR Gateway, and gives an overview of how its internals work.
 
+### Installation
+
 For a step-by-step tutorial on setting up a LINSTOR Gateway cluster, refer to
 this blog post:
 [Create a Highly Available iSCSI Target Using LINSTOR Gateway](https://linbit.com/blog/create-a-highly-available-iscsi-target-using-linstor-gateway/).

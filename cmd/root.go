@@ -113,6 +113,7 @@ func rootCommand() *cobra.Command {
 
 func initConfig() {
 	viper.SetDefault("linstor.controllers", "")
+	viper.SetDefault("server.cors_allowed_origins", []string{})
 	viper.SetConfigType("toml")
 	viper.SetConfigFile(cfgFile)
 	viper.ReadInConfig()

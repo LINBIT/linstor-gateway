@@ -24,7 +24,17 @@ linstor-gateway server --addr=":8337"`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			controllers := viper.GetStringSlice("linstor.controllers")
-			rest.ListenAndServe(addr, controllers)
+			corsOrigins := viper.GetStringSlice("server.cors_allowed_origins")
+
+			// Always add controller-based origins if controllers are configured
+			if len(controllers) > 0 {
+				for _, ctrl := range controllers {
+					corsOrigins = append(corsOrigins, fmt.Sprintf("http://%s:3370", ctrl))
+					corsOrigins = append(corsOrigins, fmt.Sprintf("https://%s:3370", ctrl))
+				}
+			}
+
+			rest.ListenAndServe(addr, controllers, corsOrigins)
 		},
 	}
 

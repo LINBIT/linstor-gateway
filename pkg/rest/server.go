@@ -61,7 +61,7 @@ func MustError(code int, w http.ResponseWriter, format string, a ...interface{})
 }
 
 // ListenAndServe is the entry point for the REST API
-func ListenAndServe(addr string, controllers []string) {
+func ListenAndServe(addr string, controllers []string, allowedOrigins []string) {
 	iscsi, err := iscsi.New(controllers)
 	if err != nil {
 		log.Fatalf("Failed to initialize ISCSI: %v", err)
@@ -83,5 +83,35 @@ func ListenAndServe(addr string, controllers []string) {
 
 	s.routes()
 
-	log.Fatal(http.ListenAndServe(addr, cors.Default().Handler(s.router)))
+	opts := cors.Options{
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete,
+		},
+		AllowedHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Access-Control-Request-Private-Network",
+		},
+		AllowPrivateNetwork: true,
+	}
+
+	// If allowedOrigins is provided, use it. If empty, explicitly deny all
+	// origins by providing an AllowOriginFunc that always returns false.
+	if len(allowedOrigins) > 0 {
+		opts.AllowedOrigins = allowedOrigins
+	} else {
+		opts.AllowedOrigins = []string{}
+		opts.AllowOriginFunc = func(origin string) bool { return false }
+	}
+
+	c := cors.New(opts)
+	if len(allowedOrigins) > 0 {
+		log.Debugf("CORS: AllowedOrigins=%v", allowedOrigins)
+	} else {
+		log.Debugf("CORS: No origins allowed")
+	}
+	log.Fatal(http.ListenAndServe(addr, c.Handler(s.router)))
 }

@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -18,7 +19,13 @@ func (s *server) ISCSIStart() http.HandlerFunc {
 			return
 		}
 
-		cfg, err := s.iscsi.Start(r.Context(), iqn)
+		resourceTimeout, err := parseResourceTimeout(r)
+		if err != nil {
+			MustError(http.StatusBadRequest, w, "invalid resource_timeout: %v", err)
+			return
+		}
+
+		cfg, err := s.iscsi.Start(r.Context(), iqn, resourceTimeout)
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "failed to start target: %v", err)
 			return
@@ -36,4 +43,12 @@ func (s *server) ISCSIStart() http.HandlerFunc {
 			log.WithError(err).Warn("failed to write response")
 		}
 	}
+}
+
+func parseResourceTimeout(r *http.Request) (time.Duration, error) {
+	timeoutStr := r.URL.Query().Get("resource_timeout")
+	if timeoutStr == "" {
+		return 0, nil
+	}
+	return time.ParseDuration(timeoutStr)
 }

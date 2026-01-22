@@ -20,7 +20,13 @@ func (s *server) NVMeoFStart() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := s.nvmeof.Start(ctx, nqn)
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
+		cfg, err := s.nvmeof.Start(ctx, nqn, resourceTimeout)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to start resource: %v", err)
 			return

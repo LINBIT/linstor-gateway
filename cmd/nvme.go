@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/client"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
@@ -120,6 +121,7 @@ func listNVMECommand() *cobra.Command {
 func createNVMECommand() *cobra.Command {
 	resourceGroup := "DfltRscGrp"
 	grossSize := false
+	var resourceTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:     "create NQN SERVICE_IP VOLUME_SIZE [VOLUME_SIZE]...",
@@ -151,11 +153,12 @@ func createNVMECommand() *cobra.Command {
 			}
 
 			_, err = cli.NvmeOf.Create(context.Background(), &nvmeof.ResourceConfig{
-				NQN:           nqn,
-				ServiceIP:     serviceIP,
-				ResourceGroup: resourceGroup,
-				Volumes:       volumes,
-				GrossSize:     grossSize,
+				NQN:             nqn,
+				ServiceIP:       serviceIP,
+				ResourceGroup:   resourceGroup,
+				Volumes:         volumes,
+				GrossSize:       grossSize,
+				ResourceTimeout: resourceTimeout,
 			})
 			if err != nil {
 				return err
@@ -168,12 +171,15 @@ func createNVMECommand() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "resource group to use.")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nvmeof.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
 
 	return cmd
 }
 
 func deleteNVMECommand() *cobra.Command {
 	var force bool
+	var resourceTimeout time.Duration
+
 	cmd := &cobra.Command{
 		Use:   "delete NQN...",
 		Short: "Delete existing NVMe-oF targets",
@@ -198,7 +204,7 @@ func deleteNVMECommand() *cobra.Command {
 				}
 
 				if yes {
-					err = cli.NvmeOf.Delete(context.Background(), nqn)
+					err = cli.NvmeOf.Delete(context.Background(), nqn, resourceTimeout)
 					if err == client.NotFoundError {
 						allErrs = append(allErrs, noTarget(nqn))
 						continue
@@ -217,11 +223,14 @@ func deleteNVMECommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nvmeof.DefaultResourceTimeout, "Timeout for waiting for the resource to become unavailable")
 	return cmd
 }
 
 func startNVMECommand() *cobra.Command {
-	return &cobra.Command{
+	var resourceTimeout time.Duration
+
+	cmd := &cobra.Command{
 		Use:   "start NQN...",
 		Short: "Start a stopped NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
@@ -234,7 +243,7 @@ func startNVMECommand() *cobra.Command {
 					continue
 				}
 
-				_, err = cli.NvmeOf.Start(context.Background(), nqn)
+				_, err = cli.NvmeOf.Start(context.Background(), nqn, resourceTimeout)
 				if err == client.NotFoundError {
 					allErrs = append(allErrs, noTarget(nqn))
 					continue
@@ -250,10 +259,16 @@ func startNVMECommand() *cobra.Command {
 			return allErrs.Err()
 		},
 	}
+
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nvmeof.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
+
+	return cmd
 }
 
 func stopNVMECommand() *cobra.Command {
-	return &cobra.Command{
+	var resourceTimeout time.Duration
+
+	cmd := &cobra.Command{
 		Use:   "stop NQN...",
 		Short: "Stop a started NVMe-oF target",
 		Args:  cobra.MinimumNArgs(1),
@@ -266,7 +281,7 @@ func stopNVMECommand() *cobra.Command {
 					continue
 				}
 
-				_, err = cli.NvmeOf.Stop(context.Background(), nqn)
+				_, err = cli.NvmeOf.Stop(context.Background(), nqn, resourceTimeout)
 				if err == client.NotFoundError {
 					allErrs = append(allErrs, noTarget(nqn))
 					continue
@@ -282,6 +297,10 @@ func stopNVMECommand() *cobra.Command {
 			return allErrs.Err()
 		},
 	}
+
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nvmeof.DefaultResourceTimeout, "Timeout for waiting for the resource to become unavailable")
+
+	return cmd
 }
 
 func addVolumeNVMECommand() *cobra.Command {

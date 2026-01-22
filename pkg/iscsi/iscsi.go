@@ -173,7 +173,7 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 		}
 	}()
 
-	_, err = i.Start(ctx, rsc.IQN)
+	_, err = i.Start(ctx, rsc.IQN, rsc.ResourceTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
@@ -184,7 +184,11 @@ func (i *ISCSI) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfi
 	return rsc, nil
 }
 
-func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
+func (i *ISCSI) Start(ctx context.Context, iqn Iqn, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -199,7 +203,7 @@ func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.AnyResourcesInUse)
@@ -215,7 +219,11 @@ func (i *ISCSI) Start(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 	return i.Get(ctx, iqn)
 }
 
-func (i *ISCSI) Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
+func (i *ISCSI) Stop(ctx context.Context, iqn Iqn, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -230,7 +238,7 @@ func (i *ISCSI) Stop(ctx context.Context, iqn Iqn) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.NoResourcesInUse)
@@ -279,13 +287,17 @@ func (i *ISCSI) List(ctx context.Context) ([]*ResourceConfig, error) {
 	return result, nil
 }
 
-func (i *ISCSI) Delete(ctx context.Context, iqn Iqn) error {
+func (i *ISCSI) Delete(ctx context.Context, iqn Iqn, resourceTimeout time.Duration) error {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	err := reactor.DeleteConfig(ctx, i.cli.Client, fmt.Sprintf(IDFormat, iqn.WWN()))
 	if err != nil {
 		return fmt.Errorf("failed to delete reactor config: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, i.cli.Client, iqn.WWN(), common.NoResourcesInUse)

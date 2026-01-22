@@ -19,9 +19,10 @@ linstor-gateway nvme create linbit:nvme:example
 ### Options
 
 ```
-      --gross                   Make all size options specify gross size, i.e. the actual space used on disk
-  -h, --help                    help for create
-  -r, --resource-group string   resource group to use. (default "DfltRscGrp")
+      --gross                       Make all size options specify gross size, i.e. the actual space used on disk
+  -h, --help                        help for create
+  -r, --resource-group string       resource group to use. (default "DfltRscGrp")
+      --resource-timeout duration   Timeout for waiting for the resource to become available (default 30s)
 ```
 
 ### Options inherited from parent commands

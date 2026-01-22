@@ -20,7 +20,13 @@ func (s *server) ISCSIStop() http.HandlerFunc {
 			return
 		}
 
-		cfg, err := s.iscsi.Stop(ctx, iqn)
+		resourceTimeout, err := parseResourceTimeout(r)
+		if err != nil {
+			MustError(http.StatusBadRequest, w, "invalid resource_timeout: %v", err)
+			return
+		}
+
+		cfg, err := s.iscsi.Stop(ctx, iqn, resourceTimeout)
 		if err != nil {
 			MustError(http.StatusInternalServerError, w, "failed to stop resource: %v", err)
 			return

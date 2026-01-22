@@ -21,6 +21,12 @@ func (s *server) NVMeoFDelete(all bool) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
 		if all {
 			deployed, err := s.nvmeof.Get(ctx, nqn)
 			if err != nil {
@@ -29,7 +35,7 @@ func (s *server) NVMeoFDelete(all bool) func(http.ResponseWriter, *http.Request)
 			if deployed == nil {
 				MustError(http.StatusNotFound, writer, "no resource found for nqn %s", nqn)
 			}
-			err = s.nvmeof.Delete(ctx, nqn)
+			err = s.nvmeof.Delete(ctx, nqn, resourceTimeout)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "nvmeof delete failed: %v", err)
 				return

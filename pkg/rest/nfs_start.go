@@ -12,7 +12,13 @@ func (s *server) NFSStart() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		resource := mux.Vars(request)["resource"]
 
-		cfg, err := s.nfs.Start(request.Context(), resource)
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
+		cfg, err := s.nfs.Start(request.Context(), resource, resourceTimeout)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to start export: %v", err)
 			return

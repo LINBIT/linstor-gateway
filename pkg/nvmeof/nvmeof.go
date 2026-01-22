@@ -181,7 +181,7 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 		}
 	}()
 
-	_, err = n.Start(ctx, rsc.NQN)
+	_, err = n.Start(ctx, rsc.NQN, rsc.ResourceTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
@@ -191,7 +191,11 @@ func (n *NVMeoF) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConf
 	return rsc, nil
 }
 
-func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
+func (n *NVMeoF) Start(ctx context.Context, nqn Nqn, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -206,7 +210,7 @@ func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, nqn.Subsystem(), common.AnyResourcesInUse)
@@ -221,7 +225,11 @@ func (n *NVMeoF) Start(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 	return n.Get(ctx, nqn)
 }
 
-func (n *NVMeoF) Stop(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
+func (n *NVMeoF) Stop(ctx context.Context, nqn Nqn, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -236,7 +244,7 @@ func (n *NVMeoF) Stop(ctx context.Context, nqn Nqn) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, nqn.Subsystem(), common.NoResourcesInUse)
@@ -285,13 +293,17 @@ func (n *NVMeoF) List(ctx context.Context) ([]*ResourceConfig, error) {
 	return result, nil
 }
 
-func (n *NVMeoF) Delete(ctx context.Context, nqn Nqn) error {
+func (n *NVMeoF) Delete(ctx context.Context, nqn Nqn, resourceTimeout time.Duration) error {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	err := reactor.DeleteConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, nqn.Subsystem()))
 	if err != nil {
 		return fmt.Errorf("failed to delete reactor config: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, nqn.Subsystem(), common.NoResourcesInUse)

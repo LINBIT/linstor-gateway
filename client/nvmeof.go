@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/nvmeof"
@@ -30,20 +31,32 @@ func (s *NvmeOfService) Get(ctx context.Context, nqn nvmeof.Nqn) (*nvmeof.Resour
 	return config, err
 }
 
-func (s *NvmeOfService) Delete(ctx context.Context, nqn nvmeof.Nqn) error {
-	_, err := s.client.doDELETE(ctx, "/api/v2/nvme-of/"+nqn.String(), nil)
+func (s *NvmeOfService) Delete(ctx context.Context, nqn nvmeof.Nqn, resourceTimeout time.Duration) error {
+	url := "/api/v2/nvme-of/" + nqn.String()
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doDELETE(ctx, url, nil)
 	return err
 }
 
-func (s *NvmeOfService) Start(ctx context.Context, nqn nvmeof.Nqn) (*nvmeof.ResourceConfig, error) {
+func (s *NvmeOfService) Start(ctx context.Context, nqn nvmeof.Nqn, resourceTimeout time.Duration) (*nvmeof.ResourceConfig, error) {
 	var ret *nvmeof.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nvme-of/"+nqn.String()+"/start", nil, &ret)
+	url := "/api/v2/nvme-of/" + nqn.String() + "/start"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }
 
-func (s *NvmeOfService) Stop(ctx context.Context, nqn nvmeof.Nqn) (*nvmeof.ResourceConfig, error) {
+func (s *NvmeOfService) Stop(ctx context.Context, nqn nvmeof.Nqn, resourceTimeout time.Duration) (*nvmeof.ResourceConfig, error) {
 	var ret *nvmeof.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nvme-of/"+nqn.String()+"/stop", nil, &ret)
+	url := "/api/v2/nvme-of/" + nqn.String() + "/stop"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }
 

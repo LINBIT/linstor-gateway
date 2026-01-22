@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/iscsi"
@@ -30,20 +31,32 @@ func (s *ISCSIService) Get(ctx context.Context, iqn iscsi.Iqn) (*iscsi.ResourceC
 	return config, err
 }
 
-func (s *ISCSIService) Delete(ctx context.Context, iqn iscsi.Iqn) error {
-	_, err := s.client.doDELETE(ctx, "/api/v2/iscsi/"+iqn.String(), nil)
+func (s *ISCSIService) Delete(ctx context.Context, iqn iscsi.Iqn, resourceTimeout time.Duration) error {
+	url := "/api/v2/iscsi/" + iqn.String()
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doDELETE(ctx, url, nil)
 	return err
 }
 
-func (s *ISCSIService) Start(ctx context.Context, iqn iscsi.Iqn) (*iscsi.ResourceConfig, error) {
+func (s *ISCSIService) Start(ctx context.Context, iqn iscsi.Iqn, resourceTimeout time.Duration) (*iscsi.ResourceConfig, error) {
 	var ret *iscsi.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/iscsi/"+iqn.String()+"/start", nil, &ret)
+	url := "/api/v2/iscsi/" + iqn.String() + "/start"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }
 
-func (s *ISCSIService) Stop(ctx context.Context, iqn iscsi.Iqn) (*iscsi.ResourceConfig, error) {
+func (s *ISCSIService) Stop(ctx context.Context, iqn iscsi.Iqn, resourceTimeout time.Duration) (*iscsi.ResourceConfig, error) {
 	var ret *iscsi.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/iscsi/"+iqn.String()+"/stop", nil, &ret)
+	url := "/api/v2/iscsi/" + iqn.String() + "/stop"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }
 

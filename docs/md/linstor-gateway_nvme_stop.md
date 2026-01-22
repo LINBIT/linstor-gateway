@@ -9,7 +9,8 @@ linstor-gateway nvme stop NQN... [flags]
 ### Options
 
 ```
-  -h, --help   help for stop
+  -h, --help                        help for stop
+      --resource-timeout duration   Timeout for waiting for the resource to become unavailable (default 30s)
 ```
 
 ### Options inherited from parent commands

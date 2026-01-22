@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/LINBIT/golinstor/client"
 	"github.com/google/uuid"
@@ -20,17 +21,19 @@ import (
 )
 
 const (
-	DefaultPort    = 4420
-	CurrentVersion = 1
+	DefaultPort            = 4420
+	CurrentVersion         = 1
+	DefaultResourceTimeout = 30 * time.Second
 )
 
 type ResourceConfig struct {
-	NQN           Nqn                   `json:"nqn"`
-	ServiceIP     common.IpCidr         `json:"service_ip"`
-	ResourceGroup string                `json:"resource_group"`
-	Volumes       []common.VolumeConfig `json:"volumes"`
-	Status        common.ResourceStatus `json:"status"`
-	GrossSize     bool                  `json:"gross_size"`
+	NQN             Nqn                   `json:"nqn"`
+	ServiceIP       common.IpCidr         `json:"service_ip"`
+	ResourceGroup   string                `json:"resource_group"`
+	Volumes         []common.VolumeConfig `json:"volumes"`
+	Status          common.ResourceStatus `json:"status"`
+	GrossSize       bool                  `json:"gross_size"`
+	ResourceTimeout time.Duration         `json:"resource_timeout,omitempty"`
 }
 
 func (r *ResourceConfig) VolumeConfig(number int) *common.Volume {
@@ -281,6 +284,9 @@ func (r *ResourceConfig) Matches(o *ResourceConfig) bool {
 func (r *ResourceConfig) FillDefaults() {
 	if r.ResourceGroup == "" {
 		r.ResourceGroup = "DfltRscGrp"
+	}
+	if r.ResourceTimeout == 0 {
+		r.ResourceTimeout = DefaultResourceTimeout
 	}
 }
 

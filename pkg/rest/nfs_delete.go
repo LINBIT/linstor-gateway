@@ -16,8 +16,14 @@ func (s *server) NFSDelete(all bool) http.HandlerFunc {
 
 		resource := mux.Vars(request)["resource"]
 
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
 		if all {
-			err := s.nfs.Delete(ctx, resource)
+			err := s.nfs.Delete(ctx, resource, resourceTimeout)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "delete failed: %v", err)
 				return
@@ -44,7 +50,7 @@ func (s *server) NFSDelete(all bool) http.HandlerFunc {
 		writer.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(writer)
 
-		err := enc.Encode(struct{}{})
+		err = enc.Encode(struct{}{})
 		if err != nil {
 			log.WithError(err).Warn("failed to write response")
 		}

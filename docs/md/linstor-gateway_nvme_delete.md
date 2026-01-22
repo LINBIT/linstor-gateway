@@ -9,8 +9,9 @@ linstor-gateway nvme delete NQN... [flags]
 ### Options
 
 ```
-  -f, --force   Delete without prompting for confirmation
-  -h, --help    help for delete
+  -f, --force                       Delete without prompting for confirmation
+  -h, --help                        help for delete
+      --resource-timeout duration   Timeout for waiting for the resource to become unavailable (default 30s)
 ```
 
 ### Options inherited from parent commands

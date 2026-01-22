@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
@@ -61,6 +62,7 @@ func createNFSCommand() *cobra.Command {
 	exportPaths := []string{"/"}
 	grossSize := false
 	filesystem := "ext4"
+	var resourceTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "create NAME SERVICE_IP [VOLUME_SIZE]...",
@@ -68,7 +70,7 @@ func createNFSCommand() *cobra.Command {
 		Long: `Creates a highly available NFS export based on LINSTOR and drbd-reactor.
 At first it creates a new resource within the LINSTOR system under the
 specified name and using the specified resource group.
-After that it creates a drbd-reactor configuration to bring up a highly available NFS 
+After that it creates a drbd-reactor configuration to bring up a highly available NFS
 export.
 
 !!! NOTE that only one NFS resource can exist in a cluster.
@@ -116,12 +118,13 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 			}
 
 			rsc := &nfs.ResourceConfig{
-				Name:          resource,
-				ResourceGroup: resourceGroup,
-				ServiceIP:     serviceIP,
-				AllowedIPs:    []common.IpCidr{allowedIPsCIDR},
-				Volumes:       volumes,
-				GrossSize:     grossSize,
+				Name:            resource,
+				ResourceGroup:   resourceGroup,
+				ServiceIP:       serviceIP,
+				AllowedIPs:      []common.IpCidr{allowedIPsCIDR},
+				Volumes:         volumes,
+				GrossSize:       grossSize,
+				ResourceTimeout: resourceTimeout,
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
@@ -138,12 +141,15 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 	cmd.Flags().StringVarP(&filesystem, "filesystem", "f", filesystem, "File system type to use (ext4 or xfs)")
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nfs.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
 
 	return cmd
 }
 
 func deleteNFSCommand() *cobra.Command {
 	var force bool
+	var resourceTimeout time.Duration
+
 	cmd := &cobra.Command{
 		Use:   "delete NAME",
 		Short: "Deletes an NFS export",
@@ -166,7 +172,7 @@ and removing the LINSTOR resources.`,
 			}
 
 			if yes {
-				err := cli.Nfs.Delete(ctx, resourceName)
+				err := cli.Nfs.Delete(ctx, resourceName, resourceTimeout)
 				if err != nil {
 					return err
 				}
@@ -179,6 +185,7 @@ and removing the LINSTOR resources.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nfs.DefaultResourceTimeout, "Timeout for waiting for the resource to become unavailable")
 
 	return cmd
 }

@@ -19,7 +19,8 @@ linstor-gateway iscsi start iqn.2019-08.com.linbit:example
 ### Options
 
 ```
-  -h, --help   help for start
+  -h, --help                        help for start
+      --resource-timeout duration   Timeout for waiting for the resource to become available (default 30s)
 ```
 
 ### Options inherited from parent commands

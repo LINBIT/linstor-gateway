@@ -9,7 +9,8 @@ linstor-gateway nvme start NQN... [flags]
 ### Options
 
 ```
-  -h, --help   help for start
+  -h, --help                        help for start
+      --resource-timeout duration   Timeout for waiting for the resource to become available (default 30s)
 ```
 
 ### Options inherited from parent commands

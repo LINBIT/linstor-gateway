@@ -208,7 +208,7 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 		}
 	}()
 
-	_, err = n.Start(ctx, rsc.Name)
+	_, err = n.Start(ctx, rsc.Name, rsc.ResourceTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start resources: %w", err)
 	}
@@ -218,7 +218,11 @@ func (n *NFS) Create(ctx context.Context, rsc *ResourceConfig) (*ResourceConfig,
 	return rsc, nil
 }
 
-func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
+func (n *NFS) Start(ctx context.Context, name string, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -233,7 +237,7 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to attach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, name, common.AnyResourcesInUse)
@@ -249,7 +253,11 @@ func (n *NFS) Start(ctx context.Context, name string) (*ResourceConfig, error) {
 	return n.Get(ctx, name)
 }
 
-func (n *NFS) Stop(ctx context.Context, name string) (*ResourceConfig, error) {
+func (n *NFS) Stop(ctx context.Context, name string, resourceTimeout time.Duration) (*ResourceConfig, error) {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	cfg, path, err := reactor.FindConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the resource configuration: %w", err)
@@ -264,7 +272,7 @@ func (n *NFS) Stop(ctx context.Context, name string) (*ResourceConfig, error) {
 		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, name, common.NoResourcesInUse)
@@ -313,13 +321,17 @@ func (n *NFS) List(ctx context.Context) ([]*ResourceConfig, error) {
 	return result, nil
 }
 
-func (n *NFS) Delete(ctx context.Context, name string) error {
+func (n *NFS) Delete(ctx context.Context, name string, resourceTimeout time.Duration) error {
+	if resourceTimeout == 0 {
+		resourceTimeout = DefaultResourceTimeout
+	}
+
 	err := reactor.DeleteConfig(ctx, n.cli.Client, fmt.Sprintf(IDFormat, name))
 	if err != nil {
 		return fmt.Errorf("failed to delete reactor config: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)
 	defer cancel()
 
 	err = common.WaitUntilResourceCondition(waitCtx, n.cli.Client, name, common.NoResourcesInUse)

@@ -20,7 +20,13 @@ func (s *server) NVMeoFStop() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		cfg, err := s.nvmeof.Stop(ctx, nqn)
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
+		cfg, err := s.nvmeof.Stop(ctx, nqn, resourceTimeout)
 		if err != nil {
 			MustError(http.StatusInternalServerError, writer, "failed to stop resource: %v", err)
 			return

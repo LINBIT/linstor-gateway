@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/pkg/nfs"
 )
@@ -28,19 +29,31 @@ func (s *NFSService) Get(ctx context.Context, name string) (*nfs.ResourceConfig,
 	return config, err
 }
 
-func (s *NFSService) Delete(ctx context.Context, name string) error {
-	_, err := s.client.doDELETE(ctx, "/api/v2/nfs/"+name, nil)
+func (s *NFSService) Delete(ctx context.Context, name string, resourceTimeout time.Duration) error {
+	url := "/api/v2/nfs/" + name
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doDELETE(ctx, url, nil)
 	return err
 }
 
-func (s *NFSService) Start(ctx context.Context, name string) (*nfs.ResourceConfig, error) {
+func (s *NFSService) Start(ctx context.Context, name string, resourceTimeout time.Duration) (*nfs.ResourceConfig, error) {
 	var ret *nfs.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/start", nil, &ret)
+	url := "/api/v2/nfs/" + name + "/start"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }
 
-func (s *NFSService) Stop(ctx context.Context, name string) (*nfs.ResourceConfig, error) {
+func (s *NFSService) Stop(ctx context.Context, name string, resourceTimeout time.Duration) (*nfs.ResourceConfig, error) {
 	var ret *nfs.ResourceConfig
-	_, err := s.client.doPOST(ctx, "/api/v2/nfs/"+name+"/stop", nil, &ret)
+	url := "/api/v2/nfs/" + name + "/stop"
+	if resourceTimeout > 0 {
+		url += "?resource_timeout=" + resourceTimeout.String()
+	}
+	_, err := s.client.doPOST(ctx, url, nil, &ret)
 	return ret, err
 }

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	apiconsts "github.com/LINBIT/golinstor"
 	"github.com/icza/gog"
@@ -22,9 +23,10 @@ import (
 )
 
 const (
-	ExportBasePath = "/srv/gateway-exports"
-	DefaultNFSPort = 2049
-	CurrentVersion = 1
+	ExportBasePath         = "/srv/gateway-exports"
+	DefaultNFSPort         = 2049
+	CurrentVersion         = 1
+	DefaultResourceTimeout = 30 * time.Second
 )
 
 var (
@@ -52,13 +54,14 @@ func ExportPath(rsc *ResourceConfig, vol *VolumeConfig) string {
 }
 
 type ResourceConfig struct {
-	Name          string                `json:"name"`
-	ServiceIP     common.IpCidr         `json:"service_ip,omitempty"`
-	AllowedIPs    []common.IpCidr       `json:"allowed_ips,omitempty"`
-	ResourceGroup string                `json:"resource_group"`
-	Volumes       []VolumeConfig        `json:"volumes"`
-	Status        common.ResourceStatus `json:"status"`
-	GrossSize     bool                  `json:"gross_size"`
+	Name            string                `json:"name"`
+	ServiceIP       common.IpCidr         `json:"service_ip,omitempty"`
+	AllowedIPs      []common.IpCidr       `json:"allowed_ips,omitempty"`
+	ResourceGroup   string                `json:"resource_group"`
+	Volumes         []VolumeConfig        `json:"volumes"`
+	Status          common.ResourceStatus `json:"status"`
+	GrossSize       bool                  `json:"gross_size"`
+	ResourceTimeout time.Duration         `json:"resource_timeout,omitempty"`
 }
 
 const (
@@ -306,6 +309,10 @@ func (r *ResourceConfig) FillDefaults() {
 
 	if len(r.AllowedIPs) == 0 {
 		r.AllowedIPs = AllowAllCidr
+	}
+
+	if r.ResourceTimeout == 0 {
+		r.ResourceTimeout = DefaultResourceTimeout
 	}
 }
 

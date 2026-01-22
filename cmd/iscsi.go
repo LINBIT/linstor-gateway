@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/prompt"
@@ -57,6 +58,7 @@ func createISCSICommand() *cobra.Command {
 	var allowedInitiators []string
 	var grossSize bool
 	var implementation string
+	var resourceTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "create IQN SERVICE_IPS [VOLUME_SIZE]...",
@@ -118,6 +120,7 @@ high availability primitives.`,
 				ResourceGroup:     group,
 				GrossSize:         grossSize,
 				Implementation:    implementation,
+				ResourceTimeout:   resourceTimeout,
 			})
 			if err != nil {
 				return err
@@ -138,6 +141,7 @@ high availability primitives.`,
 	cmd.Flags().StringSliceVar(&allowedInitiators, "allowed-initiators", []string{}, "Restrict which initiator IQNs are allowed to connect to the target")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 	cmd.Flags().StringVar(&implementation, "implementation", "", `Set the iSCSI target implementation to use ("iet", "tgt", "lio", "lio-t", or "scst")`)
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", iscsi.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
 
 	return cmd
 }
@@ -220,7 +224,9 @@ about the existing drbd-reactor and linstor parts.`,
 }
 
 func startISCSICommand() *cobra.Command {
-	return &cobra.Command{
+	var resourceTimeout time.Duration
+
+	cmd := &cobra.Command{
 		Use:     "start IQN...",
 		Short:   "Starts an iSCSI target",
 		Long:    `Makes an iSCSI target available by starting it.`,
@@ -235,7 +241,7 @@ func startISCSICommand() *cobra.Command {
 					continue
 				}
 
-				_, err = cli.Iscsi.Start(context.Background(), iqn)
+				_, err = cli.Iscsi.Start(context.Background(), iqn, resourceTimeout)
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -247,10 +253,16 @@ func startISCSICommand() *cobra.Command {
 			return allErrs.Err()
 		},
 	}
+
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", iscsi.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
+
+	return cmd
 }
 
 func stopISCSICommand() *cobra.Command {
-	return &cobra.Command{
+	var resourceTimeout time.Duration
+
+	cmd := &cobra.Command{
 		Use:     "stop IQN",
 		Short:   "Stops an iSCSI target",
 		Long:    `Disables an iSCSI target, making it unavailable to initiators while not deleting it.`,
@@ -265,7 +277,7 @@ func stopISCSICommand() *cobra.Command {
 					continue
 				}
 
-				_, err = cli.Iscsi.Stop(context.Background(), iqn)
+				_, err = cli.Iscsi.Stop(context.Background(), iqn, resourceTimeout)
 				if err != nil {
 					allErrs = append(allErrs, err)
 					continue
@@ -277,10 +289,16 @@ func stopISCSICommand() *cobra.Command {
 			return allErrs.Err()
 		},
 	}
+
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", iscsi.DefaultResourceTimeout, "Timeout for waiting for the resource to become unavailable")
+
+	return cmd
 }
 
 func deleteISCSICommand() *cobra.Command {
 	var force bool
+	var resourceTimeout time.Duration
+
 	cmd := &cobra.Command{
 		Use:   "delete IQN...",
 		Short: "Deletes an iSCSI target",
@@ -309,7 +327,7 @@ of the target will be deleted.`,
 				}
 
 				if yes {
-					err = cli.Iscsi.Delete(context.Background(), iqn)
+					err = cli.Iscsi.Delete(context.Background(), iqn, resourceTimeout)
 					if err != nil {
 						allErrs = append(allErrs, err)
 						continue
@@ -325,6 +343,7 @@ of the target will be deleted.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete without prompting for confirmation")
+	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", iscsi.DefaultResourceTimeout, "Timeout for waiting for the resource to become unavailable")
 
 	return cmd
 }

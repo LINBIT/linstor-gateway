@@ -7,7 +7,7 @@ Creates an NFS export
 Creates a highly available NFS export based on LINSTOR and drbd-reactor.
 At first it creates a new resource within the LINSTOR system under the
 specified name and using the specified resource group.
-After that it creates a drbd-reactor configuration to bring up a highly available NFS 
+After that it creates a drbd-reactor configuration to bring up a highly available NFS
 export.
 
 !!! NOTE that only one NFS resource can exist in a cluster.
@@ -29,12 +29,13 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 ### Options
 
 ```
-      --allowed-ips ip-cidr     Set the IP address mask of clients that are allowed access (default 0.0.0.0/0)
-  -p, --export-path strings     Set the export path, relative to /srv/gateway-exports. Can be specified multiple times when creating more than one volume (default [/])
-  -f, --filesystem string       File system type to use (ext4 or xfs) (default "ext4")
-      --gross                   Make all size options specify gross size, i.e. the actual space used on disk
-  -h, --help                    help for create
-  -r, --resource-group string   LINSTOR resource group to use (default "DfltRscGrp")
+      --allowed-ips ip-cidr         Set the IP address mask of clients that are allowed access (default 0.0.0.0/0)
+  -p, --export-path strings         Set the export path, relative to /srv/gateway-exports. Can be specified multiple times when creating more than one volume (default [/])
+  -f, --filesystem string           File system type to use (ext4 or xfs) (default "ext4")
+      --gross                       Make all size options specify gross size, i.e. the actual space used on disk
+  -h, --help                        help for create
+  -r, --resource-group string       LINSTOR resource group to use (default "DfltRscGrp")
+      --resource-timeout duration   Timeout for waiting for the resource to become available (default 30s)
 ```
 
 ### Options inherited from parent commands

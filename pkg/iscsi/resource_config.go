@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/icza/gog"
 	log "github.com/sirupsen/logrus"
@@ -20,8 +21,9 @@ import (
 )
 
 const (
-	DefaultISCSIPort = 3260
-	CurrentVersion   = 1
+	DefaultISCSIPort        = 3260
+	CurrentVersion          = 1
+	DefaultResourceTimeout  = 30 * time.Second
 )
 
 type ResourceConfig struct {
@@ -35,6 +37,7 @@ type ResourceConfig struct {
 	Status            common.ResourceStatus `json:"status"`
 	GrossSize         bool                  `json:"gross_size"`
 	Implementation    string                `json:"implementation"`
+	ResourceTimeout   time.Duration         `json:"resource_timeout,omitempty"`
 }
 
 const (
@@ -180,6 +183,9 @@ func (r *ResourceConfig) VolumeConfig(number int) *common.Volume {
 func (r *ResourceConfig) FillDefaults() {
 	if r.ResourceGroup == "" {
 		r.ResourceGroup = "DfltRscGrp"
+	}
+	if r.ResourceTimeout == 0 {
+		r.ResourceTimeout = DefaultResourceTimeout
 	}
 }
 

@@ -30,6 +30,7 @@ linstor-gateway iscsi create iqn.2019-08.com.linbit:example 192.168.122.181/24 2
       --implementation string        Set the iSCSI target implementation to use ("iet", "tgt", "lio", "lio-t", or "scst")
   -p, --password string              Set the password to use for CHAP authentication
   -r, --resource-group string        Set the LINSTOR resource group (default "DfltRscGrp")
+      --resource-timeout duration    Timeout for waiting for the resource to become available (default 30s)
   -u, --username string              Set the username to use for CHAP authentication
 ```
 

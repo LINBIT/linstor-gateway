@@ -22,8 +22,14 @@ func (s *server) ISCSIDelete(all bool) http.HandlerFunc {
 			return
 		}
 
+		resourceTimeout, err := parseResourceTimeout(request)
+		if err != nil {
+			MustError(http.StatusBadRequest, writer, "invalid resource_timeout: %v", err)
+			return
+		}
+
 		if all {
-			err = s.iscsi.Delete(ctx, iqn)
+			err = s.iscsi.Delete(ctx, iqn, resourceTimeout)
 			if err != nil {
 				MustError(http.StatusInternalServerError, writer, "delete failed: %v", err)
 				return

@@ -39,6 +39,6 @@ TODO
 
 EOF
 
-nvim -c ":14" CHANGELOG.md
+${EDITOR:-vi} CHANGELOG.md
 
 git --no-pager diff -- CHANGELOG.md linstor-gateway.spec debian/changelog

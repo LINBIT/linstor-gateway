@@ -3,12 +3,16 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"os"
+
+	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/LINBIT/golinstor/client"
 	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/prompt"
-	"github.com/olekukonko/tablewriter"
-	log "github.com/sirupsen/logrus"
-	"os"
 )
 
 func checkDrbdOptions(resDef client.ResourceDefinition) map[string][2]string {
@@ -46,16 +50,26 @@ func upgradeDrbdOptions(ctx context.Context, linstor *client.Client, resource st
 		return false, nil
 	}
 	fmt.Println("The following resource options need to be changed:")
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Property", "Old Value", "New Value"})
+	colorCfg := renderer.ColorizedConfig{
+		Column: renderer.Tint{
+			Columns: []renderer.Tint{
+				{},                                    // Property: no color
+				{FG: renderer.Colors{color.FgRed}},   // Old Value: red
+				{FG: renderer.Colors{color.FgGreen}}, // New Value: green
+			},
+		},
+	}
+	table := tablewriter.NewTable(os.Stdout,
+		tablewriter.WithRenderer(renderer.NewColorized(colorCfg)),
+	)
+	table.Header("Property", "Old Value", "New Value")
 
 	overrides := make(map[string]string, len(replaceOptions))
 	for k, v := range replaceOptions {
-		table.SetColumnColor(tablewriter.Colors{}, tablewriter.Colors{tablewriter.FgRedColor}, tablewriter.Colors{tablewriter.FgGreenColor})
-		table.Append([]string{k, v[0], v[1]})
+		_ = table.Append([]string{k, v[0], v[1]})
 		overrides[k] = v[1]
 	}
-	table.Render() // Send output
+	_ = table.Render()
 	fmt.Println()
 	if dryRun {
 		return true, nil

@@ -17,6 +17,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/rck/unit"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -205,9 +206,13 @@ overview about the existing LINSTOR resources and service status.`,
 				return err
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Resource", "Service IP", "Service state", "NFS export", "LINSTOR state"})
-			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
+			table := tablewriter.NewTable(os.Stdout,
+				tablewriter.WithConfig(tablewriter.NewConfigBuilder().
+					Header().Formatting().WithAutoFormat(tw.Off).Build().Build().
+					Row().Merging().WithMode(tw.MergeVertical).ByColumnIndex([]int{0, 1}).Build().Build().
+					Build()),
+			)
+			table.Header(colorHeader("Resource"), colorHeader("Service IP"), colorHeader("Service state"), colorHeader("NFS export"), colorHeader("LINSTOR state"))
 
 			var degradedResources, badResources []string
 			for _, resource := range list {
@@ -228,19 +233,13 @@ overview about the existing LINSTOR resources and service status.`,
 					if resource.Status.Service == common.ServiceStateStarted && resource.Status.Primary != "" {
 						serviceStatus += " (" + resource.Status.Primary + ")"
 					}
-					table.Rich([]string{
+					_ = table.Append(
 						resource.Name,
 						resource.ServiceIP.String(),
-						serviceStatus,
+						ColorServiceState(resource.Status.Service, serviceStatus),
 						nfs.ExportPath(resource, &vol),
-						withStatus.Status.State.String(),
-					}, []tablewriter.Colors{
-						{},
-						{},
-						ServiceStateColor(resource.Status.Service),
-						{},
-						ResourceStateColor(withStatus.Status.State),
-					})
+						ColorResourceState(withStatus.Status.State, withStatus.Status.State.String()),
+					)
 					if withStatus.Status.State != common.ResourceStateOK {
 						if !contains(degradedResources, resource.Name) {
 							degradedResources = append(degradedResources, resource.Name)
@@ -248,18 +247,18 @@ overview about the existing LINSTOR resources and service status.`,
 					}
 				}
 				if len(resource.Volumes) == 0 {
-					table.Rich(
-						[]string{resource.Name, resource.ServiceIP.String(), resource.Status.Service.String(), "", common.ResourceStateBad.String()},
-						[]tablewriter.Colors{{}, {}, ServiceStateColor(resource.Status.Service), {}, ResourceStateColor(common.ResourceStateBad)},
+					_ = table.Append(
+						resource.Name,
+						resource.ServiceIP.String(),
+						ColorServiceState(resource.Status.Service, resource.Status.Service.String()),
+						"",
+						ColorResourceState(common.ResourceStateBad, common.ResourceStateBad.String()),
 					)
 					badResources = append(badResources, resource.Name)
 				}
 			}
 
-			table.SetAutoMergeCellsByColumnIndex([]int{0, 1})
-			table.SetAutoFormatHeaders(false)
-
-			table.Render() // Send output
+			_ = table.Render()
 
 			if len(degradedResources) > 0 {
 				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))

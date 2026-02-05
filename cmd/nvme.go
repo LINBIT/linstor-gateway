@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/rck/unit"
 	"github.com/spf13/cobra"
 
@@ -60,9 +61,13 @@ func listNVMECommand() *cobra.Command {
 				return err
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"NQN", "Service IP", "Service state", "Namespace", "LINSTOR state"})
-			table.SetHeaderColor(tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader, tableColorHeader)
+			table := tablewriter.NewTable(os.Stdout,
+				tablewriter.WithConfig(tablewriter.NewConfigBuilder().
+					Header().Formatting().WithAutoFormat(tw.Off).Build().Build().
+					Row().Merging().WithMode(tw.MergeVertical).ByColumnIndex([]int{0, 1}).Build().Build().
+					Build()),
+			)
+			table.Header(colorHeader("NQN"), colorHeader("Service IP"), colorHeader("Service state"), colorHeader("Namespace"), colorHeader("LINSTOR state"))
 
 			var degradedResources, badResources []string
 			for _, cfg := range cfgs {
@@ -75,9 +80,12 @@ func listNVMECommand() *cobra.Command {
 					if cfg.Status.Service == common.ServiceStateStarted && cfg.Status.Primary != "" {
 						serviceStatus += " (" + cfg.Status.Primary + ")"
 					}
-					table.Rich(
-						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), serviceStatus, strconv.Itoa(vol.Number), vol.State.String()},
-						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(vol.State)},
+					_ = table.Append(
+						cfg.NQN.String(),
+						cfg.ServiceIP.String(),
+						ColorServiceState(cfg.Status.Service, serviceStatus),
+						strconv.Itoa(vol.Number),
+						ColorResourceState(vol.State, vol.State.String()),
 					)
 					if vol.State != common.ResourceStateOK {
 						id := cfg.NQN.Subsystem()
@@ -88,17 +96,18 @@ func listNVMECommand() *cobra.Command {
 				}
 
 				if len(cfg.Status.Volumes) == 0 {
-					table.Rich(
-						[]string{cfg.NQN.String(), cfg.ServiceIP.String(), cfg.Status.Service.String(), "", common.ResourceStateBad.String()},
-						[]tablewriter.Colors{{}, {}, ServiceStateColor(cfg.Status.Service), {}, ResourceStateColor(common.ResourceStateBad)},
+					_ = table.Append(
+						cfg.NQN.String(),
+						cfg.ServiceIP.String(),
+						ColorServiceState(cfg.Status.Service, cfg.Status.Service.String()),
+						"",
+						ColorResourceState(common.ResourceStateBad, common.ResourceStateBad.String()),
 					)
 					badResources = append(badResources, cfg.NQN.Subsystem())
 				}
 			}
 
-			table.SetAutoMergeCellsByColumnIndex([]int{0, 1})
-			table.SetAutoFormatHeaders(false)
-			table.Render()
+			_ = table.Render()
 			if len(degradedResources) > 0 {
 				log.Warnf("Some resources are degraded. Run %s for possible solutions.", bold("linstor advise resource"))
 				for _, r := range degradedResources {

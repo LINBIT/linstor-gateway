@@ -1,38 +1,38 @@
 package cmd
 
 import (
-	"github.com/olekukonko/tablewriter"
+	"github.com/fatih/color"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
 )
 
 var (
-	tableColorHeader   = tablewriter.Colors{tablewriter.FgBlueColor, tablewriter.Bold}
-	tableColorOk       = tablewriter.Colors{tablewriter.FgGreenColor}
-	tableColorDegraded = tablewriter.Colors{tablewriter.FgYellowColor}
-	tableColorBad      = tablewriter.Colors{tablewriter.FgRedColor, tablewriter.Bold}
+	colorHeader   = color.New(color.FgBlue, color.Bold).SprintFunc()
+	colorOk       = color.New(color.FgGreen).SprintFunc()
+	colorDegraded = color.New(color.FgYellow).SprintFunc()
+	colorBad      = color.New(color.FgRed, color.Bold).SprintFunc()
 )
 
-func ServiceStateColor(state common.ServiceState) tablewriter.Colors {
+func ColorServiceState(state common.ServiceState, s string) string {
 	switch state {
 	case common.ServiceStateStarted:
-		return tableColorOk
+		return colorOk(s)
 	case common.ServiceStateStopped:
-		return tableColorBad
+		return colorBad(s)
 	default:
-		return tableColorDegraded
+		return colorDegraded(s)
 	}
 }
 
-func ResourceStateColor(state common.ResourceState) tablewriter.Colors {
+func ColorResourceState(state common.ResourceState, s string) string {
 	switch state {
 	case common.ResourceStateOK:
-		return tableColorOk
+		return colorOk(s)
 	case common.ResourceStateDegraded:
-		return tableColorDegraded
+		return colorDegraded(s)
 	case common.ResourceStateBad:
-		return tableColorBad
+		return colorBad(s)
 	default:
-		return tableColorDegraded
+		return colorDegraded(s)
 	}
 }

@@ -214,7 +214,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 				"nqn": r.NQN.String(),
 				// nvme namespaces start at 1, we just ensure that our volumes also start at 1
 				"namespace_id": fmt.Sprintf("%d", vol.VolumeNumber),
-				"backing_path": fmt.Sprintf(devPath),
+				"backing_path": devPath,
 				"uuid":         guid.String(),
 				"nguid":        guid.String(),
 			},

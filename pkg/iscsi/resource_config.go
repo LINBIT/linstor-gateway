@@ -365,7 +365,7 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		luAttrs := map[string]string{
 			"target_iqn": r.IQN.String(),
 			"lun":        strconv.Itoa(int(vol.VolumeNumber)),
-			"path":       fmt.Sprintf(devPath),
+			"path":       devPath,
 			// Attention: VMware uses the product_id (= t10_dev_id) to determine
 			// LUN equivalence, so it must be unique for each LUN. However, it
 			// only considers the first 8 bytes for whatever reason, so take

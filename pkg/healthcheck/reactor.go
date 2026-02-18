@@ -65,6 +65,10 @@ func guessReactorReloadDir() string {
 		"/usr/share/doc/drbd-reactor",
 		"/usr/share/doc/drbd-reactor-*/examples",
 		"/usr/share/doc/drbd-reactor-*",
+		"/usr/share/doc/packages/drbd-reactor/examples",
+		"/usr/share/doc/packages/drbd-reactor",
+		"/usr/share/doc/packages/drbd-reactor-*/examples",
+		"/usr/share/doc/packages/drbd-reactor-*",
 	}
 	for _, p := range paths {
 		matches, err := filepath.Glob(p)

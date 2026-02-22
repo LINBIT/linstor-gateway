@@ -28,6 +28,10 @@ import (
 
 var bold = color.New(color.Bold).SprintfFunc()
 
+func hintCheckHealth() {
+	log.Warnf("%s run %s on all cluster nodes to check for configuration issues.", color.YellowString("Hint:"), bold("linstor-gateway check-health"))
+}
+
 func iscsiCommands() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:     "iscsi",
@@ -124,6 +128,7 @@ high availability primitives.`,
 				ResourceTimeout:   resourceTimeout,
 			})
 			if err != nil {
+				hintCheckHealth()
 				return err
 			}
 
@@ -252,6 +257,7 @@ func startISCSICommand() *cobra.Command {
 
 				_, err = cli.Iscsi.Start(context.Background(), iqn, resourceTimeout)
 				if err != nil {
+					hintCheckHealth()
 					allErrs = append(allErrs, err)
 					continue
 				}

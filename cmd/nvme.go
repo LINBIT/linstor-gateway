@@ -170,6 +170,7 @@ func createNVMECommand() *cobra.Command {
 				ResourceTimeout: resourceTimeout,
 			})
 			if err != nil {
+				hintCheckHealth()
 				return err
 			}
 
@@ -258,6 +259,7 @@ func startNVMECommand() *cobra.Command {
 					continue
 				}
 				if err != nil {
+					hintCheckHealth()
 					allErrs = append(allErrs, err)
 					continue
 				}

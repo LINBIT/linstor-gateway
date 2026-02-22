@@ -129,6 +129,7 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
+				hintCheckHealth()
 				return err
 			}
 

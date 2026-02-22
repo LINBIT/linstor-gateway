@@ -365,32 +365,59 @@ of the target will be deleted.`,
 
 func addVolumeISCSICommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "add-volume IQN LU_NR LU_SIZE",
+		Use:   "add-volume IQN [LU_NR] LU_SIZE",
 		Short: "Add a new logical unit to an existing iSCSI target",
-		Long:  "Add a new logical unit to an existing iSCSI target. The target needs to be stopped.",
-		Args:  cobra.ExactArgs(3),
+		Long: `Add a new logical unit to an existing iSCSI target. The target needs to be stopped.
+If LU_NR is omitted, the next available logical unit number is used automatically.`,
+		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
 			iqn, err := iscsi.NewIqn(args[0])
 			if err != nil {
 				return err
 			}
 
-			volNr, err := strconv.Atoi(args[1])
+			var volNr int
+			var sizeArg string
+
+			if len(args) == 3 {
+				volNr, err = strconv.Atoi(args[1])
+				if err != nil {
+					return err
+				}
+				sizeArg = args[2]
+			} else {
+				// Auto-increment: fetch existing target and find the next volume number
+				cfg, err := cli.Iscsi.Get(ctx, iqn)
+				if err != nil {
+					return fmt.Errorf("failed to get existing target: %w", err)
+				}
+				if cfg == nil {
+					return fmt.Errorf("target %q not found", iqn)
+				}
+
+				maxVol := 0
+				for _, v := range cfg.Volumes {
+					if v.Number > maxVol {
+						maxVol = v.Number
+					}
+				}
+				volNr = maxVol + 1
+				sizeArg = args[1]
+			}
+
+			size, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(sizeArg)
 			if err != nil {
 				return err
 			}
 
-			size, err := unit.MustNewUnit(unit.DefaultUnits).ValueFromString(args[2])
+			_, err = cli.Iscsi.AddLogicalUnit(ctx, iqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
 			if err != nil {
 				return err
 			}
 
-			_, err = cli.Iscsi.AddLogicalUnit(context.Background(), iqn, &common.VolumeConfig{Number: volNr, SizeKiB: uint64(size.Value / unit.K)})
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Added volume to \"%s\"\n", iqn)
+			fmt.Printf("Added volume %d to \"%s\"\n", volNr, iqn)
 			return nil
 		},
 	}

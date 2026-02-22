@@ -200,7 +200,7 @@ func (i *ISCSI) Start(ctx context.Context, iqn Iqn, resourceTimeout time.Duratio
 
 	err = reactor.AttachConfig(ctx, i.cli.Client, cfg, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
+		return nil, fmt.Errorf("failed to attach reactor configuration: %w", err)
 	}
 
 	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)

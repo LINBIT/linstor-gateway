@@ -188,7 +188,7 @@ func DetachConfig(ctx context.Context, cli *client.Client, cfg *PromoterConfig, 
 	for rd := range cfg.Resources {
 		err := cli.ResourceDefinitions.DetachExternalFile(ctx, rd, path)
 		if err != nil {
-			return fmt.Errorf("error attaching file to resource: %w", err)
+			return fmt.Errorf("error detaching file from resource: %w", err)
 		}
 	}
 

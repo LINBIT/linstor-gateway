@@ -207,7 +207,7 @@ func (n *NVMeoF) Start(ctx context.Context, nqn Nqn, resourceTimeout time.Durati
 
 	err = reactor.AttachConfig(ctx, n.cli.Client, cfg, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detach reactor configuration: %w", err)
+		return nil, fmt.Errorf("failed to attach reactor configuration: %w", err)
 	}
 
 	waitCtx, cancel := context.WithTimeout(ctx, resourceTimeout)

@@ -93,11 +93,6 @@ func checkAgent(iscsiBackends []string) error {
 	err = category(
 		"Resource Agents",
 		&checkFileExists{filename: "/usr/lib/ocf/resource.d/heartbeat", packageName: "resource-agents", isDirectory: true},
-		&checkFileExists{
-			filename:    "/usr/lib/ocf/resource.d/heartbeat/nvmet-subsystem",
-			packageName: "resource-agents",
-			hint:        "The nvmet-* resource agents are only shipped with resource-agents 4.9.0 or later. See https://github.com/ClusterLabs/resource-agents for instructions on how to manually install a newer version.",
-		},
 		// Temporary workaround: debian packaging for resource-agents does not include psmisc as a dependency.
 		// TODO Remove this check once the packaging is fixed on all relevant distributions.
 		// See also: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1095291
@@ -130,6 +125,11 @@ func checkAgent(iscsiBackends []string) error {
 	}
 	err = category(
 		"NVMe-oF",
+		&checkFileExists{
+			filename:    "/usr/lib/ocf/resource.d/heartbeat/nvmet-subsystem",
+			packageName: "resource-agents",
+			hint:        "The nvmet-* resource agents are only shipped with resource-agents 4.9.0 or later. See https://github.com/ClusterLabs/resource-agents for instructions on how to manually install a newer version.",
+		},
 		&checkInPath{binary: "nvmetcli", packageName: "nvmetcli", hint: "nvmetcli is not (yet) packaged on all distributions. See https://git.infradead.org/users/hch/nvmetcli.git for instructions on how to manually install it."},
 		&checkKernelModuleLoaded{"nvmet", "nvmetcli"},
 	)

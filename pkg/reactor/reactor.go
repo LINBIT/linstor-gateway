@@ -176,6 +176,19 @@ func AttachConfig(ctx context.Context, cli *client.Client, cfg *PromoterConfig, 
 	for rd := range cfg.Resources {
 		err := cli.ResourceDefinitions.AttachExternalFile(ctx, rd, path)
 		if err != nil {
+			// The LINSTOR satellite returns a generic FAIL_UNKNOWN_ERROR (StorageException)
+			// when allowExtFiles is misconfigured, so we have to match the error message.
+			// See linstor-server: StltExternalFileHandler.isWhitelisted()
+			if strings.Contains(err.Error(), "does not have a whitelisted parent") {
+				log.Error("Hint: the LINSTOR satellite configuration is missing the required 'allowExtFiles' entry.")
+				log.Error("Make sure /etc/linstor/linstor_satellite.toml on ALL satellite nodes contains:")
+				log.Error("")
+				log.Error("    [files]")
+				log.Error(`    allowExtFiles = ["/etc/drbd-reactor.d"]`)
+				log.Error("")
+				log.Error("After changing the configuration, restart the linstor-satellite service.")
+				log.Error("Run 'linstor-gateway check-health' on each node to verify the configuration.")
+			}
 			return fmt.Errorf("error attaching file to resource: %w", err)
 		}
 	}

@@ -1,13 +1,21 @@
 package healthcheck
 
 import (
+	"errors"
 	"fmt"
-	"github.com/fatih/color"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
 )
+
+type errReactorReloadFailed struct{}
+
+func (e *errReactorReloadFailed) Error() string {
+	return "service drbd-reactor-reload.path is in failed state"
+}
 
 type checkReactorAutoReload struct {
 }
@@ -34,6 +42,9 @@ func (c *checkReactorAutoReload) check(prevError bool) error {
 	status, err := unitStatus("drbd-reactor-reload.path")
 	if err != nil {
 		return err
+	}
+	if status.SubState == "failed" {
+		return &errReactorReloadFailed{}
 	}
 	if status.ActiveState != "active" {
 		return fmt.Errorf("service drbd-reactor-reload.path is not started")
@@ -89,7 +100,13 @@ func (c *checkReactorAutoReload) format(err error) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "    %s drbd-reactor is not configured to automatically reload\n", color.RedString("✗"))
 	fmt.Fprintf(&b, "      %s\n", faint("→ %s", err.Error()))
-	if dir != "" {
+	var failedErr *errReactorReloadFailed
+	if errors.As(err, &failedErr) {
+		fmt.Fprintf(&b, "      The drbd-reactor-reload.path unit is in a failed state and will not trigger reloads.\n")
+		fmt.Fprintf(&b, "      Please execute:\n")
+		fmt.Fprintf(&b, "        %s\n", bold("systemctl reset-failed drbd-reactor-reload.path drbd-reactor-reload.service"))
+		fmt.Fprintf(&b, "        %s\n", bold("systemctl enable --now drbd-reactor-reload.path"))
+	} else if dir != "" {
 		path := filepath.Join(dir, "drbd-reactor-reload.{path,service}")
 		fmt.Fprintf(&b, "      Please execute:\n")
 		fmt.Fprintf(&b, "        %s\n", bold("cp %s /etc/systemd/system/", path))

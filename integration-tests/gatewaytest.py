@@ -148,6 +148,67 @@ class LinstorConnection(linstor.Linstor):
 
             time.sleep(1)
 
+    def wait_all_volumes_uptodate(self, resource: str, expected_volumes: int,
+                                  retries: int = 30, sleep_s: float = 2.0):
+        """
+        Wait until every volume of the resource is UpToDate on all diskful
+        nodes (and Diskless on diskless nodes). Each volume must have at
+        least 2 UpToDate replicas. Catches the issue #24 condition where a
+        newly added volume stays Inconsistent on the diskful peers.
+
+        :param resource: the LINSTOR resource name (e.g. "iscsi1")
+        :param expected_volumes: number of volumes the resource must have
+        :param retries: number of polling attempts before giving up
+        :param sleep_s: delay between attempts
+        :exception TimeoutError: if the condition is not reached in time
+        """
+
+        attempts = 0
+        while True:
+            attempts += 1
+            if attempts > retries:
+                raise TimeoutError(
+                    'Resource {} did not have all {} volumes UpToDate after {} retries'.format(
+                        resource, expected_volumes, retries))
+
+            resp = self.resource_list(filter_by_resources=[resource])
+            if len(resp) == 0 or len(resp[0].resource_states) == 0:
+                time.sleep(sleep_s)
+                continue
+            states = resp[0].resource_states
+
+            ok = True
+            bad = []
+            # Key by LINSTOR volume number, not list index: after a
+            # non-trailing delete-volume the surviving volumes can be
+            # sparse (e.g. {0, 2}), so a positional list would alias
+            # them onto the same slot.
+            per_volume_uptodate = {}
+            for st in states:
+                if len(st.volume_states) != expected_volumes:
+                    ok = False
+                    bad.append('node={} has {} volumes (expected {})'.format(
+                        st.node_name, len(st.volume_states), expected_volumes))
+                    continue
+                for v in st.volume_states:
+                    per_volume_uptodate.setdefault(v.number, 0)
+                    if v.disk_state == 'UpToDate':
+                        per_volume_uptodate[v.number] += 1
+                    elif v.disk_state == 'Diskless':
+                        pass
+                    else:
+                        ok = False
+                        bad.append('node={} vol={} state={}'.format(
+                            st.node_name, v.number, v.disk_state))
+
+            if ok and len(per_volume_uptodate) == expected_volumes \
+                    and all(c >= 2 for c in per_volume_uptodate.values()):
+                return True
+
+            log('Resource {} not yet healthy (attempt {}/{}): uptodate-per-volume={} bad={}'.format(
+                resource, attempts, retries, per_volume_uptodate, bad))
+            time.sleep(sleep_s)
+
     def resource_exists(self, resource: str):
         """
         Check if a resource exists.

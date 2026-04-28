@@ -24,3 +24,6 @@ vms = [3]
 
 [tests.create-same-ip]
 vms = [3]
+
+[tests.iscsi-add-delete-volume]
+vms = [3]

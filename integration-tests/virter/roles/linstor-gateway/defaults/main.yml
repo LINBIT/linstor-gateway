@@ -1,1 +1,4 @@
 linstor_gateway_version: "*"
+# When non-empty, this path (inside the ansible controller container) is
+# copied onto the VMs as /usr/sbin/linstor-gateway, bypassing the package.
+linstor_gateway_local_binary: ""

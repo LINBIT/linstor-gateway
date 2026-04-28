@@ -102,7 +102,7 @@
   tags:
     - preload
 
-- name: Install LINSTOR Gateway
+- name: Install LINSTOR Gateway from package
   yum:
     pkg:
       - "linstor-gateway-{{ linstor_gateway_version }}"
@@ -110,6 +110,16 @@
   register: linstor_gateway_install
   retries: 5
   until: linstor_gateway_install is success
+  when: linstor_gateway_local_binary | length == 0
+  tags:
+    - testimage
+
+- name: Install LINSTOR Gateway from local binary
+  copy:
+    src: "{{ linstor_gateway_local_binary }}"
+    dest: /usr/sbin/linstor-gateway
+    mode: '0755'
+  when: linstor_gateway_local_binary | length > 0
   tags:
     - testimage
 

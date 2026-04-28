@@ -1,0 +1,6 @@
+/files/
+/tests-out/
+/log/
+__pycache__/
+*.pyc
+/venv/

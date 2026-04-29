@@ -9,12 +9,13 @@
   tags:
     - preload
 
-- name: Add CI repo
+- name: Add CI repo (disabled by default — only the linstor-gateway under test pulls from here)
   yum_repository:
     name: linbit-ci
     description: LINBIT CI Packages
     baseurl: "{{ ci_repo_baseurl }}"
     gpgcheck: false
+    enabled: false
     metadata_expire: "0"
   tags:
     - preload
@@ -106,6 +107,7 @@
   yum:
     pkg:
       - "linstor-gateway-{{ linstor_gateway_version }}"
+    enablerepo: linbit-ci
     update_cache: true
   register: linstor_gateway_install
   retries: 5

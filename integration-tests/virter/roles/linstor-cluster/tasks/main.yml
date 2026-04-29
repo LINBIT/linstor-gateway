@@ -42,33 +42,28 @@
   tags:
     - preload
 
-# cat /etc/os-release | curl -sT - -X POST https://bestmodule.drbd.io/api/v1/best/$(uname -r)
-- name: Determine best kmod
+- name: Determine best DRBD kmod for the running kernel
   uri:
-    url: https://bestmodule.drbd.io/api/v1/best/{{ kernel_version }}
-    src: "/etc/os-release"
-    remote_src: "True"
+    url: https://bestmodule.drbd.io/api/v1/best/{{ ansible_kernel }}
+    src: /etc/os-release
+    remote_src: true
     method: POST
     body_format: raw
     return_content: true
   register: best_kmod
   tags:
-    - preload
+    - testimage
 
-- debug:
-    var: best_kmod.content
-  tags:
-    - preload
-
-- name: Install DRBD
+- name: Install drbd-utils and DRBD kmod
   yum:
     pkg:
-      - drbd-utils
+      - "drbd-utils{{ ('-' + drbd_utils_version) if drbd_utils_version | length > 0 else '' }}"
       - "{{ best_kmod.content | regex_replace('(.*)\\.rpm', '\\1') }}"
+    update_cache: true
   notify:
     - Restart satellite
   tags:
-    - preload
+    - testimage
 
 - name: Configure DRBD utils to not phone home
   lineinfile:
@@ -78,20 +73,27 @@
     state: present
     validate: drbdadm -c %s dump
   tags:
-    - preload
+    - testimage
 
 - name: Install software components
   yum:
     pkg:
       - gnupg
       - lvm2
-      - linstor-controller
-      - linstor-satellite
-      - linstor-client
+  tags:
+    - preload
+
+- name: Install LINSTOR packages
+  yum:
+    pkg:
+      - "linstor-controller{{ ('-' + linstor_version) if linstor_version | length > 0 else '' }}"
+      - "linstor-satellite{{ ('-' + linstor_version) if linstor_version | length > 0 else '' }}"
+      - "linstor-client{{ ('-' + linstor_version) if linstor_version | length > 0 else '' }}"
+    update_cache: true
   notify:
     - Restart satellite
   tags:
-    - preload
+    - testimage
 
 - name: Trigger handlers
   meta: flush_handlers
@@ -102,8 +104,6 @@
     dest: /etc/lvm/lvm.conf
     owner: root
     mode: 0644
-  notify:
-    - Restart satellite
   tags:
     - preload
 
@@ -138,7 +138,7 @@
   notify:
     - Restart satellite
   tags:
-    - preload
+    - testimage
 
 - name: Enable satellite
   service:
@@ -147,7 +147,7 @@
   notify:
     - Restart satellite
   tags:
-    - preload
+    - testimage
 
 - name: Set up linstor-controller service (on controller)
   service:

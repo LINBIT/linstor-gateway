@@ -9,12 +9,13 @@
 - name: Install drbd-reactor
   yum:
     pkg:
-      - drbd-reactor
+      - "drbd-reactor{{ ('-' + drbd_reactor_version) if drbd_reactor_version | length > 0 else '' }}"
     state: present
+    update_cache: true
   notify:
     - Reload drbd-reactor
   tags:
-    - preload
+    - testimage
 
 - name: Enable drbd-reactor service
   service:
@@ -22,7 +23,7 @@
     state: started
     enabled: yes
   tags:
-    - preload
+    - testimage
 
 - name: Configure reloading service
   copy:
@@ -39,7 +40,7 @@
     - Reload drbd-reactor reloader
   when: configure_autoreload
   tags:
-    - preload
+    - testimage
 
 - name: Enable drbd-reactor reloader
   service:
@@ -48,4 +49,4 @@
     enabled: yes
   when: configure_autoreload and drbd_reactor_reloader.changed
   tags:
-    - preload
+    - testimage

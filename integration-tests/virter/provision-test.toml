@@ -3,6 +3,12 @@ version = 1
 [values]
 LinstorGatewayVersion = "*"
 LinstorGatewayLocalBinary = ""
+# DRBD/LINSTOR/reactor versions are passed in by the Makefile. Empty means
+# "no version pin": yum picks the latest stable from the enabled repos.
+DrbdVersion = ""
+DrbdUtilsVersion = ""
+LinstorVersion = ""
+DrbdReactorVersion = ""
 
 [[steps]]
 [steps.container]
@@ -14,6 +20,10 @@ command = [
 	"/virter/workspace/virter/provision-playbook.yml",
 	"--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",
 	"--extra-vars", "linstor_gateway_local_binary={{ .LinstorGatewayLocalBinary }}",
+	"--extra-vars", "drbd_version={{ .DrbdVersion }}",
+	"--extra-vars", "drbd_utils_version={{ .DrbdUtilsVersion }}",
+	"--extra-vars", "linstor_version={{ .LinstorVersion }}",
+	"--extra-vars", "drbd_reactor_version={{ .DrbdReactorVersion }}",
 	"--tags", "testimage"
 ]
 [steps.container.env]

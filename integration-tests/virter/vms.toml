@@ -1,5 +1,9 @@
 name = "t"
 provision_file = "provision-test.toml"
+# The testimage stage installs the whole drbd/linstor/reactor stack (used to
+# only install linstor-gateway), so the default 3-minute provision timeout
+# is too tight. Match drbd9-tests' 30m to leave headroom for slow mirrors.
+provision_timeout = "30m"
 
 [[vms]]
 base_image = "linstor-gateway-tests--base-alma-9"

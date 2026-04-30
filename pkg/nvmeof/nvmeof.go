@@ -413,6 +413,27 @@ func (n *NVMeoF) DeleteVolume(ctx context.Context, nqn Nqn, nsid int) (*Resource
 		return nil, errors.New("cannot delete volume while service is running")
 	}
 
+	// Volume number 0 is the reserved cluster-private/system volume that
+	// hosts the filesystem drbd-reactor mounts for tickle dirs etc.; user
+	// namespaces are numbered from 1. Refuse to delete it directly, and
+	// refuse to leave the target with zero user namespaces.
+	if nsid == 0 {
+		return nil, errors.New("cannot delete volume 0; it is the reserved cluster-private/system volume")
+	}
+	userVolumes := 0
+	targetExists := false
+	for _, v := range rscCfg.Volumes {
+		if v.Number > 0 {
+			userVolumes++
+			if v.Number == nsid {
+				targetExists = true
+			}
+		}
+	}
+	if targetExists && userVolumes <= 1 {
+		return nil, errors.New("cannot delete the last remaining volume; use `delete` to remove the target instead")
+	}
+
 	for i := range rscCfg.Volumes {
 		if rscCfg.Volumes[i].Number == nsid {
 			err = n.cli.ResourceDefinitions.DeleteVolumeDefinition(ctx, nqn.Subsystem(), nsid)

@@ -76,6 +76,20 @@ active_node = ls.wait_for_resource_active(RESOURCE)
 gatewaytest.log('Resource {} active again on node {}'.format(RESOURCE, active_node))
 ls.wait_inuse_stable(RESOURCE, active_node)
 
+# --- Probe: deleting the last remaining user LUN must be refused. -----
+# A target with zero user LUNs is a useless half-state -- the right way
+# to remove the last LUN is `iscsi delete`. If this assertion fails it
+# means the gateway currently allows the broken state and a guard needs
+# adding in pkg/iscsi/iscsi.go's DeleteVolume.
+first.run(['linstor-gateway', 'iscsi', 'stop', IQN])
+try:
+    first.run(['linstor-gateway', 'iscsi', 'delete-volume', IQN, '2'])
+except CalledProcessError:
+    gatewaytest.log('delete-volume correctly refused for the last user LUN')
+else:
+    raise AssertionError(
+        'delete-volume should have refused removing the last remaining user LUN')
+
 # --- Cleanup. ---------------------------------------------------------
 first.run(['linstor-gateway', 'iscsi', 'delete', '--force', IQN])
 first.assert_resource_not_exists('iscsi', IQN)

@@ -27,3 +27,6 @@ vms = [3]
 
 [tests.iscsi-add-delete-volume]
 vms = [3]
+
+[tests.nvme-add-delete-volume]
+vms = [3]

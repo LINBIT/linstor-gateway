@@ -430,7 +430,10 @@ func (n *NVMeoF) DeleteVolume(ctx context.Context, nqn Nqn, nsid int) (*Resource
 			}
 		}
 	}
-	if targetExists && userVolumes <= 1 {
+	if !targetExists {
+		return nil, fmt.Errorf("volume %d does not exist on target %q", nsid, nqn)
+	}
+	if userVolumes <= 1 {
 		return nil, errors.New("cannot delete the last remaining volume; use `delete` to remove the target instead")
 	}
 

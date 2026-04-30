@@ -72,12 +72,21 @@ active_node = ls.wait_for_resource_active(RESOURCE)
 gatewaytest.log('Resource {} active again on node {}'.format(RESOURCE, active_node))
 ls.wait_inuse_stable(RESOURCE, active_node)
 
+# --- Probe: deleting a non-existent NSID must fail loudly. ------------
+# Used to silently report success and do nothing; now expected to error
+# (pkg/nvmeof/nvmeof.go DeleteVolume returns "volume N does not exist").
+first.run(['linstor-gateway', 'nvme', 'stop', NQN])
+try:
+    first.run(['linstor-gateway', 'nvme', 'delete-volume', NQN, '99'])
+except CalledProcessError:
+    gatewaytest.log('delete-volume correctly errored for a non-existent NSID')
+else:
+    raise AssertionError(
+        'delete-volume should have errored for a non-existent NSID')
+
 # --- Probe: deleting the last remaining namespace must be refused. ----
 # A target with zero user namespaces is a useless half-state -- the
-# right way to remove the last NSID is `nvme delete`. If this assertion
-# fails it means the gateway currently allows the broken state and a
-# guard needs adding in pkg/nvmeof/nvmeof.go's DeleteVolume.
-first.run(['linstor-gateway', 'nvme', 'stop', NQN])
+# right way to remove the last NSID is `nvme delete`.
 try:
     first.run(['linstor-gateway', 'nvme', 'delete-volume', NQN, '2'])
 except CalledProcessError:

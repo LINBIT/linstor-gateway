@@ -425,7 +425,10 @@ func (i *ISCSI) DeleteVolume(ctx context.Context, iqn Iqn, lun int) (*ResourceCo
 			}
 		}
 	}
-	if targetExists && userVolumes <= 1 {
+	if !targetExists {
+		return nil, fmt.Errorf("volume %d does not exist on target %q", lun, iqn)
+	}
+	if userVolumes <= 1 {
 		return nil, errors.New("cannot delete the last remaining volume; use `delete` to remove the target instead")
 	}
 

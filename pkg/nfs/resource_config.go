@@ -27,6 +27,13 @@ const (
 	DefaultNFSPort         = 2049
 	CurrentVersion         = 1
 	DefaultResourceTimeout = 30 * time.Second
+
+	// ImplementationKernel uses the in-kernel NFS server via ocf:heartbeat:nfsserver.
+	ImplementationKernel = "kernel"
+	// ImplementationGanesha uses NFS-Ganesha via ocf:heartbeat:ganesha-nfs.
+	// Exports are configured via ganesha.conf rather than ocf:heartbeat:exportfs.
+	ImplementationGanesha = "ganesha"
+	DefaultImplementation = ImplementationKernel
 )
 
 var (
@@ -62,6 +69,9 @@ type ResourceConfig struct {
 	Status          common.ResourceStatus `json:"status"`
 	GrossSize       bool                  `json:"gross_size"`
 	ResourceTimeout time.Duration         `json:"resource_timeout,omitempty"`
+	// Implementation selects which NFS server runs the export. Either
+	// ImplementationKernel (the default) or ImplementationGanesha.
+	Implementation string `json:"implementation,omitempty"`
 }
 
 const (
@@ -124,7 +134,9 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 					r.AllowedIPs = append(r.AllowedIPs, cidr)
 				}
 			case "ocf:heartbeat:nfsserver":
-				break
+				r.Implementation = ImplementationKernel
+			case "ocf:heartbeat:ganesha-nfs":
+				r.Implementation = ImplementationGanesha
 			case "ocf:heartbeat:IPaddr2":
 				ip := net.ParseIP(agent.Attributes["ip"])
 				if ip == nil {
@@ -314,6 +326,10 @@ func (r *ResourceConfig) FillDefaults() {
 	if r.ResourceTimeout == 0 {
 		r.ResourceTimeout = DefaultResourceTimeout
 	}
+
+	if r.Implementation == "" {
+		r.Implementation = DefaultImplementation
+	}
 }
 
 func (r *ResourceConfig) Valid() error {
@@ -327,6 +343,12 @@ func (r *ResourceConfig) Valid() error {
 
 	if r.ServiceIP.Mask == nil {
 		return common.ValidationError("missing service ip prefix length")
+	}
+
+	switch r.Implementation {
+	case "", ImplementationKernel, ImplementationGanesha:
+	default:
+		return common.ValidationError(fmt.Sprintf("unknown nfs implementation %q (expected %q or %q)", r.Implementation, ImplementationKernel, ImplementationGanesha))
 	}
 
 	sort.Slice(r.Volumes, func(i, j int) bool {
@@ -368,6 +390,10 @@ func (r *ResourceConfig) Matches(o *ResourceConfig) bool {
 	}
 
 	if r.ResourceGroup != o.ResourceGroup {
+		return false
+	}
+
+	if r.Implementation != o.Implementation {
 		return false
 	}
 
@@ -463,38 +489,52 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		},
 	})
 
-	agents = append(agents, &reactor.ResourceAgent{
-		Type: "ocf:heartbeat:nfsserver",
-		Name: "nfsserver",
-		Attributes: map[string]string{
-			"nfs_ip":             r.ServiceIP.IP().String(),
-			"nfs_shared_infodir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name, "nfs"),
-			"nfs_server_scope":   r.ServiceIP.IP().String(),
-		},
-	})
+	switch r.Implementation {
+	case ImplementationGanesha:
+		agents = append(agents, &reactor.ResourceAgent{
+			Type: "ocf:heartbeat:ganesha-nfs",
+			Name: "nfsserver",
+			Attributes: map[string]string{
+				"nfs_ip": r.ServiceIP.IP().String(),
+			},
+		})
+		// Ganesha manages its exports via ganesha.conf, so no
+		// ocf:heartbeat:exportfs agents are emitted. AllowedIPs is
+		// not enforced through the resource agent in this mode.
+	default:
+		agents = append(agents, &reactor.ResourceAgent{
+			Type: "ocf:heartbeat:nfsserver",
+			Name: "nfsserver",
+			Attributes: map[string]string{
+				"nfs_ip":             r.ServiceIP.IP().String(),
+				"nfs_shared_infodir": filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name, "nfs"),
+				"nfs_server_scope":   r.ServiceIP.IP().String(),
+			},
+		})
 
-	for i := 1; i < len(deployedRes.Volumes); i++ {
-		vol := deployedRes.Volumes[i]
-		resVol := r.Volumes[i]
-		if int(vol.VolumeNumber) != resVol.Number {
-			return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, resVol.Number)
-		}
+		for i := 1; i < len(deployedRes.Volumes); i++ {
+			vol := deployedRes.Volumes[i]
+			resVol := r.Volumes[i]
+			if int(vol.VolumeNumber) != resVol.Number {
+				return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, resVol.Number)
+			}
 
-		fsid := uuid.NewSHA1(resUuid, []byte(vol.Uuid))
+			fsid := uuid.NewSHA1(resUuid, []byte(vol.Uuid))
 
-		dirPath := ExportPath(r, &resVol)
+			dirPath := ExportPath(r, &resVol)
 
-		for j := range r.AllowedIPs {
-			agents = append(agents, &reactor.ResourceAgent{
-				Type: "ocf:heartbeat:exportfs",
-				Name: fmt.Sprintf(exportAgentName, vol.VolumeNumber, j),
-				Attributes: map[string]string{
-					"directory":  dirPath,
-					"fsid":       fsid.String(),
-					"clientspec": nfsFormatCidr(&r.AllowedIPs[j]),
-					"options":    "rw,all_squash,anonuid=0,anongid=0",
-				},
-			})
+			for j := range r.AllowedIPs {
+				agents = append(agents, &reactor.ResourceAgent{
+					Type: "ocf:heartbeat:exportfs",
+					Name: fmt.Sprintf(exportAgentName, vol.VolumeNumber, j),
+					Attributes: map[string]string{
+						"directory":  dirPath,
+						"fsid":       fsid.String(),
+						"clientspec": nfsFormatCidr(&r.AllowedIPs[j]),
+						"options":    "rw,all_squash,anonuid=0,anongid=0",
+					},
+				})
+			}
 		}
 	}
 

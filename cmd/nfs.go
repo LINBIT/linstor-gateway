@@ -33,7 +33,9 @@ func nfsCommands() *cobra.Command {
 and drbd-reactor. A running LINSTOR cluster including storage pools and resource groups
 is a prerequisite to use this tool.
 
-NOTE that only one NFS resource can exist in a cluster.
+NOTE that with the kernel NFS implementation (the default), only one NFS resource
+can exist in a cluster. Use --implementation=ganesha to run multiple independent
+NFS resources in the same cluster.
 See "help nfs create" for more information`,
 		Args: cobra.NoArgs,
 	}
@@ -63,6 +65,7 @@ func createNFSCommand() *cobra.Command {
 	exportPaths := []string{"/"}
 	grossSize := false
 	filesystem := "ext4"
+	implementation := nfs.DefaultImplementation
 	var resourceTimeout time.Duration
 
 	cmd := &cobra.Command{
@@ -74,8 +77,11 @@ specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS
 export.
 
-!!! NOTE that only one NFS resource can exist in a cluster.
-To create multiple exports, create a single resource with multiple volumes.`,
+With the kernel NFS implementation (the default), only one NFS resource can exist
+in a cluster. To create multiple exports under a single kernel resource, pass
+multiple sizes and --export-path values.
+With --implementation=ganesha, multiple independent NFS resources can coexist in
+the same cluster.`,
 		Example: `linstor-gateway nfs create example 192.168.211.122/24 2G
 linstor-gateway nfs create restricted 10.10.22.44/16 2G --allowed-ips 10.10.0.0/16
 linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --export-path /movies
@@ -126,6 +132,7 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 				Volumes:         volumes,
 				GrossSize:       grossSize,
 				ResourceTimeout: resourceTimeout,
+				Implementation:  implementation,
 			}
 			_, err = cli.Nfs.Create(ctx, rsc)
 			if err != nil {
@@ -140,10 +147,11 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "LINSTOR resource group to use")
 	cmd.Flags().StringSliceVarP(&exportPaths, "export-path", "p", exportPaths, fmt.Sprintf("Set the export path, relative to %s. Can be specified multiple times when creating more than one volume", nfs.ExportBasePath))
-	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
+	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access. Not enforced when --implementation=ganesha")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 	cmd.Flags().StringVarP(&filesystem, "filesystem", "f", filesystem, "File system type to use (ext4 or xfs)")
 	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nfs.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
+	cmd.Flags().StringVar(&implementation, "implementation", implementation, fmt.Sprintf("NFS server implementation to use (%q or %q)", nfs.ImplementationKernel, nfs.ImplementationGanesha))
 
 	return cmd
 }

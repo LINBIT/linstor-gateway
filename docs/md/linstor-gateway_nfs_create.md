@@ -10,8 +10,11 @@ specified name and using the specified resource group.
 After that it creates a drbd-reactor configuration to bring up a highly available NFS
 export.
 
-!!! NOTE that only one NFS resource can exist in a cluster.
-To create multiple exports, create a single resource with multiple volumes.
+With the kernel NFS implementation (the default), only one NFS resource can exist
+in a cluster. To create multiple exports under a single kernel resource, pass
+multiple sizes and --export-path values.
+With --implementation=ganesha, multiple independent NFS resources can coexist in
+the same cluster.
 
 ```
 linstor-gateway nfs create NAME SERVICE_IP [VOLUME_SIZE]... [flags]
@@ -29,11 +32,12 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 ### Options
 
 ```
-      --allowed-ips ip-cidr         Set the IP address mask of clients that are allowed access (default 0.0.0.0/0)
+      --allowed-ips ip-cidr         Set the IP address mask of clients that are allowed access. Not enforced when --implementation=ganesha (default 0.0.0.0/0)
   -p, --export-path strings         Set the export path, relative to /srv/gateway-exports. Can be specified multiple times when creating more than one volume (default [/])
   -f, --filesystem string           File system type to use (ext4 or xfs) (default "ext4")
       --gross                       Make all size options specify gross size, i.e. the actual space used on disk
   -h, --help                        help for create
+      --implementation string       NFS server implementation to use ("kernel" or "ganesha") (default "kernel")
   -r, --resource-group string       LINSTOR resource group to use (default "DfltRscGrp")
       --resource-timeout duration   Timeout for waiting for the resource to become available (default 30s)
 ```

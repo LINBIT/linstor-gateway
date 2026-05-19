@@ -84,7 +84,7 @@ func (n *NFS) getExistingDeployment(ctx context.Context, rsc *ResourceConfig, cf
 	return deployedCfg, nil
 }
 
-func (n *NFS) isNFSConfig(config reactor.PromoterConfig) bool {
+func (n *NFS) isKernelNFSConfig(config reactor.PromoterConfig) bool {
 	for _, r := range config.Resources {
 		for _, s := range r.Start {
 			if agent, ok := s.(*reactor.ResourceAgent); ok {
@@ -98,7 +98,9 @@ func (n *NFS) isNFSConfig(config reactor.PromoterConfig) bool {
 }
 
 // checkExistingConfigs goes through the list of currently deployed configs, and checks:
-// - if an NFS config already exists; if so, abort with an error
+// - if a kernel NFS config already exists and the new resource also uses the
+//   kernel implementation; if so, abort with an error (ocf:heartbeat:nfsserver
+//   is a node-wide singleton). Ganesha resources can coexist freely.
 // - if an existing config has the same name as the one we are trying to create; if so, just return that
 // - if the IP address of the new config collides with an existing config; if so, abort with an error
 func (n *NFS) checkExistingConfigs(ctx context.Context, newRsc *ResourceConfig) (*reactor.PromoterConfig, string, error) {
@@ -119,8 +121,8 @@ func (n *NFS) checkExistingConfigs(ctx context.Context, newRsc *ResourceConfig) 
 			existingPath = p
 			continue
 		}
-		if n.isNFSConfig(c) {
-			return nil, "", fmt.Errorf("an NFS config already exists in %s. Only one NFS resource is allowed", p)
+		if newRsc.Implementation == ImplementationKernel && n.isKernelNFSConfig(c) {
+			return nil, "", fmt.Errorf("a kernel NFS config already exists in %s. Only one kernel NFS resource is allowed; use --implementation=ganesha to create multiple NFS resources", p)
 		}
 
 		if err := common.CheckIPCollision(c, newRsc.ServiceIP.IP()); err != nil {

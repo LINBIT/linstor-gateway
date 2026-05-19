@@ -44,7 +44,27 @@ func TestResource_RoundTrip(t *testing.T) {
 				ExportPath: "/",
 			},
 		},
-		Status: common.ResourceStatus{},
+		Implementation: ImplementationKernel,
+		Status:         common.ResourceStatus{},
+	}, {
+		Name:      "ganesha",
+		ServiceIP: common.ServiceIPFromParts(net.IP{192, 168, 127, 1}, 24),
+		// AllowedIPs is unused for ganesha; no exportfs agents are emitted.
+		ResourceGroup: "rg1",
+		Volumes: []VolumeConfig{
+			{VolumeConfig: common.ClusterPrivateVolume()},
+			{
+				VolumeConfig: common.VolumeConfig{
+					Number:              1,
+					SizeKiB:             1024,
+					FileSystem:          "ext4",
+					FileSystemRootOwner: common.UserGroup{User: "someone", Group: "somegroup"},
+				},
+				ExportPath: "/",
+			},
+		},
+		Implementation: ImplementationGanesha,
+		Status:         common.ResourceStatus{},
 	}}
 
 	for i := range testcases {
@@ -81,6 +101,7 @@ func TestResource_RoundTrip(t *testing.T) {
 			assert.Equal(t, tcase.ResourceGroup, decoded.ResourceGroup)
 			assert.Equal(t, tcase.Volumes, decoded.Volumes)
 			assert.Equal(t, tcase.Status, decoded.Status)
+			assert.Equal(t, tcase.Implementation, decoded.Implementation)
 		})
 	}
 }

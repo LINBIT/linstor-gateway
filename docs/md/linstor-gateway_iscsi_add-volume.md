@@ -5,9 +5,10 @@ Add a new logical unit to an existing iSCSI target
 ### Synopsis
 
 Add a new logical unit to an existing iSCSI target. The target needs to be stopped.
+If LU_NR is omitted, the next available logical unit number is used automatically.
 
 ```
-linstor-gateway iscsi add-volume IQN LU_NR LU_SIZE [flags]
+linstor-gateway iscsi add-volume IQN [LU_NR] LU_SIZE [flags]
 ```
 
 ### Options

@@ -78,6 +78,30 @@
   tags:
     - preload
 
+- name: Add CentOS Storage SIG repo (nfs-ganesha)
+  # nfs-ganesha was retired from EPEL 9; the CentOS Storage SIG is the
+  # canonical EL9 source.
+  yum_repository:
+    name: centos-storage-nfsganesha-9
+    description: CentOS Storage SIG - nfs-ganesha 9
+    baseurl: https://mirror.stream.centos.org/SIGs/9-stream/storage/x86_64/nfsganesha-9/
+    gpgcheck: false
+  tags:
+    - preload
+
+- name: Install nfs-ganesha
+  yum:
+    pkg:
+      - nfs-ganesha
+      - nfs-ganesha-vfs
+  # Bound the task: dnf has no aggressive timeout when a mirror is
+  # unreachable, so without this a network issue would hang the pipeline
+  # until the CI job timeout (~1h) instead of surfacing an error.
+  async: 300
+  poll: 5
+  tags:
+    - preload
+
 - name: Install LINSTOR Gateway
   yum:
     pkg:
@@ -92,6 +116,14 @@
 - name: Disable nfs server
   service:
     name: nfs-server
+    state: stopped
+    enabled: no
+  tags:
+    - preload
+
+- name: Disable nfs-ganesha service
+  service:
+    name: nfs-ganesha
     state: stopped
     enabled: no
   tags:

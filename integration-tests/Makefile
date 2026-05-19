@@ -21,6 +21,7 @@ run:
 base_image:
 	virter image pull linstor-gateway-tests-base-os $(BASE_OS_IMAGE_SOURCE)
 	virter image build linstor-gateway-tests-base-os \
+			--vcpus 4 --memory 2G \
 			--provision virter/provision-base.toml \
 			--set values.LinbitRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/packages-linbit-com \
 			--set values.CIRepoBaseURL=$$LINBIT_REGISTRY_URL/repository/ci-yum/rhel9 \

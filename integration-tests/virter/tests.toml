@@ -10,6 +10,9 @@ vms = [3]
 [tests.nfs-create]
 vms = [3]
 
+[tests.nfs-create-ganesha]
+vms = [3]
+
 [tests.nvme-create]
 vms = [3]
 

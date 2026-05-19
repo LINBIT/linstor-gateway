@@ -5,9 +5,10 @@ LinstorGatewayVersion = "*"
 
 [[steps]]
 [steps.container]
-image = "quay.io/ansible/ansible-runner:stable-2.9-devel"
+image = "quay.io/ansible/awx-ee:24.6.1"
+user = "0"
 command = [
-	"ansible-playbook",
+	"sh", "/virter/workspace/virter/run-ansible-playbook.sh",
 	"--inventory", "/virter/workspace/virter/inventory",
 	"/virter/workspace/virter/provision-playbook.yml",
 	"--extra-vars", "linstor_gateway_version={{ .LinstorGatewayVersion }}",

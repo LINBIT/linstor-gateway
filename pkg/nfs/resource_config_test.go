@@ -292,6 +292,53 @@ func TestValid(t *testing.T) {
 	}
 }
 
+func TestGaneshaDefaultAllowedIPsRoundTrip(t *testing.T) {
+	t.Parallel()
+	rsc := &ResourceConfig{
+		Name:          "ganesha-default",
+		ServiceIP:     common.ServiceIPFromParts(net.IP{192, 168, 127, 1}, 24),
+		ResourceGroup: "rg1",
+		Volumes: []VolumeConfig{
+			{
+				VolumeConfig: common.VolumeConfig{
+					Number:              1,
+					SizeKiB:             1024,
+					FileSystem:          "ext4",
+					FileSystemRootOwner: common.UserGroup{User: "someone", Group: "somegroup"},
+				},
+				ExportPath: "/",
+			},
+		},
+		Implementation: ImplementationGanesha,
+	}
+	// Mirror the server-side Create flow: fill defaults, then prepend the
+	// cluster-private volume (volume 0).
+	rsc.FillDefaults()
+	rsc.Volumes = append([]VolumeConfig{{VolumeConfig: common.ClusterPrivateVolume()}}, rsc.Volumes...)
+
+	// A defaulted ganesha resource must use a single catch-all so it round-trips.
+	assert.Len(t, rsc.AllowedIPs, 1)
+
+	encoded, err := rsc.ToPromoter([]client.ResourceWithVolumes{
+		{Volumes: []client.Volume{
+			{VolumeNumber: 0, DevicePath: "/dev/drbd1000", Props: filesystemProps(rsc.Volumes[0])},
+			{VolumeNumber: 1, DevicePath: "/dev/drbd1001", Props: filesystemProps(rsc.Volumes[1])},
+		}},
+	})
+	assert.NoError(t, err)
+
+	decoded, err := FromPromoter(
+		encoded,
+		&client.ResourceDefinition{ResourceGroupName: "rg1"},
+		[]client.VolumeDefinition{
+			{VolumeNumber: gog.Ptr(int32(0)), SizeKib: 64 * 1024, Props: filesystemProps(rsc.Volumes[0])},
+			{VolumeNumber: gog.Ptr(int32(1)), SizeKib: 1024, Props: filesystemProps(rsc.Volumes[1])},
+		},
+	)
+	assert.NoError(t, err)
+	assert.True(t, rsc.Matches(decoded), "defaulted ganesha config must round-trip: AllowedIPs %v vs decoded %v", rsc.AllowedIPs, decoded.AllowedIPs)
+}
+
 func TestParseRootOwner(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

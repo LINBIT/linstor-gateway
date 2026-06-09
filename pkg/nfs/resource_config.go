@@ -31,7 +31,8 @@ const (
 	// ImplementationKernel uses the in-kernel NFS server via ocf:heartbeat:nfsserver.
 	ImplementationKernel = "kernel"
 	// ImplementationGanesha uses NFS-Ganesha via ocf:heartbeat:ganesha-nfs.
-	// Exports are configured via ganesha.conf rather than ocf:heartbeat:exportfs.
+	// The agent renders ganesha.conf from the OCF parameters we emit (generated
+	// mode), so no ocf:heartbeat:exportfs agents are used.
 	ImplementationGanesha = "ganesha"
 	DefaultImplementation = ImplementationKernel
 )
@@ -332,16 +333,30 @@ func (r *ResourceConfig) FillDefaults() {
 		r.Volumes[i].ExportPath = rootedPath(r.Volumes[i].ExportPath)
 	}
 
+	if r.Implementation == "" {
+		r.Implementation = DefaultImplementation
+	}
+
 	if len(r.AllowedIPs) == 0 {
-		r.AllowedIPs = AllowAllCidr
+		if r.Implementation == ImplementationGanesha {
+			// Ganesha represents "allow everyone" as a single "*", which maps
+			// back to one family-appropriate catch-all. Emitting the dual
+			// AllowAllCidr would serialize to "*,*" and fail to round-trip
+			// (both map back to the same family catch-all), breaking the
+			// idempotency check on re-create. Default to a single catch-all
+			// matching the service IP family, like the CLI does.
+			catchAll := common.ServiceIPFromParts(net.IPv4zero, 0)
+			if r.ServiceIP.IP().To4() == nil {
+				catchAll = common.ServiceIPFromParts(net.IPv6zero, 0)
+			}
+			r.AllowedIPs = []common.IpCidr{catchAll}
+		} else {
+			r.AllowedIPs = AllowAllCidr
+		}
 	}
 
 	if r.ResourceTimeout == 0 {
 		r.ResourceTimeout = DefaultResourceTimeout
-	}
-
-	if r.Implementation == "" {
-		r.Implementation = DefaultImplementation
 	}
 }
 

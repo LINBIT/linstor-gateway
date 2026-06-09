@@ -49,7 +49,9 @@ func TestResource_RoundTrip(t *testing.T) {
 	}, {
 		Name:      "ganesha",
 		ServiceIP: common.ServiceIPFromParts(net.IP{192, 168, 127, 1}, 24),
-		// AllowedIPs is unused for ganesha; no exportfs agents are emitted.
+		AllowedIPs: []common.IpCidr{
+			common.ServiceIPFromParts(net.IP{192, 168, 127, 0}, 24),
+		},
 		ResourceGroup: "rg1",
 		Volumes: []VolumeConfig{
 			{VolumeConfig: common.ClusterPrivateVolume()},

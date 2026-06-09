@@ -97,6 +97,7 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 	}
 
 	var numPortblocks, numPortunblocks int
+	var ganeshaClients string
 	for _, entry := range rscCfg.Start {
 		switch agent := entry.(type) {
 		case *reactor.ResourceAgent:
@@ -137,6 +138,7 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 				r.Implementation = ImplementationKernel
 			case "ocf:heartbeat:ganesha-nfs":
 				r.Implementation = ImplementationGanesha
+				ganeshaClients = agent.Attributes["clients"]
 			case "ocf:heartbeat:IPaddr2":
 				ip := net.ParseIP(agent.Attributes["ip"])
 				if ip == nil {
@@ -163,6 +165,17 @@ func FromPromoter(cfg *reactor.PromoterConfig, definition *client.ResourceDefini
 
 	if numPortblocks != 1 {
 		return nil, fmt.Errorf("malformed configuration: got a different number of portblock agents (%d) than IPaddr2 agents (1)", numPortblocks)
+	}
+
+	if r.Implementation == ImplementationGanesha && ganeshaClients != "" {
+		// The service IP disambiguates a "*" client into the right address
+		// family. ToPromoter always emits IPaddr2 before ganesha-nfs, so it is
+		// set by now; warn rather than silently pick a family if a hand-edited
+		// config omits or reorders it.
+		if r.ServiceIP.IP() == nil {
+			log.Warnf("ganesha resource %q has a clients whitelist but no service IP; allowed IPs may be inaccurate", r.Name)
+		}
+		r.AllowedIPs = clientsToAllowedIPs(ganeshaClients, r.ServiceIP)
 	}
 
 	return r, nil

@@ -68,6 +68,49 @@ func TestClientsToAllowedIPs(t *testing.T) {
 	}
 }
 
+func TestGaneshaAgent(t *testing.T) {
+	t.Parallel()
+	service := common.ServiceIPFromParts(net.IP{192, 168, 0, 1}, 24)
+	allowed := []common.IpCidr{cidr(t, "10.20.0.0/16")}
+
+	t.Run("single volume", func(t *testing.T) {
+		agent, err := ganeshaAgent(service,
+			[]ganeshaExport{{path: "/srv/gateway-exports/nfs1/", id: 1}},
+			allowed)
+		assert.NoError(t, err)
+		assert.Equal(t, "ocf:heartbeat:ganesha-nfs", agent.Type)
+		assert.Equal(t, "nfsserver", agent.Name)
+		assert.Equal(t, "192.168.0.1", agent.Attributes["nfs_ip"])
+		assert.Equal(t, "/srv/gateway-exports/nfs1/", agent.Attributes["export_path"])
+		assert.Equal(t, "1", agent.Attributes["export_id"])
+		assert.Equal(t, "10.20.0.0/16", agent.Attributes["clients"])
+		assert.Equal(t, "All_Squash", agent.Attributes["squash"])
+	})
+
+	t.Run("multiple volumes produce parallel ;-lists", func(t *testing.T) {
+		agent, err := ganeshaAgent(service,
+			[]ganeshaExport{
+				{path: "/srv/gateway-exports/nfs1/music", id: 1},
+				{path: "/srv/gateway-exports/nfs1/movies", id: 2},
+			},
+			allowed)
+		assert.NoError(t, err)
+		assert.Equal(t, "/srv/gateway-exports/nfs1/music;/srv/gateway-exports/nfs1/movies", agent.Attributes["export_path"])
+		assert.Equal(t, "1;2", agent.Attributes["export_id"])
+	})
+
+	t.Run("no allowed IPs is an error (deny-default)", func(t *testing.T) {
+		_, err := ganeshaAgent(service,
+			[]ganeshaExport{{path: "/srv/gateway-exports/nfs1/", id: 1}}, nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("no exports is an error", func(t *testing.T) {
+		_, err := ganeshaAgent(service, nil, allowed)
+		assert.Error(t, err)
+	})
+}
+
 func TestClientsRoundTrip(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

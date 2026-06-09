@@ -1,12 +1,15 @@
 package nfs
 
 import (
+	"errors"
 	"net"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/LINBIT/linstor-gateway/pkg/common"
+	"github.com/LINBIT/linstor-gateway/pkg/reactor"
 )
 
 // allowedIPsToClients renders a list of allowed CIDRs into the ganesha-nfs
@@ -28,6 +31,48 @@ func allowedIPsToClients(ips []common.IpCidr) string {
 		}
 	}
 	return strings.Join(parts, ",")
+}
+
+// ganeshaExport is one directory exported by the ganesha-nfs agent: the
+// server-side path on the replicated filesystem and a stable export id.
+type ganeshaExport struct {
+	path string
+	id   int
+}
+
+// ganeshaAgent builds the ocf:heartbeat:ganesha-nfs resource agent for
+// generated mode. export_path/export_id are emitted as parallel ';'-separated
+// lists (one entry per exported volume); clients is the shared deny-default
+// whitelist derived from allowedIPs. Squash is All_Squash to mirror the kernel
+// NFS implementation's all_squash behavior (the agent has no Anonymous_Uid
+// parameter, so clients map to ganesha's default anonymous identity).
+func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs []common.IpCidr) (*reactor.ResourceAgent, error) {
+	if len(exports) == 0 {
+		return nil, errors.New("ganesha export requires at least one volume to export")
+	}
+	if len(allowedIPs) == 0 {
+		// Generated mode is deny-default: with an empty clients whitelist the
+		// agent refuses every mount. FillDefaults normally populates the
+		// catch-all, so this only guards against a programming error.
+		return nil, errors.New("ganesha generated mode requires at least one allowed IP")
+	}
+	paths := make([]string, len(exports))
+	ids := make([]string, len(exports))
+	for i, e := range exports {
+		paths[i] = e.path
+		ids[i] = strconv.Itoa(e.id)
+	}
+	return &reactor.ResourceAgent{
+		Type: "ocf:heartbeat:ganesha-nfs",
+		Name: "nfsserver",
+		Attributes: map[string]string{
+			"nfs_ip":      serviceIP.IP().String(),
+			"export_path": strings.Join(paths, ";"),
+			"export_id":   strings.Join(ids, ";"),
+			"clients":     allowedIPsToClients(allowedIPs),
+			"squash":      "All_Squash",
+		},
+	}, nil
 }
 
 // clientsToAllowedIPs is the inverse of allowedIPsToClients. "*" maps to the

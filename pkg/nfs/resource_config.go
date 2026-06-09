@@ -491,16 +491,27 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 
 	switch r.Implementation {
 	case ImplementationGanesha:
-		agents = append(agents, &reactor.ResourceAgent{
-			Type: "ocf:heartbeat:ganesha-nfs",
-			Name: "nfsserver",
-			Attributes: map[string]string{
-				"nfs_ip": r.ServiceIP.IP().String(),
-			},
-		})
-		// Ganesha manages its exports via ganesha.conf, so no
-		// ocf:heartbeat:exportfs agents are emitted. AllowedIPs is
-		// not enforced through the resource agent in this mode.
+		// Generated mode: the ganesha-nfs agent renders ganesha.conf from
+		// these parameters. Each user volume becomes one export; the shared
+		// Filesystem agents (above) mount the exported directories.
+		var exports []ganeshaExport
+		for i := 1; i < len(deployedRes.Volumes); i++ {
+			vol := deployedRes.Volumes[i]
+			resVol := r.Volumes[i]
+			if int(vol.VolumeNumber) != resVol.Number {
+				return nil, fmt.Errorf("inconsistent volumes, expected volume number %d, got %d", vol.VolumeNumber, resVol.Number)
+			}
+			exports = append(exports, ganeshaExport{
+				path: ExportPath(r, &resVol),
+				id:   int(vol.VolumeNumber),
+			})
+		}
+
+		ganesha, err := ganeshaAgent(r.ServiceIP, exports, r.AllowedIPs)
+		if err != nil {
+			return nil, err
+		}
+		agents = append(agents, ganesha)
 	default:
 		agents = append(agents, &reactor.ResourceAgent{
 			Type: "ocf:heartbeat:nfsserver",

@@ -25,6 +25,7 @@ service_ip = nodes.get_service_ip()
 
 first.run([
     'linstor-gateway', 'nfs', 'create', '--implementation=ganesha',
+    '--allowed-ips', '10.20.0.0/16',
     'nfs1', service_ip, '1G',
 ])
 first.assert_resource_exists('nfs', 'nfs1')
@@ -41,6 +42,17 @@ assert 'ocf:heartbeat:nfsserver' not in config_content, \
     'unexpected ocf:heartbeat:nfsserver in ganesha config:\n{}'.format(config_content)
 assert 'ocf:heartbeat:exportfs' not in config_content, \
     'unexpected ocf:heartbeat:exportfs in ganesha config:\n{}'.format(config_content)
+# Generated mode: linstor-gateway drives the export config through the RA's
+# OCF parameters (allowed-ips -> clients, one export_path per volume,
+# All_Squash to mirror the kernel implementation).
+assert 'clients=10.20.0.0/16' in config_content, \
+    'expected ganesha clients whitelist in promoter config, got:\n{}'.format(config_content)
+assert 'export_path=/srv/gateway-exports/' in config_content, \
+    'expected ganesha export_path in promoter config, got:\n{}'.format(config_content)
+assert 'export_id=1' in config_content, \
+    'expected ganesha export_id in promoter config, got:\n{}'.format(config_content)
+assert 'squash=All_Squash' in config_content, \
+    'expected ganesha squash policy in promoter config, got:\n{}'.format(config_content)
 
 ls = gatewaytest.LinstorConnection(first)
 

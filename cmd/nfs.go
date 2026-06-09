@@ -96,6 +96,14 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 				return err
 			}
 
+			// If the user did not explicitly set --allowed-ips, the default
+			// catch-all must match the address family of the service IP.
+			// Otherwise an IPv6 service IP would end up with an IPv4-only
+			// 0.0.0.0/0 default that no IPv6 client can match.
+			if !cmd.Flags().Changed("allowed-ips") && serviceIP.IP().To4() == nil {
+				allowedIPsCIDR = common.ServiceIPFromParts(net.IPv6zero, 0)
+			}
+
 			rawSizes := args[2:]
 			if len(rawSizes) != len(exportPaths) {
 				if len(exportPaths) == 1 {

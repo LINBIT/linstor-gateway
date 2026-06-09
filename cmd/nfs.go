@@ -155,7 +155,7 @@ linstor-gateway nfs create multi 172.16.16.55/24 1G 2G --export-path /music --ex
 
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", resourceGroup, "LINSTOR resource group to use")
 	cmd.Flags().StringSliceVarP(&exportPaths, "export-path", "p", exportPaths, fmt.Sprintf("Set the export path, relative to %s. Can be specified multiple times when creating more than one volume", nfs.ExportBasePath))
-	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access. Not enforced when --implementation=ganesha")
+	cmd.Flags().VarP(&allowedIPsCIDR, "allowed-ips", "", "Set the IP address mask of clients that are allowed access")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 	cmd.Flags().StringVarP(&filesystem, "filesystem", "f", filesystem, "File system type to use (ext4 or xfs)")
 	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", nfs.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")

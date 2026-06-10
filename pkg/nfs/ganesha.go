@@ -43,9 +43,10 @@ type ganeshaExport struct {
 // ganeshaAgent builds the ocf:heartbeat:ganesha-nfs resource agent for
 // generated mode. export_path/export_id are emitted as parallel ';'-separated
 // lists (one entry per exported volume); clients is the shared deny-default
-// whitelist derived from allowedIPs. Squash is All_Squash to mirror the kernel
-// NFS implementation's all_squash behavior (the agent has no Anonymous_Uid
-// parameter, so clients map to ganesha's default anonymous identity).
+// whitelist derived from allowedIPs. Squash is All_Squash with anonuid/anongid
+// 0 to mirror the kernel NFS implementation's "all_squash,anonuid=0,anongid=0"
+// export options (without an explicit anonuid, ganesha squashes to uid -2 =
+// 4294967294, which can write nowhere on a root-owned export).
 func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs []common.IpCidr) (*reactor.ResourceAgent, error) {
 	if len(exports) == 0 {
 		return nil, errors.New("ganesha export requires at least one volume to export")
@@ -71,6 +72,8 @@ func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs [
 			"export_id":   strings.Join(ids, ";"),
 			"clients":     allowedIPsToClients(allowedIPs),
 			"squash":      "All_Squash",
+			"anonuid":     "0",
+			"anongid":     "0",
 		},
 	}, nil
 }

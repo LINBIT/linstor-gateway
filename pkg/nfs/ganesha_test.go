@@ -87,6 +87,7 @@ func TestGaneshaAgent(t *testing.T) {
 		assert.Equal(t, "All_Squash", agent.Attributes["squash"])
 		assert.Equal(t, "0", agent.Attributes["anonuid"])
 		assert.Equal(t, "0", agent.Attributes["anongid"])
+		assert.Equal(t, "192.168.0.1", agent.Attributes["server_scope"])
 	})
 
 	t.Run("multiple volumes produce parallel ;-lists", func(t *testing.T) {

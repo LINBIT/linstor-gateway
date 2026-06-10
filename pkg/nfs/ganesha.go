@@ -74,6 +74,11 @@ func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs [
 			"squash":      "All_Squash",
 			"anonuid":     "0",
 			"anongid":     "0",
+			// Stable NFSv4 server scope across nodes, like the kernel
+			// implementation's nfs_server_scope: without it ganesha derives
+			// the scope from the hostname and NFSv4.1+ clients refuse to
+			// reclaim state after failover (I/O on open files hangs forever).
+			"server_scope": serviceIP.IP().String(),
 		},
 	}, nil
 }

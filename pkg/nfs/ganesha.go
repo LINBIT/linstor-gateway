@@ -47,7 +47,12 @@ type ganeshaExport struct {
 // 0 to mirror the kernel NFS implementation's "all_squash,anonuid=0,anongid=0"
 // export options (without an explicit anonuid, ganesha squashes to uid -2 =
 // 4294967294, which can write nowhere on a root-owned export).
-func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs []common.IpCidr) (*reactor.ResourceAgent, error) {
+//
+// recoveryDir is where ganesha keeps its NFSv4 recovery DB. It must fail over
+// with the resource, so it lives on the cluster-private volume (like the
+// kernel implementation's nfs_shared_infodir) rather than inside an export,
+// where it would be visible to clients.
+func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs []common.IpCidr, recoveryDir string) (*reactor.ResourceAgent, error) {
 	if len(exports) == 0 {
 		return nil, errors.New("ganesha export requires at least one volume to export")
 	}
@@ -79,6 +84,7 @@ func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs [
 			// the scope from the hostname and NFSv4.1+ clients refuse to
 			// reclaim state after failover (I/O on open files hangs forever).
 			"server_scope": serviceIP.IP().String(),
+			"recovery_dir": recoveryDir,
 		},
 	}, nil
 }

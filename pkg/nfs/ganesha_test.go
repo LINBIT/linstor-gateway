@@ -76,7 +76,7 @@ func TestGaneshaAgent(t *testing.T) {
 	t.Run("single volume", func(t *testing.T) {
 		agent, err := ganeshaAgent(service,
 			[]ganeshaExport{{path: "/srv/gateway-exports/nfs1/", id: 1}},
-			allowed)
+			allowed, "/srv/ha/internal/nfs1/ganesha")
 		assert.NoError(t, err)
 		assert.Equal(t, "ocf:heartbeat:ganesha-nfs", agent.Type)
 		assert.Equal(t, "nfsserver", agent.Name)
@@ -88,6 +88,7 @@ func TestGaneshaAgent(t *testing.T) {
 		assert.Equal(t, "0", agent.Attributes["anonuid"])
 		assert.Equal(t, "0", agent.Attributes["anongid"])
 		assert.Equal(t, "192.168.0.1", agent.Attributes["server_scope"])
+		assert.Equal(t, "/srv/ha/internal/nfs1/ganesha", agent.Attributes["recovery_dir"])
 	})
 
 	t.Run("multiple volumes produce parallel ;-lists", func(t *testing.T) {
@@ -96,7 +97,7 @@ func TestGaneshaAgent(t *testing.T) {
 				{path: "/srv/gateway-exports/nfs1/music", id: 1},
 				{path: "/srv/gateway-exports/nfs1/movies", id: 2},
 			},
-			allowed)
+			allowed, "/srv/ha/internal/nfs1/ganesha")
 		assert.NoError(t, err)
 		assert.Equal(t, "/srv/gateway-exports/nfs1/music;/srv/gateway-exports/nfs1/movies", agent.Attributes["export_path"])
 		assert.Equal(t, "1;2", agent.Attributes["export_id"])
@@ -104,12 +105,13 @@ func TestGaneshaAgent(t *testing.T) {
 
 	t.Run("no allowed IPs is an error (deny-default)", func(t *testing.T) {
 		_, err := ganeshaAgent(service,
-			[]ganeshaExport{{path: "/srv/gateway-exports/nfs1/", id: 1}}, nil)
+			[]ganeshaExport{{path: "/srv/gateway-exports/nfs1/", id: 1}}, nil,
+			"/srv/ha/internal/nfs1/ganesha")
 		assert.Error(t, err)
 	})
 
 	t.Run("no exports is an error", func(t *testing.T) {
-		_, err := ganeshaAgent(service, nil, allowed)
+		_, err := ganeshaAgent(service, nil, allowed, "/srv/ha/internal/nfs1/ganesha")
 		assert.Error(t, err)
 	})
 }

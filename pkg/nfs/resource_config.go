@@ -535,7 +535,8 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 			})
 		}
 
-		ganesha, err := ganeshaAgent(r.ServiceIP, exports, r.AllowedIPs)
+		recoveryDir := filepath.Join(common.ClusterPrivateVolumeMountPath, deployedRes.Name, "ganesha")
+		ganesha, err := ganeshaAgent(r.ServiceIP, exports, r.AllowedIPs, recoveryDir)
 		if err != nil {
 			return nil, err
 		}

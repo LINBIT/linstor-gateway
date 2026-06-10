@@ -89,6 +89,7 @@ func TestGaneshaAgent(t *testing.T) {
 		assert.Equal(t, "0", agent.Attributes["anongid"])
 		assert.Equal(t, "192.168.0.1", agent.Attributes["server_scope"])
 		assert.Equal(t, "/srv/ha/internal/nfs1/ganesha", agent.Attributes["recovery_dir"])
+		assert.Equal(t, "false", agent.Attributes["enable_nlm"])
 	})
 
 	t.Run("multiple volumes produce parallel ;-lists", func(t *testing.T) {

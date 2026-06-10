@@ -85,6 +85,14 @@ func ganeshaAgent(serviceIP common.IpCidr, exports []ganeshaExport, allowedIPs [
 			// reclaim state after failover (I/O on open files hangs forever).
 			"server_scope": serviceIP.IP().String(),
 			"recovery_dir": recoveryDir,
+			// No NLM: with NLM enabled ganesha always waits out the full
+			// 90s grace period on failover (NLM reclaims have no completion
+			// signal), stalling NFSv4 I/O. Disabled, grace lifts as soon as
+			// all v4.1+ clients have reclaimed (seconds). NFSv3 I/O still
+			// works, only v3 locking is refused — which is honest, since
+			// nothing here runs rpc.statd, so v3 locks would not survive a
+			// failover anyway.
+			"enable_nlm": "false",
 		},
 	}, nil
 }

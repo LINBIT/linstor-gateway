@@ -4,8 +4,8 @@ import argparse
 import errno
 import ipaddress
 import os
-import pipes
 import re
+import shlex
 import socket
 import subprocess
 import sys
@@ -341,7 +341,7 @@ class Node:
             stdout = StringIO()
 
         if quote:
-            cmd_string = ' '.join(pipes.quote(str(x)) for x in cmd)
+            cmd_string = ' '.join(shlex.quote(str(x)) for x in cmd)
         else:
             cmd_string = ' '.join(cmd)
 

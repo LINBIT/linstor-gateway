@@ -120,6 +120,86 @@ func TestParsePromoterConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "with block_size",
+			cfg: &reactor.PromoterConfig{
+				Resources: map[string]reactor.PromoterResourceConfig{
+					"target1": {
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "", "incoming_password": "", "iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t", "block_size": "4096"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						},
+					},
+				},
+			},
+			want: &ResourceConfig{
+				IQN: Iqn{"iqn.2021-08.com.linbit", "target1"}, AllowedInitiators: nil,
+				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16")}, Implementation: "lio-t", BlockSize: 4096,
+			},
+		},
+		{
+			name: "with backstore_type",
+			cfg: &reactor.PromoterConfig{
+				Resources: map[string]reactor.PromoterResourceConfig{
+					"target1": {
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "", "incoming_password": "", "iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t", "liot_bstype": "fileio", "block_size": "512"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						},
+					},
+				},
+			},
+			want: &ResourceConfig{
+				IQN: Iqn{"iqn.2021-08.com.linbit", "target1"}, AllowedInitiators: nil,
+				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16")}, Implementation: "lio-t", BlockSize: 512, BackstoreType: "fileio",
+			},
+		},
+		{
+			name: "with scst backstore_type",
+			cfg: &reactor.PromoterConfig{
+				Resources: map[string]reactor.PromoterResourceConfig{
+					"target1": {
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "", "incoming_password": "", "iqn": "iqn.2021-08.com.linbit:target1", "implementation": "scst"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1", "implementation": "scst", "scst_bstype": "vdisk_fileio", "block_size": "512"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						},
+					},
+				},
+			},
+			want: &ResourceConfig{
+				IQN: Iqn{"iqn.2021-08.com.linbit", "target1"}, AllowedInitiators: nil,
+				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16")}, Implementation: "scst", BlockSize: 512, BackstoreType: "vdisk_fileio",
+			},
+		},
+		{
+			name: "with write_cache",
+			cfg: &reactor.PromoterConfig{
+				Resources: map[string]reactor.PromoterResourceConfig{
+					"target1": {
+						Start: []reactor.StartEntry{
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "pblock0", Attributes: map[string]string{"action": "block", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:IPaddr2", Name: "service_ip0", Attributes: map[string]string{"cidr_netmask": "16", "ip": "1.1.1.1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSITarget", Name: "target", Attributes: map[string]string{"allowed_initiators": "", "incoming_username": "", "incoming_password": "", "iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:iSCSILogicalUnit", Name: "lu1", Attributes: map[string]string{"lun": "1", "path": "/dev/drbd/by-res/target1/1", "product_id": "LINSTOR iSCSI", "target_iqn": "iqn.2021-08.com.linbit:target1", "implementation": "lio-t", "liot_bstype": "fileio", "block_size": "512", "write_cache": "1"}},
+							&reactor.ResourceAgent{Type: "ocf:heartbeat:portblock", Name: "punblock0", Attributes: map[string]string{"action": "unblock", "ip": "1.1.1.1", "portno": "3260", "protocol": "tcp"}},
+						},
+					},
+				},
+			},
+			want: &ResourceConfig{
+				IQN: Iqn{"iqn.2021-08.com.linbit", "target1"}, AllowedInitiators: nil,
+				ServiceIPs: []common.IpCidr{ipnet("1.1.1.1/16")}, Implementation: "lio-t", BlockSize: 512, BackstoreType: "fileio", WriteCache: "writeback",
+			},
+		},
+		{
 			name: "with specific implementation",
 			cfg: &reactor.PromoterConfig{
 				Resources: map[string]reactor.PromoterResourceConfig{

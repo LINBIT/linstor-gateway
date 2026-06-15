@@ -25,6 +25,8 @@ linstor-gateway iscsi create iqn.2019-08.com.linbit:example 192.168.122.181/24 2
 
 ```
       --allowed-initiators strings   Restrict which initiator IQNs are allowed to connect to the target
+      --backstore-type string        Set the backstore type ("fileio" for targetcli, "vdisk_fileio" for SCST)
+      --block-size int               Override the block size presented to iSCSI initiators (512, 1024, 2048, or 4096)
       --gross                        Make all size options specify gross size, i.e. the actual space used on disk
   -h, --help                         help for create
       --implementation string        Set the iSCSI target implementation to use ("iet", "tgt", "lio", "lio-t", or "scst")
@@ -32,6 +34,7 @@ linstor-gateway iscsi create iqn.2019-08.com.linbit:example 192.168.122.181/24 2
   -r, --resource-group string        Set the LINSTOR resource group (default "DfltRscGrp")
       --resource-timeout duration    Timeout for waiting for the resource to become available (default 30s)
   -u, --username string              Set the username to use for CHAP authentication
+      --write-cache string           Set the write cache mode ("writethrough" or "writeback"); the resource agent defaults to write-through when unset
 ```
 
 ### Options inherited from parent commands

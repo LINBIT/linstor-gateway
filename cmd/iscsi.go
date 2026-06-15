@@ -63,6 +63,9 @@ func createISCSICommand() *cobra.Command {
 	var allowedInitiators []string
 	var grossSize bool
 	var implementation string
+	var blockSize int
+	var backstoreType string
+	var writeCache string
 	var resourceTimeout time.Duration
 
 	cmd := &cobra.Command{
@@ -125,6 +128,9 @@ high availability primitives.`,
 				ResourceGroup:     group,
 				GrossSize:         grossSize,
 				Implementation:    implementation,
+				BlockSize:         blockSize,
+				BackstoreType:     backstoreType,
+				WriteCache:        writeCache,
 				ResourceTimeout:   resourceTimeout,
 			})
 			if err != nil {
@@ -147,6 +153,9 @@ high availability primitives.`,
 	cmd.Flags().StringSliceVar(&allowedInitiators, "allowed-initiators", []string{}, "Restrict which initiator IQNs are allowed to connect to the target")
 	cmd.Flags().BoolVar(&grossSize, "gross", false, "Make all size options specify gross size, i.e. the actual space used on disk")
 	cmd.Flags().StringVar(&implementation, "implementation", "", `Set the iSCSI target implementation to use ("iet", "tgt", "lio", "lio-t", or "scst")`)
+	cmd.Flags().IntVar(&blockSize, "block-size", 0, "Override the block size presented to iSCSI initiators (512, 1024, 2048, or 4096)")
+	cmd.Flags().StringVar(&backstoreType, "backstore-type", "", `Set the backstore type ("fileio" for targetcli, "vdisk_fileio" for SCST)`)
+	cmd.Flags().StringVar(&writeCache, "write-cache", "", `Set the write cache mode ("writethrough" or "writeback"); the resource agent defaults to write-through when unset`)
 	cmd.Flags().DurationVar(&resourceTimeout, "resource-timeout", iscsi.DefaultResourceTimeout, "Timeout for waiting for the resource to become available")
 
 	return cmd

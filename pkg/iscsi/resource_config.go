@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	DefaultISCSIPort        = 3260
-	CurrentVersion          = 1
-	DefaultResourceTimeout  = 30 * time.Second
+	DefaultISCSIPort       = 3260
+	CurrentVersion         = 1
+	DefaultResourceTimeout = 30 * time.Second
 )
 
 type ResourceConfig struct {
@@ -37,13 +37,17 @@ type ResourceConfig struct {
 	Status            common.ResourceStatus `json:"status"`
 	GrossSize         bool                  `json:"gross_size"`
 	Implementation    string                `json:"implementation"`
+	BlockSize         int                   `json:"block_size,omitempty"`
+	BackstoreType     string                `json:"backstore_type,omitempty"`
+	WriteCache        string                `json:"write_cache,omitempty"`
 	ResourceTimeout   time.Duration         `json:"resource_timeout,omitempty"`
 }
 
 const (
-	agentTypePortblock   = "ocf:heartbeat:portblock"
-	agentTypeIPaddr2     = "ocf:heartbeat:IPaddr2"
-	agentTypeISCSITarget = "ocf:heartbeat:iSCSITarget"
+	agentTypePortblock        = "ocf:heartbeat:portblock"
+	agentTypeIPaddr2          = "ocf:heartbeat:IPaddr2"
+	agentTypeISCSITarget      = "ocf:heartbeat:iSCSITarget"
+	agentTypeISCSILogicalUnit = "ocf:heartbeat:iSCSILogicalUnit"
 )
 
 const minAgentEntries = 4 // portblock, service_ip, target, portunblock
@@ -105,6 +109,28 @@ func parsePromoterConfig(cfg *reactor.PromoterConfig) (*ResourceConfig, error) {
 					}
 				}
 				r.Implementation = agent.Attributes["implementation"]
+			case agentTypeISCSILogicalUnit:
+				if r.BlockSize == 0 {
+					if bs, ok := agent.Attributes["block_size"]; ok {
+						r.BlockSize, _ = strconv.Atoi(bs)
+					}
+				}
+				if r.BackstoreType == "" {
+					for _, key := range []string{"liot_bstype", "scst_bstype"} {
+						if val, ok := agent.Attributes[key]; ok {
+							r.BackstoreType = val
+							break
+						}
+					}
+				}
+				if r.WriteCache == "" {
+					switch agent.Attributes["write_cache"] {
+					case "0":
+						r.WriteCache = "writethrough"
+					case "1":
+						r.WriteCache = "writeback"
+					}
+				}
 			}
 		case *reactor.SystemdService:
 			// ignore systemd services for now
@@ -196,6 +222,22 @@ func (r *ResourceConfig) Valid() error {
 
 	if len(r.ServiceIPs) == 0 {
 		return common.ValidationError("missing service ips")
+	}
+
+	if r.BlockSize != 0 {
+		switch r.BlockSize {
+		case 512, 1024, 2048, 4096:
+			// valid
+		default:
+			return common.ValidationError("block_size must be 512, 1024, 2048, or 4096")
+		}
+	}
+
+	switch r.WriteCache {
+	case "", "writethrough", "writeback":
+		// valid
+	default:
+		return common.ValidationError(`write_cache must be "writethrough" or "writeback"`)
 	}
 
 	sort.Slice(r.Volumes, func(i, j int) bool {
@@ -376,8 +418,26 @@ func (r *ResourceConfig) ToPromoter(deployment []client.ResourceWithVolumes) (*r
 		if r.Implementation != "" {
 			luAttrs["implementation"] = r.Implementation
 		}
+		if r.BlockSize != 0 {
+			luAttrs["block_size"] = strconv.Itoa(r.BlockSize)
+		}
+		if r.BackstoreType != "" {
+			switch r.Implementation {
+			case "scst":
+				luAttrs["scst_bstype"] = r.BackstoreType
+			default:
+				luAttrs["liot_bstype"] = r.BackstoreType
+			}
+		}
+		// the resource agent defaults to write-through when unset
+		switch r.WriteCache {
+		case "writethrough":
+			luAttrs["write_cache"] = "0"
+		case "writeback":
+			luAttrs["write_cache"] = "1"
+		}
 		agents = append(agents, &reactor.ResourceAgent{
-			Type:       "ocf:heartbeat:iSCSILogicalUnit",
+			Type:       agentTypeISCSILogicalUnit,
 			Name:       fmt.Sprintf("lu%d", vol.VolumeNumber),
 			Attributes: luAttrs,
 		})

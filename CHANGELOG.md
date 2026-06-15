@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-15
+
+### Changes
+
+* Add support for NFS-Ganesha as an alternative NFS implementation, selectable via the `--implementation` flag on `nfs create` (defaults to the kernel NFS server). (3c3ebe6)
+* Add `--block-size`, `--backstore-type`, and `--write-cache` flags to the iSCSI commands. (ed142bf)
+* Make the volume number optional in `iscsi add-volume`; when omitted it is auto-incremented from the highest existing volume. (abcb8a8)
+* Refuse to delete the reserved system volume (volume 0) or the last remaining user volume on iSCSI and NVMe-oF targets. (f9d212f)
+* Display a helpful hint when deploying a reactor config fails because the satellite's `allowExtFiles` is not configured. (ffe5be1)
+* Suggest running `check-health` when creating or starting a resource fails. (edc5c03)
+* Detect a failed `drbd-reactor-reload.path` systemd unit in the health check and suggest `systemctl reset-failed`. (830c209)
+
+### Fixes
+
+* Return an error when `delete-volume` is called for a volume that does not exist on iSCSI and NVMe-oF targets. (5ca5cfc)
+* Move the `nvmet-subsystem` resource agent check into the NVMe-oF health check category so it no longer fails for iSCSI/NFS-only users. (ce7deba)
+* Recognize the SUSE documentation path (`/usr/share/doc/packages/`) when locating the drbd-reactor reload directory in the health check. (9e50fa6)
+* Fix several misleading "attach"/"detach" copy-paste errors in error messages. (4bb7ee5)
+
 ## [2.1.0] - 2026-02-05
 
 ### Changes
@@ -333,7 +352,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/LINBIT/linstor-gateway/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/LINBIT/linstor-gateway/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.8.0...v1.9.0

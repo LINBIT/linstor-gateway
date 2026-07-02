@@ -25,8 +25,8 @@ type NFS struct {
 	cli *linstorcontrol.Linstor
 }
 
-func New(controllers []string) (*NFS, error) {
-	cli, err := linstorcontrol.Default(controllers)
+func New(controllers []string, token string) (*NFS, error) {
+	cli, err := linstorcontrol.Default(controllers, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linstor client: %w", err)
 	}

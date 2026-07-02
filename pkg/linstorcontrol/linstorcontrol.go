@@ -126,12 +126,19 @@ func StatusFromResources(serviceCfgPath string, definition *client.ResourceDefin
 	}
 }
 
-func Default(controllers []string) (*Linstor, error) {
-	cli, err := client.NewClient(
+func Default(controllers []string, token string) (*Linstor, error) {
+	opts := []client.Option{
 		client.Log(log.StandardLogger()),
 		client.Controllers(controllers),
 		client.UserAgent(version.UserAgent()),
-	)
+	}
+	if token != "" {
+		// Only pass the option when a token is actually configured, so that
+		// an empty gateway configuration never overrides a token that
+		// golinstor picked up from LS_BEARER_TOKEN_FILE.
+		opts = append(opts, client.BearerToken(token))
+	}
+	cli, err := client.NewClient(opts...)
 	if err != nil {
 		return nil, err
 	}

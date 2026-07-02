@@ -16,12 +16,13 @@ const satelliteConfigFile = "/etc/linstor/linstor_satellite.toml"
 
 type checkLinstor struct {
 	controllers []string
+	token       string
 }
 
 func (c *checkLinstor) check(bool) error {
 	ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
 	defer done()
-	cli, err := linstorcontrol.Default(c.controllers)
+	cli, err := linstorcontrol.Default(c.controllers, c.token)
 	if err != nil {
 		return err
 	}
@@ -34,6 +35,15 @@ func (c *checkLinstor) check(bool) error {
 
 func (c *checkLinstor) format(err error) string {
 	var b strings.Builder
+	if strings.Contains(strings.ToLower(err.Error()), "unauthorized") {
+		fmt.Fprintf(&b, "    %s %s\n", color.RedString("✗"), "The LINSTOR controller rejected the request as unauthorized")
+		fmt.Fprintf(&b, "      %s\n", err.Error())
+		fmt.Fprintf(&b, "      The LINSTOR controller has token authentication enabled. Make sure that either\n")
+		fmt.Fprintf(&b, "      • the %s or %s command line option, or\n", bold("--token"), bold("--token-file"))
+		fmt.Fprintf(&b, "      • the %s or %s key in your configuration file (%s)\n", bold("linstor.token"), bold("linstor.token_file"), bold(viper.ConfigFileUsed()))
+		fmt.Fprintf(&b, "      contain a valid LINSTOR API token.\n")
+		return b.String()
+	}
 	fmt.Fprintf(&b, "    %s %s\n", color.RedString("✗"), "No connection to a LINSTOR controller")
 	fmt.Fprintf(&b, "      %s\n", err.Error())
 	fmt.Fprintf(&b, "      Make sure that either\n")

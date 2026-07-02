@@ -149,11 +149,11 @@ func checkAgent(iscsiBackends []string) error {
 	return nil
 }
 
-func checkServer(controllers []string) error {
+func checkServer(controllers []string, token string) error {
 	errs := 0
 	err := category(
 		"LINSTOR",
-		&checkLinstor{controllers},
+		&checkLinstor{controllers, token},
 	)
 	if err != nil {
 		errs++
@@ -179,7 +179,7 @@ func checkClient(cli *client.Client) error {
 	return nil
 }
 
-func CheckRequirements(mode string, iscsiBackends []string, controllers []string, cli *client.Client) error {
+func CheckRequirements(mode string, iscsiBackends []string, controllers []string, token string, cli *client.Client) error {
 	doPrint := func() {
 		fmt.Printf("Checking %s requirements.\n\n", bold(mode))
 	}
@@ -189,7 +189,7 @@ func CheckRequirements(mode string, iscsiBackends []string, controllers []string
 		return checkAgent(iscsiBackends)
 	case "server":
 		doPrint()
-		return checkServer(controllers)
+		return checkServer(controllers, token)
 	case "client":
 		doPrint()
 		return checkClient(cli)

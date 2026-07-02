@@ -61,16 +61,16 @@ func MustError(code int, w http.ResponseWriter, format string, a ...interface{})
 }
 
 // ListenAndServe is the entry point for the REST API
-func ListenAndServe(addr string, controllers []string, allowedOrigins []string) {
-	iscsi, err := iscsi.New(controllers)
+func ListenAndServe(addr string, controllers []string, token string, allowedOrigins []string) {
+	iscsi, err := iscsi.New(controllers, token)
 	if err != nil {
 		log.Fatalf("Failed to initialize ISCSI: %v", err)
 	}
-	nfs, err := nfs.New(controllers)
+	nfs, err := nfs.New(controllers, token)
 	if err != nil {
 		log.Fatalf("Failed to initialize NFS: %v", err)
 	}
-	nvmeof, err := nvmeof.New(controllers)
+	nvmeof, err := nvmeof.New(controllers, token)
 	if err != nil {
 		log.Fatalf("Failed to initialize NVMeoF: %v", err)
 	}

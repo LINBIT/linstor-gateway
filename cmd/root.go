@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/LINBIT/linstor-gateway/client"
+	"github.com/LINBIT/linstor-gateway/pkg/linstorcontrol"
 	"github.com/LINBIT/linstor-gateway/pkg/version"
 
 	log "github.com/sirupsen/logrus"
@@ -113,10 +114,20 @@ func rootCommand() *cobra.Command {
 
 func initConfig() {
 	viper.SetDefault("linstor.controllers", "")
+	viper.SetDefault("linstor.token", "")
+	viper.SetDefault("linstor.token_file", "")
 	viper.SetDefault("server.cors_allowed_origins", []string{})
 	viper.SetConfigType("toml")
 	viper.SetConfigFile(cfgFile)
 	viper.ReadInConfig()
+}
+
+// linstorToken resolves the LINSTOR API token from the viper configuration.
+func linstorToken() (string, error) {
+	return linstorcontrol.ResolveToken(
+		viper.GetString("linstor.token"),
+		viper.GetString("linstor.token_file"),
+	)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

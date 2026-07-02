@@ -390,7 +390,11 @@ func upgradeNVMECommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			controllers := viper.GetStringSlice("linstor.controllers")
-			cli, err := linstorcontrol.Default(controllers)
+			token, err := linstorToken()
+			if err != nil {
+				return err
+			}
+			cli, err := linstorcontrol.Default(controllers, token)
 			if err != nil {
 				return err
 			}
@@ -409,6 +413,10 @@ func upgradeNVMECommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&forceYes, "yes", "y", false, "Run non-interactively; answer all questions with yes")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Display potential updates without taking any actions")
 	_ = viper.BindPFlag("linstor.controllers", cmd.Flags().Lookup("controllers"))
+	cmd.Flags().String("token", "", "LINSTOR API token to authenticate with the LINSTOR controller")
+	cmd.Flags().String("token-file", "", "Path to a file containing the LINSTOR API token")
+	_ = viper.BindPFlag("linstor.token", cmd.Flags().Lookup("token"))
+	_ = viper.BindPFlag("linstor.token_file", cmd.Flags().Lookup("token-file"))
 
 	return cmd
 }

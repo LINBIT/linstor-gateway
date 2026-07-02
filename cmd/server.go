@@ -22,9 +22,13 @@ https://app.swaggerhub.com/apis-docs/Linstor/linstor-gateway
 For example:
 linstor-gateway server --addr=":8337"`,
 		Args: cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			controllers := viper.GetStringSlice("linstor.controllers")
 			corsOrigins := viper.GetStringSlice("server.cors_allowed_origins")
+			token, err := linstorToken()
+			if err != nil {
+				return err
+			}
 
 			// Always add controller-based origins if controllers are configured
 			if len(controllers) > 0 {
@@ -34,7 +38,8 @@ linstor-gateway server --addr=":8337"`,
 				}
 			}
 
-			rest.ListenAndServe(addr, controllers, corsOrigins)
+			rest.ListenAndServe(addr, controllers, token, corsOrigins)
+			return nil
 		},
 	}
 
@@ -43,6 +48,10 @@ linstor-gateway server --addr=":8337"`,
 	serverCmd.Flags().StringVar(&addr, "addr", defaultAddr, "Host and port as defined by http.ListenAndServe()")
 	serverCmd.Flags().StringSlice("controllers", nil, "List of LINSTOR controllers to try to connect to (default from $LS_CONTROLLERS, or localhost:3370)")
 	viper.BindPFlag("linstor.controllers", serverCmd.Flags().Lookup("controllers"))
+	serverCmd.Flags().String("token", "", "LINSTOR API token to authenticate with the LINSTOR controller")
+	serverCmd.Flags().String("token-file", "", "Path to a file containing the LINSTOR API token")
+	viper.BindPFlag("linstor.token", serverCmd.Flags().Lookup("token"))
+	viper.BindPFlag("linstor.token_file", serverCmd.Flags().Lookup("token-file"))
 	serverCmd.DisableAutoGenTag = true
 
 	return serverCmd

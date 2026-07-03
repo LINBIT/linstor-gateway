@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/LINBIT/linstor-gateway/pkg/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,7 +12,8 @@ import (
 func (s *server) APIStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		status := map[string]string{
-			"status": "ok",
+			"status":  "ok",
+			"version": version.Version,
 		}
 
 		w.WriteHeader(http.StatusOK)

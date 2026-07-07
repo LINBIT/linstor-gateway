@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-07-07
+
+### Changes
+
+* Support LINSTOR API token authentication. A bearer token can be configured via the new `linstor.token` and `linstor.token_file` configuration keys, or the corresponding `--token` and `--token-file` flags on the `server`, `check-health`, and `upgrade` commands. (941d772)
+* Include the LINSTOR Gateway version in the `/status` REST API response. (91601b9)
+
 ## [2.2.0] - 2026-06-15
 
 ### Changes
@@ -352,7 +359,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * First released version
 * REST API version 1.0.0
 
-[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/LINBIT/linstor-gateway/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/LINBIT/linstor-gateway/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/LINBIT/linstor-gateway/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/LINBIT/linstor-gateway/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LINBIT/linstor-gateway/compare/v1.9.0...v2.0.0

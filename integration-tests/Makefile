@@ -15,14 +15,16 @@
 #
 # Knobs that pick up sensible defaults but can be overridden via env:
 #   LINBIT_DOCKER_REGISTRY      docker registry for the base test-suite image
-#   LINBIT_REGISTRY_URL         http(s) URL of the LINBIT package mirror
+#   LINBIT_PACKAGES_URL         http(s) URL of the LINBIT package mirror
+#   LINBIT_PULP_BASE_URL        http(s) URL of the LINBIT pulp server
 #   CI_COMMIT_SHA               short git SHA used in the default version
 
 # Use the local checkout's HEAD when CI_COMMIT_SHA isn't provided.
 CI_COMMIT_SHA ?= $(shell git -C .. rev-parse --short HEAD 2>/dev/null)
 
 LINBIT_DOCKER_REGISTRY ?= registry.at.linbit.com
-LINBIT_REGISTRY_URL    ?=
+LINBIT_PACKAGES_URL    ?= https://pkg-linbit.cache.at.linbit.com
+LINBIT_PULP_BASE_URL   ?= https://pulp.at.linbit.com
 
 TEST_SUITE_IMAGE       ?= linstor-gateway-e2e:latest
 BASE_OS_IMAGE_SOURCE   ?= https://vault.almalinux.org/9.5/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.5-20241120.x86_64.qcow2
@@ -54,7 +56,7 @@ help:
 	@echo ""
 	@echo "Other targets:"
 	@echo "  make binary             just build the gateway into ./files/linstor-gateway"
-	@echo "  make base_image         build the base virter image (needs LINBIT_REGISTRY_URL)"
+	@echo "  make base_image         build the base virter image"
 	@echo "  make docker             build the test-suite docker image"
 	@echo "  make clean              remove build artifacts"
 	@echo ""
@@ -69,7 +71,8 @@ help:
 	@echo "  TEST_SUITE_IMAGE            test-suite docker image tag     [$(TEST_SUITE_IMAGE)]"
 	@echo "  BASE_IMAGE                  base virter image tag           [$(BASE_IMAGE)]"
 	@echo "  LINBIT_DOCKER_REGISTRY      docker registry                 [$(LINBIT_DOCKER_REGISTRY)]"
-	@echo "  LINBIT_REGISTRY_URL         LINBIT package mirror URL       [$(LINBIT_REGISTRY_URL)]"
+	@echo "  LINBIT_PACKAGES_URL         LINBIT package mirror URL       [$(LINBIT_PACKAGES_URL)]"
+	@echo "  LINBIT_PULP_BASE_URL        LINBIT pulp server URL          [$(LINBIT_PULP_BASE_URL)]"
 
 run:
 	mkdir -p tests-out
@@ -98,16 +101,12 @@ local: binary
 	$(MAKE) run LOCAL_BINARY=$(LOCAL_BINARY_CONTAINER_PATH)
 
 base_image:
-	@if [ -z "$(LINBIT_REGISTRY_URL)" ]; then \
-		echo "error: LINBIT_REGISTRY_URL must be set to build the base image" >&2; \
-		exit 1; \
-	fi
 	virter image pull linstor-gateway-tests-base-os $(BASE_OS_IMAGE_SOURCE)
 	virter image build linstor-gateway-tests-base-os \
 			--vcpus 4 --memory 2G \
 			--provision virter/provision-base.toml \
-			--set values.LinbitRepoBaseURL=$(LINBIT_REGISTRY_URL)/repository/packages-linbit-com \
-			--set values.CIRepoBaseURL=$(LINBIT_REGISTRY_URL)/repository/ci-yum/rhel9 \
+			--set values.LinbitRepoBaseURL=$(LINBIT_PACKAGES_URL) \
+			--set values.CIRepoBaseURL=$(LINBIT_PULP_BASE_URL)/pulp/content/rpm/rhel9/ \
 			$(BASE_IMAGE)
 
 docker:

@@ -111,6 +111,8 @@ publish-docker:
   stage: package
   rules:
     - if: $CI_MERGE_REQUEST_ID
+    # Other projects run the e2e tests of tagged releases.
+    - if: $CI_COMMIT_TAG
   image: $LINBIT_DOCKER_REGISTRY/container-tools:latest
   script:
     - docker buildx build --pull --push -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA integration-tests

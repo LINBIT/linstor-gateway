@@ -79,29 +79,53 @@
   tags:
     - preload
 
-- name: Add CentOS Storage SIG repo (nfs-ganesha)
-  # nfs-ganesha was retired from EPEL 9; the CentOS Storage SIG is the
-  # canonical EL9 source.
-  yum_repository:
-    name: centos-storage-nfsganesha-9
-    description: CentOS Storage SIG - nfs-ganesha 9
-    baseurl: https://mirror.stream.centos.org/SIGs/9-stream/storage/x86_64/nfsganesha-9/
-    gpgcheck: false
+- name: Check nfs-ganesha source
+  assert:
+    that:
+      - nfs_ganesha_source in ['linbit', 'ci']
+      - nfs_ganesha_source != 'ci' or nfs_ganesha_version | length > 0
+    fail_msg: >-
+      nfs_ganesha_source must be 'linbit' or 'ci' (with a pinned
+      nfs_ganesha_version), got '{{ nfs_ganesha_source }}' / '{{ nfs_ganesha_version }}'
   tags:
-    - preload
+    - testimage
+
+- name: Add nfs-ganesha CI repo (disabled by default)
+  yum_repository:
+    name: linbit-nfs-ganesha-ci
+    description: LINBIT CI Packages (nfs-ganesha)
+    baseurl: "{{ nfs_ganesha_ci_repo_url }}"
+    gpgcheck: false
+    enabled: false
+    metadata_expire: "0"
+  when: nfs_ganesha_source == 'ci'
+  tags:
+    - testimage
 
 - name: Install nfs-ganesha
   yum:
     pkg:
-      - nfs-ganesha
-      - nfs-ganesha-vfs
+      - "nfs-ganesha{{ ('-' + nfs_ganesha_version + '*') if nfs_ganesha_version | length > 0 else '' }}"
+      - "nfs-ganesha-vfs{{ ('-' + nfs_ganesha_version + '*') if nfs_ganesha_version | length > 0 else '' }}"
+    enablerepo: "{{ 'linbit-nfs-ganesha-ci' if nfs_ganesha_source == 'ci' else 'drbd' }}"
+    update_cache: true
   # Bound the task: dnf has no aggressive timeout when a mirror is
   # unreachable, so without this a network issue would hang the pipeline
   # until the CI job timeout (~1h) instead of surfacing an error.
   async: 300
   poll: 5
   tags:
-    - preload
+    - testimage
+
+- name: Verify LINBIT nfs-ganesha is installed
+  command: rpm -q --qf '%{VERSION}-%{RELEASE}\n' nfs-ganesha nfs-ganesha-vfs
+  register: nfs_ganesha_installed
+  changed_when: false
+  failed_when: >-
+    nfs_ganesha_installed.rc != 0 or
+    nfs_ganesha_installed.stdout_lines | reject('search', '\.linbit-') | list | length > 0
+  tags:
+    - testimage
 
 - name: Install LINSTOR Gateway from package
   yum:
@@ -139,4 +163,4 @@
     state: stopped
     enabled: no
   tags:
-    - preload
+    - testimage

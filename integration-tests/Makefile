@@ -6,6 +6,8 @@
 #   DRBD_UTILS_VERSION          drbd-utils yum version glob
 #   LINSTOR_VERSION             linstor-{controller,satellite,client} yum version glob
 #   DRBD_REACTOR_VERSION        drbd-reactor yum version glob
+#   NFS_GANESHA_SOURCE          "linbit" (drbd-9 repo) or "ci" (pulp CI repo)
+#   NFS_GANESHA_VERSION         nfs-ganesha VERSION-RELEASE (required for "ci")
 #
 # By default these defer to the stable LINBIT repo (latest released versions)
 # so a broken upstream master doesn't block this project's MRs. To target
@@ -37,6 +39,11 @@ DRBD_VERSION           ?=
 DRBD_UTILS_VERSION     ?=
 LINSTOR_VERSION        ?=
 DRBD_REACTOR_VERSION   ?=
+# The CI repo holds many builds, so NFS_GANESHA_SOURCE=ci needs a pinned
+# NFS_GANESHA_VERSION; for "linbit", empty means the latest release.
+NFS_GANESHA_SOURCE     ?= linbit
+NFS_GANESHA_VERSION    ?=
+NFS_GANESHA_CI_REPO_URL ?= $(LINBIT_PULP_BASE_URL)/pulp/content/rpm/rhel9/
 TORUN                  ?= all
 NVMS                   ?= 12
 
@@ -68,6 +75,9 @@ help:
 	@echo "  DRBD_UTILS_VERSION          drbd-utils yum version          [$(DRBD_UTILS_VERSION)]"
 	@echo "  LINSTOR_VERSION             linstor-* yum version           [$(LINSTOR_VERSION)]"
 	@echo "  DRBD_REACTOR_VERSION        drbd-reactor yum version        [$(DRBD_REACTOR_VERSION)]"
+	@echo "  NFS_GANESHA_SOURCE          nfs-ganesha source (linbit|ci)  [$(NFS_GANESHA_SOURCE)]"
+	@echo "  NFS_GANESHA_VERSION         nfs-ganesha VERSION-RELEASE     [$(NFS_GANESHA_VERSION)]"
+	@echo "  NFS_GANESHA_CI_REPO_URL     nfs-ganesha CI yum repo         [$(NFS_GANESHA_CI_REPO_URL)]"
 	@echo "  TEST_SUITE_IMAGE            test-suite docker image tag     [$(TEST_SUITE_IMAGE)]"
 	@echo "  BASE_IMAGE                  base virter image tag           [$(BASE_IMAGE)]"
 	@echo "  LINBIT_DOCKER_REGISTRY      docker registry                 [$(LINBIT_DOCKER_REGISTRY)]"
@@ -89,6 +99,9 @@ run:
 			--set values.DrbdUtilsVersion=$(DRBD_UTILS_VERSION)                 \
 			--set values.LinstorVersion=$(LINSTOR_VERSION)                      \
 			--set values.DrbdReactorVersion=$(DRBD_REACTOR_VERSION)             \
+			--set values.NfsGaneshaSource=$(NFS_GANESHA_SOURCE)                 \
+			--set values.NfsGaneshaVersion=$(NFS_GANESHA_VERSION)               \
+			--set values.NfsGaneshaCIRepoURL=$(NFS_GANESHA_CI_REPO_URL)         \
 			--torun $(TORUN)                                                    \
 			--set values.LinstorGatewayVersion=$(LINSTOR_GATEWAY_VERSION)
 

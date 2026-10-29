@@ -9,6 +9,10 @@ DrbdVersion = ""
 DrbdUtilsVersion = ""
 LinstorVersion = ""
 DrbdReactorVersion = ""
+# nfs-ganesha source ("linbit" or "ci") and version are passed in by the Makefile.
+NfsGaneshaSource = "linbit"
+NfsGaneshaCIRepoURL = ""
+NfsGaneshaVersion = ""
 
 [[steps]]
 [steps.container]
@@ -24,6 +28,9 @@ command = [
 	"--extra-vars", "drbd_utils_version={{ .DrbdUtilsVersion }}",
 	"--extra-vars", "linstor_version={{ .LinstorVersion }}",
 	"--extra-vars", "drbd_reactor_version={{ .DrbdReactorVersion }}",
+	"--extra-vars", "nfs_ganesha_source={{ .NfsGaneshaSource }}",
+	"--extra-vars", "nfs_ganesha_ci_repo_url={{ .NfsGaneshaCIRepoURL }}",
+	"--extra-vars", "nfs_ganesha_version={{ .NfsGaneshaVersion }}",
 	"--tags", "testimage"
 ]
 [steps.container.env]

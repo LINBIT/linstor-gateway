@@ -2,3 +2,10 @@ linstor_gateway_version: "*"
 # When non-empty, this path (inside the ansible controller container) is
 # copied onto the VMs as /usr/sbin/linstor-gateway, bypassing the package.
 linstor_gateway_local_binary: ""
+# Where nfs-ganesha is installed from: "linbit" (the LINBIT drbd-9 repo) or
+# "ci" (pulp CI repo at nfs_ganesha_ci_repo_url).
+nfs_ganesha_source: linbit
+nfs_ganesha_ci_repo_url: https://pulp.at.linbit.com/pulp/content/rpm/rhel9/
+# Full VERSION-RELEASE without dist (e.g. 15.9.linbit-3.0.42bc41b6). Required
+# for "ci"; for "linbit", empty means the latest release.
+nfs_ganesha_version: ""

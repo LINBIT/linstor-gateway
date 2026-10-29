@@ -1,5 +1,5 @@
 variables:
-  BUILD_HELPERS_VERSION: 72a6dafa7feb37410f2114da7b750a59b3dcc44e
+  BUILD_HELPERS_VERSION: 0fa86e05314b906db34862d95e81b598dc029fa1
   VIRTER_VERSION: v1.1.0
   VMSHED_VERSION: v0.28.0
   # we have to change the way GitLab CI clones the repository.
@@ -45,12 +45,11 @@ build:
         set -x
 
         make VERSION=$version FORCE=1 debrelease
-        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file linstor-gateway-$version.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+        pulp file content upload --repository lbbuild-upstream \
+          --file linstor-gateway-$version.tar.gz \
+          --relative-path linstor-gateway-$version.tar.gz
         lbbuildctl build linstor-gateway --ci \
           --arch amd64 -v "$version" \
-          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
-          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
-          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
           -d rhel9.0
       }
 

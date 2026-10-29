@@ -21,6 +21,12 @@ gatewaytest.log('Resource nvme1 active on node {}'.format(active_node))
 ls.wait_inuse_stable('nvme1', active_node)
 gatewaytest.log('Resource nvme1 stably in use on node {}'.format(active_node))
 
+ip = service_ip.split('/')[0]
+nqn = 'nqn.2021-08.com.linbit:nvme:nvme1'
+gatewaytest.check_failover(ls, nodes, 'nvme1', active_node,
+                           connect=lambda client: client.nvme_connect(ip, nqn),
+                           disconnect=lambda client: client.nvme_disconnect(nqn))
+
 first.run(['linstor-gateway', 'nvme', 'delete', '--force', 'nqn.2021-08.com.linbit:nvme:nvme1'])
 first.assert_resource_not_exists('nvme-of', 'nqn.2021-08.com.linbit:nvme:nvme1')
 

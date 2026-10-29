@@ -23,10 +23,12 @@ for n in nodes:
 first = nodes[0]
 first.start_server()
 service_ip = nodes.get_service_ip()
+# Only allow the cluster's own network so the client below can mount.
+allowed_ips = nodes.get_access_net()
 
 first.run([
     'linstor-gateway', 'nfs', 'create', '--implementation=ganesha',
-    '--allowed-ips', '10.20.0.0/16',
+    '--allowed-ips', allowed_ips,
     'nfs1', service_ip, '1G',
 ])
 first.assert_resource_exists('nfs', 'nfs1')
@@ -46,7 +48,7 @@ assert 'ocf:heartbeat:exportfs' not in config_content, \
 # Generated mode: linstor-gateway drives the export config through the RA's
 # OCF parameters (allowed-ips -> clients, one export_path per volume,
 # All_Squash to mirror the kernel implementation).
-assert 'clients=10.20.0.0/16' in config_content, \
+assert 'clients={}'.format(allowed_ips) in config_content, \
     'expected ganesha clients whitelist in promoter config, got:\n{}'.format(config_content)
 assert 'export_path=/srv/gateway-exports/' in config_content, \
     'expected ganesha export_path in promoter config, got:\n{}'.format(config_content)
@@ -61,6 +63,11 @@ active_node = ls.wait_for_resource_active('nfs1')
 gatewaytest.log('Resource nfs1 active on node {}'.format(active_node))
 ls.wait_inuse_stable('nfs1', active_node)
 gatewaytest.log('Resource nfs1 stably in use on node {}'.format(active_node))
+
+ip = service_ip.split('/')[0]
+gatewaytest.check_failover(ls, nodes, 'nfs1', active_node,
+                           connect=lambda client: client.nfs_mount(ip, '/srv/gateway-exports/nfs1'),
+                           disconnect=lambda client: client.nfs_umount())
 
 first.run(['linstor-gateway', 'nfs', 'delete', '--force', 'nfs1'])
 first.assert_resource_not_exists('nfs', 'nfs1')

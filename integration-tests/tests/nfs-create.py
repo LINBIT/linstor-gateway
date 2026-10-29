@@ -18,6 +18,11 @@ gatewaytest.log('Resource nfs1 active on node {}'.format(active_node))
 ls.wait_inuse_stable('nfs1', active_node)
 gatewaytest.log('Resource nfs1 stably in use on node {}'.format(active_node))
 
+ip = service_ip.split('/')[0]
+gatewaytest.check_failover(ls, nodes, 'nfs1', active_node,
+                           connect=lambda client: client.nfs_mount(ip, '/srv/gateway-exports/nfs1'),
+                           disconnect=lambda client: client.nfs_umount())
+
 first.run(['linstor-gateway', 'nfs', 'delete', '--force', 'nfs1'])
 first.assert_resource_not_exists('nfs', 'nfs1')
 

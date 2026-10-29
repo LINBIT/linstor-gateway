@@ -79,6 +79,14 @@
   tags:
     - preload
 
+- name: Install iSCSI initiator
+  # Tests log in from a cluster node to verify the targets serve data.
+  yum:
+    pkg:
+      - iscsi-initiator-utils
+  tags:
+    - preload
+
 - name: Check nfs-ganesha source
   assert:
     that:

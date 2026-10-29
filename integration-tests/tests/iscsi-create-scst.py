@@ -21,6 +21,12 @@ gatewaytest.log('Resource iscsi1 active on node {}'.format(active_node))
 ls.wait_inuse_stable('iscsi1', active_node)
 gatewaytest.log('Resource iscsi1 stably in use on node {}'.format(active_node))
 
+ip = service_ip.split('/')[0]
+iqn = 'iqn.2019-08.com.linbit:iscsi1'
+gatewaytest.check_failover(ls, nodes, 'iscsi1', active_node,
+                           connect=lambda client: client.iscsi_login(ip, iqn),
+                           disconnect=lambda client: client.iscsi_logout(ip, iqn))
+
 first.run(['linstor-gateway', 'iscsi', 'delete', '--force', 'iqn.2019-08.com.linbit:iscsi1'])
 first.assert_resource_not_exists('iscsi', 'iqn.2019-08.com.linbit:iscsi1')
 

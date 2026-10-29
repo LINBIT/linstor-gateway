@@ -3,12 +3,13 @@
 import gatewaytest
 
 # ----- HACK: ganesha-nfs RA is not in a released resource-agents yet -----
-# Pull the RA from the upstream commit that introduced it. Once a
+# Pull the RA from an upstream commit that supports generated mode
+# (export_path, clients, ... as OCF parameters). Once a
 # resource-agents release ships ocf:heartbeat:ganesha-nfs, drop this
 # block and rely on the package install in the provisioning playbook.
 GANESHA_NFS_RA_URL = (
     "https://raw.githubusercontent.com/ClusterLabs/resource-agents/"
-    "7c15379357a469c8060b13ec8afaed13d667f2e4/heartbeat/ganesha-nfs"
+    "d0e6423c5d5f0d949ef13bd4ae096f4e6ab0d88b/heartbeat/ganesha-nfs"
 )
 GANESHA_NFS_RA_PATH = "/usr/lib/ocf/resource.d/heartbeat/ganesha-nfs"
 # ------------------------------------------------------------------------

@@ -111,14 +111,9 @@ publish-docker:
   stage: package
   rules:
     - if: $CI_MERGE_REQUEST_ID
-  tags:
-    - shell
+  image: $LINBIT_DOCKER_REGISTRY/container-tools:latest
   script:
-    - ln -snf $DOCKER_AUTH_CONFIG_FILE $HOME/.docker/config.json
-    - |
-      cd integration-tests
-      docker build -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA .
-      docker push $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA
+    - docker buildx build --pull --push -t $LINBIT_DOCKER_REGISTRY/linstor-gateway-e2e:$CI_COMMIT_SHA integration-tests
 
 test:
   stage: test

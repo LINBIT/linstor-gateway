@@ -18,7 +18,7 @@ stages:
 
 build:
   stage: build
-  image: golang:1.24-bookworm
+  image: golang:1.27-bookworm
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_TAG
@@ -119,7 +119,7 @@ publish-docker:
 
 test:
   stage: test
-  image: golang:1.24-bookworm
+  image: golang:1.27-bookworm
   rules:
     - if: $CI_MERGE_REQUEST_ID
   cache:
@@ -174,7 +174,7 @@ sbom:
   rules:
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == "master"
-  image: golang:1.24-bookworm
+  image: golang:1.27-bookworm
   before_script:
     - git init build-helpers -q -b unused
     - git -C build-helpers fetch -q --depth 1 $CI_SERVER_PROTOCOL://gitlab-ci-token:${CI_JOB_TOKEN}@$CI_SERVER_HOST:$CI_SERVER_PORT/linbit/build-helpers.git $BUILD_HELPERS_VERSION

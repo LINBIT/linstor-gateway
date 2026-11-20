@@ -309,11 +309,6 @@ func isErrAlreadyExists(err error) bool {
 		return false
 	}
 
-	apiErr, ok := err.(client.ApiCallError)
-	if !ok {
-		return false
-	}
-
 	possibleErrs := []uint64{
 		apiconsts.FailExistsNode,
 		apiconsts.FailExistsRscDfn,
@@ -342,7 +337,7 @@ func isErrAlreadyExists(err error) bool {
 	}
 
 	for _, e := range possibleErrs {
-		if apiErr.Is(e) {
+		if errors.Is(err, client.ApiCallRcErr(e)) {
 			return true
 		}
 	}
